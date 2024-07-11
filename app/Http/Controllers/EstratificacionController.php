@@ -61,6 +61,8 @@ class EstratificacionController extends Controller
             $nuevoPaciente->profesion = $paciente['profesion'];
             $nuevoPaciente->cintura =$paciente['cintura'];
             $nuevoPaciente->estadoCivil = $paciente['estadoCivil'];
+            $nuevoPaciente->diagnostico = $paciente['diagnostico'];
+            $nuevoPaciente->medicamentos = $paciente['medicamentos'];
             $nuevoPaciente->talla = $talla;
             $nuevoPaciente->peso = $peso;
             $nuevoPaciente->fechaNacimiento = $fechaNacimiento;
@@ -79,9 +81,7 @@ class EstratificacionController extends Controller
 
         $estratificacion->primeravez_rhc = $data['rhc_1_fecha'];
         $estratificacion->pe_fecha = $data['pe'];
-        $estratificacion->CSE = $data['cse'];
         $estratificacion->estrati_fecha = $data['estrati'];
-        $estratificacion->diagnostico = $data['diagnostico'];
         $estratificacion->c_isquemia = $data['cIsquemia'];
         $estratificacion->im = ($data['im'] == 'true') ? 1:0;
         $estratificacion->ima = ($data['ima'] == 'true') ? 1:0;
@@ -122,6 +122,8 @@ class EstratificacionController extends Controller
         $estratificacion->pcr = $data['pcr'];
         $estratificacion->enf_coronaria = $data['enfCoronaria'];
         $estratificacion->isquemia = $data['isquemia'];
+        $estratificacion->isquemia_irm = $data['isquemiaIrm'];
+        $estratificacion->eco_estres = $data['eco'];
         $estratificacion->holter = $data['holter'];
         $estratificacion->pe_capacidad =  ($data['capacidadPe'] == 'true') ? 1:0;
         $estratificacion->fc_basal = $data['fcBasal'];
@@ -183,7 +185,7 @@ class EstratificacionController extends Controller
 
         $estratificacion->save();
 
-        return response()->json($estratificacion);
+        return response()->json("Guardado correctamente");
     }
 
     /**
@@ -228,7 +230,6 @@ class EstratificacionController extends Controller
         $expedienteFind->primeravez_rhc = $request['primeravez_rhc'];
         $expedienteFind->pe_fecha = $request['pe_fecha'];
         $expedienteFind->estrati_fecha = $request['estrati_fecha'];
-        $expedienteFind->diagnostico = $request['diagnostico'];
         $expedienteFind->c_isquemia = $request['c_isquemia'];
         $expedienteFind->im = ($request['im'] == 'true' || $request['im'] == 1) ? 1:0;
         $expedienteFind->ima = ($request['ima'] == 'true'|| $request['ima'] == 1) ? 1:0;
@@ -269,6 +270,8 @@ class EstratificacionController extends Controller
         $expedienteFind->pcr = $request['pcr'];
         $expedienteFind->enf_coronaria = $request['enf_coronaria'];
         $expedienteFind->isquemia = $request['isquemia'];
+        $estratificacion->isquemia_irm = $request['isquemia_irm'];
+        $estratificacion->eco_estres = $request['eco_estres'];
         $expedienteFind->holter = $request['holter'];
         $expedienteFind->pe_capacidad =  ($request['pe_capacidad'] == 'true') ? 1:0;
         $expedienteFind->fc_basal = $request['fc_basal'];

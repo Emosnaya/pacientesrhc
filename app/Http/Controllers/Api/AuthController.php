@@ -36,7 +36,12 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         if(!Auth::attempt($credentials)){
-            return response()->json(['error' => 'Cedula o Password Incorrecto'],422);
+            return response()->json([
+                'message' => 'Usuario o password incorrecto',
+                'errors' => [
+                    'error' => ['Cedula o password incorrecto']
+                ]
+            ], 422);
         }
 
         /** @var User $user */

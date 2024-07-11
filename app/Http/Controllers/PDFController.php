@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Clinico;
 use App\Models\Esfuerzo;
 use App\Models\Estratificacion;
 use App\Models\Paciente;
@@ -31,5 +32,15 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('estrati', compact('data', 'paciente','user'));
         return $pdf->stream('Estratificacion.pdf'); 
+    }
+
+    public function clinicoPdf(Request $request)
+    {
+        $data = Clinico::find($request->id);
+        $paciente =  Paciente::find($data->paciente_id);
+        $user = User::find($data->user_id);
+
+        $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user'));
+        return $pdf->stream('Clinico.pdf'); 
     }
 }

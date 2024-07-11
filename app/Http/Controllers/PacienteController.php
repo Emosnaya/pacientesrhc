@@ -52,6 +52,9 @@ class PacienteController extends Controller
         $paciente->profesion = $request->profesion;
         $paciente->cintura = $request->cintura;
         $paciente->estadoCivil = $request->estadoCivil;
+        $paciente->diagnostico = $request->diagnostico;
+        $paciente->medicamentos = $request->medicamentos;
+        $paciente->envio = $request->envio;
         $paciente->talla = $request->talla;
         $paciente->peso = $request->peso;
         $paciente->fechaNacimiento = $fechaNacimiento;
@@ -126,6 +129,9 @@ class PacienteController extends Controller
         $pacientefind->profesion = $request->profesion;
         $pacientefind->cintura = $request->cintura;
         $pacientefind->estadoCivil = $request->estadoCivil;
+        $paciente->diagnostico = $request->diagnostico;
+        $paciente->medicamentos = $request->medicamentos;
+        $paciente->envio = $request->envio;
         $pacientefind->talla = $request->talla;
         $pacientefind->peso = $request->peso;
         $pacientefind->fechaNacimiento = $fechaNacimiento;

@@ -61,6 +61,8 @@ class EsfuerzoController extends Controller
             $nuevoPaciente->profesion = $paciente['profesion'];
             $nuevoPaciente->cintura = $paciente['cintura'];
             $nuevoPaciente->estadoCivil = $paciente['estadoCivil'];
+            $nuevoPaciente->diagnostico = $paciente['diagnostico'];
+            $nuevoPaciente->medicamentos = $paciente['medicamentos'];
             $nuevoPaciente->talla = $talla;
             $nuevoPaciente->peso = $peso;
             $nuevoPaciente->fechaNacimiento = $fechaNacimiento;
@@ -78,8 +80,8 @@ class EsfuerzoController extends Controller
             
         }
 
-        $prevalencia = $data['prevalencia'];
-        $sensibilidad = $data['sensibilidad'];
+        $prevalencia = 0.98;
+        $sensibilidad = $data['confusor'] === 'true'?.64:.68;
         $especificidad = $data['especificidad'];
 
         $vpp = ($sensibilidad*$prevalencia)/(($sensibilidad*$prevalencia)+(1-$especificidad)*(1-$prevalencia));
@@ -216,14 +218,12 @@ class EsfuerzoController extends Controller
 
 
         $pesfuerzo->numPrueba = $data['numPrueba'];
-        $pesfuerzo->diagnostico =  $data['diagnostico'];
         $pesfuerzo->icc =  $icc;
         $pesfuerzo->FEVI =  $data['fevi'];
         $pesfuerzo->metodo = $data['metodo'];
         $pesfuerzo->disfuncionDias = ($data['disfuncion'] == 'true') ? 1:0;
         $pesfuerzo->nyha = $data['nya'];
         $pesfuerzo->ccs = $data['ccs'];
-        $pesfuerzo->medicamentos = $data['medicamentos'];
         $pesfuerzo->betabloqueador = ($data['betabloqueador'] == 'true') ? 1:0;
         $pesfuerzo->iecas = ($data['iecass'] == 'true') ? 1:0;
         $pesfuerzo->nitratos = ($data['nitratos'] == 'true') ? 1:0;
@@ -235,9 +235,9 @@ class EsfuerzoController extends Controller
         $pesfuerzo->aldactone = ($data['aldactone'] == 'true') ? 1:0;
         $pesfuerzo->antiagregante = ($data['antiagregante'] == 'true') ? 1:0;
         $pesfuerzo->otros = ( $data['otros'] == 'true') ? 1:0;
-        $pesfuerzo->prevalencia =  $data['prevalencia'];
+        $pesfuerzo->prevalencia =  $prevalencia;
         $pesfuerzo->confusor = ($data['confusor'] == 'true') ? 1:0;
-        $pesfuerzo->sensibilidad = $data['sensibilidad'];
+        $pesfuerzo->sensibilidad = $sensibilidad;
         $pesfuerzo->especificidad = $data['especificidad'];
         $pesfuerzo->vpp = $vpp;
         $pesfuerzo->vpn = $vpn;
@@ -425,8 +425,8 @@ class EsfuerzoController extends Controller
         $esfuerzoFind = Esfuerzo::find($request->id);
         $nuevoPaciente = Paciente::find($request->paciente_id);
 
-        $prevalencia = $request['prevalencia'];
-        $sensibilidad = $request['sensibilidad'];
+        $prevalencia = 0.98;
+        $sensibilidad = $request['confusor'] === 'true'?.64:.68;
         $especificidad = $request['especificidad'];
 
         $vpp = ($sensibilidad*$prevalencia)/(($sensibilidad*$prevalencia)+(1-$especificidad)*(1-$prevalencia));
@@ -565,14 +565,12 @@ class EsfuerzoController extends Controller
 
 
         $esfuerzoFind->numPrueba = $request['numPrueba'];
-        $esfuerzoFind->diagnostico =  $request['diagnostico'];
         $esfuerzoFind->icc =  $icc;
         $esfuerzoFind->FEVI =  $request['FEVI'];
         $esfuerzoFind->metodo = $request['metodo'];
         $esfuerzoFind->disfuncionDias = ($request['disfuncionDias'] == 'true'|| $request['disfuncionDias'] === 1) ? 1:0;
         $esfuerzoFind->nyha = $request['nyha'];
         $esfuerzoFind->ccs = $request['ccs'];
-        $esfuerzoFind->medicamentos = $request['medicamentos'];
         $esfuerzoFind->betabloqueador = ($request['betabloqueador'] == 'true'||$request['betabloqueador'] === 1) ? 1:0;
         $esfuerzoFind->iecas = ($request['iecas'] == 'true'|| $request['iecas'] === 1) ? 1:0;
         $esfuerzoFind->nitratos = ($request['nitratos'] == 'true'||$request['nitratos'] === 1) ? 1:0;
@@ -584,9 +582,9 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->aldactone = ($request['aldactone'] == 'true' ||$request['aldactone'] === 1) ? 1:0;
         $esfuerzoFind->antiagregante = ($request['antiagregante'] == 'true' ||$request['antiagregante'] === 1) ? 1:0;
         $esfuerzoFind->otros = ( $request['otros'] == 'true' ||$request['otros'] === 1) ? 1:0;
-        $esfuerzoFind->prevalencia =  $request['prevalencia'];
+        $esfuerzoFind->prevalencia =  $prevalencia;
         $esfuerzoFind->confusor = ($request['confusor'] == 'true' ||$request['confusor'] === 1) ? 1:0;
-        $esfuerzoFind->sensibilidad = $request['sensibilidad'];
+        $esfuerzoFind->sensibilidad = $sensibilidad;
         $esfuerzoFind->especificidad = $request['especificidad'];
         $esfuerzoFind->vpp = $vpp;
         $esfuerzoFind->vpn = $vpn;
