@@ -18,7 +18,6 @@ return new class extends Migration
             $table->date('primeravez_rhc')->nullable();
             $table->date('pe_fecha')->nullable();
             $table->date('estrati_fecha')->nullable();
-            $table->string('diagnostico')->nullable();
             $table->string('c_isquemia')->nullable();
             $table->boolean('im')->nullable();
             $table->boolean('ima')->nullable();
@@ -59,6 +58,8 @@ return new class extends Migration
             $table->double('pcr')->nullable();
             $table->string('enf_coronaria')->nullable();
             $table->string('isquemia')->nullable();
+            $table->string('isquemia_irm')->nullable();
+            $table->string('eco_estres')->nullable();
             $table->string('holter')->nullable();
             $table->boolean('pe_capacidad')->nullable();
             $table->double('fc_basal')->nullable();
@@ -97,7 +98,6 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('paciente_id')->constrained()->onDelete('cascade');
             $table->integer('tipo_exp')->nullable();
-            $table->string('CSE')->nullable();
             $table->timestamps();
         });
     }

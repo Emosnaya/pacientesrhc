@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SignupRequest;
+use App\Http\Resources\ClinicoCollection;
+use App\Models\Clinico;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +18,6 @@ class UserController extends Controller
      */
     public function index()
     {
-        //
     }
 
     /**

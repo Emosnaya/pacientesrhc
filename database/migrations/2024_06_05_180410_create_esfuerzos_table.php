@@ -17,14 +17,12 @@ return new class extends Migration
             $table->id();
             $table->string('numPrueba')->nullable();
             $table->date('fecha')->nullable();
-            $table->string('diagnostico')->nullable();
             $table->boolean('icc')->nullable();
             $table->integer('FEVI')->nullable();
             $table->string('metodo')->nullable();
             $table->boolean('disfuncionDias')->nullable();
             $table->boolean('nyha')->nullable();
             $table->integer('ccs')->nullable();
-            $table->string('medicamentos')->nullable();
             $table->boolean('betabloqueador')->nullable();
             $table->boolean('iecas')->nullable();
             $table->boolean('nitratos')->nullable();

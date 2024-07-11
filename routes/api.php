@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\ClinicoController;
 use App\Http\Controllers\EsfuerzoController;
 use App\Http\Controllers\EstratificacionController;
+use App\Http\Controllers\InfoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PDFController;
 use App\Http\Controllers\UserController;
@@ -32,8 +34,13 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::apiResource('/esfuerzo',EsfuerzoController::class);
     Route::apiResource('/estratificacion',EstratificacionController::class);
     Route::apiResource('/users',UserController::class);
+    Route::apiResource('/clinico',ClinicoController::class);
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
+    Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
+    Route::get('/clinicos/{id}',[InfoController::class,'clinicos']);
+    Route::get('/esfuerzos/{id}',[InfoController::class,'esfuerzos']);
+    Route::get('/estratificaciones/{id}',[InfoController::class,'estratificaciones']);
 });
 
 Route::post('/registro', [AuthController::class, 'signup']);
