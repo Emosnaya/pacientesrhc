@@ -106,15 +106,15 @@ class EsfuerzoController extends Controller
         $tAmax_tbasal_value = null;
 
 
-        if($tAmax_tbasal > 40){
+        if($tAmax_tbasal >= 40){
             $tAmax_tbasal_value = 0;
-        }else if(($tAmax_tbasal > 31) || ($tAmax_tbasal <= 40)){
+        }else if(($tAmax_tbasal >= 31) & ($tAmax_tbasal <= 40)){
             $tAmax_tbasal_value = 1;
-        }else if(($tAmax_tbasal > 21) || ($tAmax_tbasal <= 30)){
+        }else if(($tAmax_tbasal >= 21) & ($tAmax_tbasal <= 30)){
             $tAmax_tbasal_value = 2;
-        }else if(($tAmax_tbasal > 11) || ($tAmax_tbasal <= 20)){
+        }else if(($tAmax_tbasal >= 11) & ($tAmax_tbasal <= 20)){
             $tAmax_tbasal_value = 3;
-        }else if(($tAmax_tbasal > 0) || ($tAmax_tbasal < 10)){
+        }else if(($tAmax_tbasal >= 0) & ($tAmax_tbasal <= 10)){
             $tAmax_tbasal_value = 4;
         }else if($tAmax_tbasal < 0){
             $tAmax_tbasal_value = 5;
@@ -451,15 +451,15 @@ class EsfuerzoController extends Controller
         $tAmax_tbasal_value = null;
 
 
-        if($tAmax_tbasal > 40){
+        if($tAmax_tbasal >= 40){
             $tAmax_tbasal_value = 0;
-        }else if(($tAmax_tbasal > 31) || ($tAmax_tbasal <= 40)){
+        }else if(($tAmax_tbasal >= 31) & ($tAmax_tbasal <= 40)){
             $tAmax_tbasal_value = 1;
-        }else if(($tAmax_tbasal > 21) || ($tAmax_tbasal <= 30)){
+        }else if(($tAmax_tbasal >= 21) & ($tAmax_tbasal <= 30)){
             $tAmax_tbasal_value = 2;
-        }else if(($tAmax_tbasal > 11) || ($tAmax_tbasal <= 20)){
+        }else if(($tAmax_tbasal >= 11) & ($tAmax_tbasal <= 20)){
             $tAmax_tbasal_value = 3;
-        }else if(($tAmax_tbasal > 0) || ($tAmax_tbasal < 10)){
+        }else if(($tAmax_tbasal >= 0) & ($tAmax_tbasal <= 10)){
             $tAmax_tbasal_value = 4;
         }else if($tAmax_tbasal < 0){
             $tAmax_tbasal_value = 5;
