@@ -149,8 +149,11 @@
   .m-t-3{
     margin-top: -2rem;
   }
-  .m-t-0{
+  .m-t-07{
     margin-top: -0.7rem;
+  }
+  .m-t-0{
+    margin-top: -1rem;
   }
   
   .linea {
@@ -189,7 +192,7 @@
     position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
     left: 5.5rem; /* Comienza desde el borde izquierdo del contenedor */
     right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
+    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
     border-bottom: 3px solid black; /* Línea sólida negra */
     z-index: 0; /* Detrás del título */
   }
@@ -387,7 +390,7 @@
           </tr>
         </tbody>
         </table>
-        <span class="f-7 m-t-0">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
+        <span class="f-7 m-t-07">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
       </div>
       <div class="ml-2 text-container-g">
         <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}} lpm</span></p>
@@ -404,11 +407,11 @@
       <h2 class="h5 titulo m-t-0">Arritmias</h2>
       <div class="linea-ar"></div>
     </div>
-    <p  class="f-bold m-t-0">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
+    <p  class="f-bold m-t-07">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
   </div>
   <div class="paciente mt-0">
     <div class="contenedor ">
-      <h2 class="h5 titulo">Puntuaciones</h2>
+      <h2 class="h5 titulo m-t-07">Puntuaciones</h2>
       <div class="linea-pu"></div>
     </div>
     <p  class="f-bold m-t-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
@@ -420,7 +423,8 @@
   </div>
   <div class="paciente mt-1 mb-1">
     <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
-    <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span> <span class="f-bold ml-4">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
+    <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
+    <p class="mt-0 mb-0"><span class="f-bold">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
   </div>
   <div class="contenedor">
     <h2 class="h5 titulo"></h2>
