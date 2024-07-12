@@ -200,7 +200,7 @@
     position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
     left: 7.2rem; /* Comienza desde el borde izquierdo del contenedor */
     right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
+    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
     border-bottom: 3px solid black; /* Línea sólida negra */
     z-index: 0; /* Detrás del título */
   }
