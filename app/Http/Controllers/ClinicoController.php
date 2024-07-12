@@ -95,7 +95,7 @@ class ClinicoController extends Controller
         $clinico->falla_cardiaca = $data['fallaCardiaca']==="true"?1:0;
         $clinico->sobreviviente_cpr = $data['sobrevivienteCpr']==="true"?1:0;
         $clinico->incapacidad_entrenar = $data['incapacidadEntrenar']==="true"?1:0;
-        $clinico->cf_nyha = $data['cfNyha'];
+        $clinico->cf_nyha = $data['cfNyha']!=1&$data['cfNyha']!=2?0:$data['cfNyha'];
         $clinico->crvc = $data['crvc'];
         $clinico->crvc_hemoductos = $data['crvcHemo'];
         $clinico->insuficiencia_art_per = $data['insuArtPer']==="true"?1:0;

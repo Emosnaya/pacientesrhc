@@ -26,20 +26,23 @@
         padding: 1rem;
     }
     .text {
-        font-size: 10px;
+        font-size: 9.5px;
         text-align: center;
         width: 100%; /* Espacio entre línea y texto */
     }
         .tabla{
-            font-size: 9px;
+            font-size: 8.5px;
             margin-bottom: 0;
             width: 100%
         }
         .f-10{
-          font-size: 11px;
+          font-size: 10px;
         }
         .f-15{
           font-size: 15px;
+        }
+        .f-7{
+          font-size: 7px;
         }
         .paciente{
             font-size: 12px
@@ -344,7 +347,7 @@
       <span class="f-bold">  Suspensión de la prueba : <span class="f-normal">{{$data->motivoSuspension}}</span></span></p> <p class="mt-0 mb-0"> <span class="f-bold">  METs Teórico: <span  class="f-normal">{{round($data->mets_teorico_general,2)}}</span></span>
       <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
       <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
-      <span class="f-bold">  TASmax/TASbasal: <span  class="f-normal">{{round($data->indice_tas,2)}}</span></span>  <span class="f-bold">  IEM: <span  class="f-normal">{{round($data->iem,2)}}</span></span>
+      <span class="f-bold">  TASmax/TASbasal: <span  class="f-normal">{{round($data->indice_tas,2)}}</span></span>  <span class="f-bold">  IEM: <span  class="f-normal">{{number_format($data->iem*100,2)}}</span></span>
       <span class="f-bold">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold">  Rec TAS (3/1): <span  class="f-normal">{{round($data->tas_3er_min/$data->tas_1er_min,2)}}</span></span>
       <span class="f-bold">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
@@ -383,9 +386,10 @@
             <td class="border-t">NV</td>
           </tr>
         </tbody>
-        </table>  
+        </table>
+        <span class="f-7 m-t-0">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
       </div>
-      <div class=" ml-2 text-container-g mr-5">
+      <div class="ml-2 text-container-g">
         <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}} lpm</span></p>
         <p class="f-bold mb-1"> Depresión max ST (mm): <span class="ml-1 mr-2 f-normal">{{$data->MaxInfra}}</span></p>
       </div>
@@ -393,10 +397,11 @@
   <br>
   <br>
   <br>
+  <br>
   <div class="paciente mt-0">
     <p class="f-bold text-sm">Tipo de isquemia: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
     <div class="contenedor ">
-      <h2 class="h5 titulo">Arritmias</h2>
+      <h2 class="h5 titulo m-t-0">Arritmias</h2>
       <div class="linea-ar"></div>
     </div>
     <p  class="f-bold m-t-0">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
@@ -414,20 +419,20 @@
     <div class="linea-t"></div>
   </div>
   <div class="paciente mt-1 mb-1">
-    <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span> <span class="f-bold">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p> 
-    <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
+    <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
+    <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span> <span class="f-bold ml-4">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
   </div>
   <div class="contenedor">
     <h2 class="h5 titulo"></h2>
     <div class="linea-t"></div>
   </div>
   <div class="paciente mt-1">
-    <p  class="f-bold mt-0 pt-0">Para diagnóstico de cardiopatía isquémica:
+    <p  class="f-bold mt-0 mb-0">Para diagnóstico de cardiopatía isquémica:
       <span class="f-bold">  Confusor: <span class="f-normal">{{$data->confusor}}</span></span>
-      <span class="f-bold">  Prob pre-prueba: <span class="f-normal">{{$data->prevalencia}}%</span></span>
-      <span class="f-bold">  Sensibilidad: <span class="f-normal">{{$data->sensibilidad}}%</span></span>
-      <span class="f-bold">  Especificidad: <span class="f-normal">{{$data->especificidad}}%</span></span>
-      <span class="f-bold">  V.Predictivo: <span class="f-normal">{{round($data->vpp,2)}}%</span></span></p>
+      <span class="f-bold">  Prob pre-prueba: <span class="f-normal">{{$data->prevalencia*100}}%</span></span>
+      <span class="f-bold">  Sensibilidad: <span class="f-normal">{{$data->sensibilidad*100}}%</span></span></p>
+      <p><span class="f-bold  mt-0 mb-0">  Especificidad: <span class="f-normal">{{$data->especificidad*100}}%</span></span>
+      <span class="f-bold">  V.Predictivo: <span class="f-normal">{{round($data->vpp*100)}}%</span></span></p>
   </div>
 
   
