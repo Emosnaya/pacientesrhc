@@ -26,17 +26,17 @@
         padding: 1rem;
     }
     .text {
-        font-size: 11px;
+        font-size: 10px;
         text-align: center;
         width: 100%; /* Espacio entre línea y texto */
     }
         .tabla{
-            font-size: 10px;
+            font-size: 9px;
             margin-bottom: 0;
             width: 100%
         }
         .f-10{
-          font-size: 12px;
+          font-size: 11px;
         }
         .f-15{
           font-size: 15px;
@@ -205,6 +205,9 @@
     border-bottom: 3px solid black; /* Línea sólida negra */
     z-index: 0; /* Detrás del título */
   }
+  .backgr-black{
+    background-color: #000
+  }
     </style>
   </head>
   <body>
@@ -216,11 +219,10 @@
           <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
         </div>
         <br>
-          <p  class="f-bold mt-2 mb-0 f-15">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span></p>
-          <p class="mt-0 mb-0"><span class="f-bold">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
-          <span class="f-bold ml-3">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
-          <span class="f-bold ml-3">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
-          <p class="f-bold mt-0 mb-1">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span>  <span class="f-bold ml-3">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span></span></p>
+          <p  class="f-bold mt-2 mb-0 ">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span><span class="f-bold ml-2">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
+            <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
+            <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
+          <p class="f-bold mt-0 mb-1">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span>  <span class="f-bold ml-3">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></span></p>
       </div>
     </header>
     <main class="ma-t-0">
@@ -279,12 +281,12 @@
           </tr>
           <tr>
             <th scope=" ">Recuperación</th>
-            <td class="border-l border-r text-ctr"></td>
-            <td class="border-l border-r text-ctr"></td>
-            <td class="border-l border-r text-ctr"></td>
-            <td class="border-l border-r text-ctr"></td>
-            <td class="border-l border-r text-ctr"></td>
-            <td class="border-l border-r border-b text-ctr"></td>
+            <td class="backgr-black"></td>
+            <td class="backgr-black"></td>
+            <td class="backgr-black"></td>
+            <td class="backgr-black"></td>
+            <td class="backgr-black"></td>
+            <td class="backgr-black"></td>
           </tr>
           <tr>
             <td scope="row border-b">1er min</td>
@@ -340,15 +342,15 @@
       </div>
       <p  class="f-bold mb-0 m-t-2">Tiempo de esfuerzo: <span class="f-normal">{{ round($data->tiempoEsfuerzo,2)}}  min (tiempo calculado correspondiente a protocolo de Bruce) </span>
       <span class="f-bold">  Suspensión de la prueba : <span class="f-normal">{{$data->motivoSuspension}}</span></span></p> <p class="mt-0 mb-0"> <span class="f-bold">  METs Teórico: <span  class="f-normal">{{round($data->mets_teorico_general,2)}}</span></span>
-      <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presor,2)}}</span></span>
-      <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{$data->mvo2/3.5*0.1}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
+      <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
+      <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
       <span class="f-bold">  TASmax/TASbasal: <span  class="f-normal">{{round($data->indice_tas,2)}}</span></span>  <span class="f-bold">  IEM: <span  class="f-normal">{{round($data->iem,2)}}</span></span>
       <span class="f-bold">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold">  Rec TAS (3/1): <span  class="f-normal">{{round($data->tas_3er_min/$data->tas_1er_min,2)}}</span></span>
       <span class="f-bold">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
   <div class="paciente mt-2">
     <div class="contenedor ">
-      <h2 class="h5 titulo">Medición de Gases Aspirados</h2>
+      <h2 class="h5 titulo">Medición de Gases Espirados</h2>
       <div class="linea-med"></div>
     </div>
     <p  class="f-bold m-t-2">VO2max (mlO2/Kg/min): <span class="f-normal">{{ round($data->vo2_max_gases,2)}}</span>
@@ -364,21 +366,21 @@
       <table class="table-g">  
         <thead class="thead-striped">
           <tr>
-            <th scope="col" class="f-bold">Ind. tobillo/brazo(ITB)</th>
-            <th scope="col">Basal</th>
-            <th scope="col">Post-esfuerzo</th>
+            <th scope="col" class="f-bold border-t">Ind. tobillo/brazo(ITB)</th>
+            <th scope="col" class="border-t">Basal</th>
+            <th scope="col" class="border-t">Post-esfuerzo</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Pie derecho</th>
-            <td>NV</td>
-            <td>NV</td>
+            <th scope="row" class="border-t">Pie derecho</th>
+            <td class="border-t">NV</td>
+            <td class="border-t">NV</td>
           </tr>
           <tr>
-            <th scope="row">Pie Izquierdo</th>
-            <td>NV</td>
-            <td>NV</td>
+            <th scope="row" class="border-t">Pie Izquierdo</th>
+            <td class="border-t">NV</td>
+            <td class="border-t">NV</td>
           </tr>
         </tbody>
         </table>  
@@ -405,16 +407,15 @@
       <div class="linea-pu"></div>
     </div>
     <p  class="f-bold m-t-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
-      <span class="f-bold">  Veranos (VA): <span class="f-normal">{{round($data->veteranos,2)}}</span></span></p>
+      <span class="f-bold">  Veteranos (VA): <span class="f-normal">{{round($data->veteranos,2)}}</span></span></p>
   </div>
   <div class="contenedor ">
     <h2 class="h5 titulo"></h2>
     <div class="linea-t"></div>
   </div>
   <div class="paciente mt-1 mb-1">
-    <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> <p class="m-t-0 mb-0">
-      <span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span>
-      <span class="f-bold">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
+    <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span> <span class="f-bold">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p> 
+    <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
   </div>
   <div class="contenedor">
     <h2 class="h5 titulo"></h2>
