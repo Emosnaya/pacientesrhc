@@ -171,21 +171,28 @@
   .back-blk{
     background-color: #000;
   }
+  .f-17{
+    font-size: 17px;
+  }
+  .ma-bo{
+    margin-left: 4rem;
+    padding-left: 7.2rem
+  }
     </style>
   </head>
   <body>
     <header class=" mb-0">
         <div class="paciente mt-0">
-          <p class="f-bold f-15 text-center mb-0 mt-0">Estratificación de riesgo Cardiovascular</p>
+          <p class="f-bold f-17 text-center mb-0 mt-0">Estratificación de riesgo Cardiovascular</p>
           <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
           <div class="medio">
             <p class="text-sm texto-izquierda mb-0 f-bold">Fecha Estratificación: {{ $data->estrati_fecha}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
           </div>
           <br>
             <p  class="f-bold mb-0">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span>
-            <span class="f-bold">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
-            <span class=f-bold"">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class=f-bold"">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
-            <span class=f-bold"">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
+            <span class="f-bold ml-2">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class="f-bold ml-2">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
+            <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold ml-2">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
+            <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
             <p class="mb-0 mt-0 f-bold">Diagnostico: <span class="f-normal">{{$paciente->diagnostico}}</span></p>
         </div>
     </header>
@@ -221,11 +228,11 @@
               <tr class="">
                 <th scope="row ">Perimetro de cintura</th>
                 <td class="border-l border-r text-ctr">{{$paciente->cintura}}</td>
-                <td class="border-r text-ctr">(&lt;88) o (&lt;102)</td>
+                <td class="border-r text-ctr"><img src="img/venus-solid.svg" alt="" style="height: 12px" class="font-light">(&lt;88) o (&lt;102)<img src="img/mars-solid.svg" alt="" style="height: 12px" class="font-light"></td>
                 <td class="border-r text-ctr @if(($paciente->genero === 0 && $paciente->cintura<88) || ($paciente->genero === 1 && $paciente->cintura<102)) bg-success @else  @endif">@if(($paciente->genero === 0 && $paciente->cintura<88) || ($paciente->genero === 1 && $paciente->cintura<102)) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
                 <td class="border-r text-ctr"></td>
                 <td class="border-r text-ctr"></td>
-                <td class="border-r text-ctr">(>88) o (>102)</td>
+                <td class="border-r text-ctr"><img src="img/venus-solid.svg" alt="" style="height: 12px" class="font-light">(>88) o (>102)<img src="img/mars-solid.svg" alt="" style="height: 12px" class="font-light"></td>
                 <td class="border-r text-ctr @if(($paciente->genero === 0 && $paciente->cintura>88) || ($paciente->genero === 1 && $paciente->cintura>102)) bg-danger @else  @endif">@if(($paciente->genero === 0 && $paciente->cintura>88) || ($paciente->genero === 1 && $paciente->cintura>102)) <img src="img/check-solid.svg" alt="" style="height: 13px" class="">  @else &nbsp; @endif</td>
               </tr>
               <tr>
@@ -261,11 +268,11 @@
               <tr>
                 <th scope="row">FEVI (%)</th>
                 <td class="border-l border-r text-ctr">{{$data->fevi}}%</td>
-                <td class="border-l border-r text-ctr"> >=50 </td>
+                <td class="border-l border-r text-ctr"> >=50 %</td>
                 <td class="border-l border-r text-ctr @if($data->fevi>=50) bg-success @else  @endif">@if($data->fevi>=50) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
-                <td class="border-l border-r text-ctr"> 36 a 49 </td>
+                <td class="border-l border-r text-ctr"> 36 a 49 %</td>
                 <td class="border-l border-r text-ctr @if($data->fevi>=36 && $data->fevi<=49) bg-warning @else  @endif">@if($data->fevi>=36 && $data->fevi<=49) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
-                <td class="border-l border-r text-ctr"> &lt;35</td>
+                <td class="border-l border-r text-ctr"> &lt;35%</td>
                 <td class="border-l border-r text-ctr @if($data->fevi<=35) bg-danger @else  @endif">@if($data->fevi<=35) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
               </tr>
               <tr>
@@ -299,7 +306,7 @@
                 <td class="border-l border-r text-ctr @if($data->icc === 1) bg-danger @else  @endif">@if($data->icc === 1) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
               <tr>
-                <th scope="row">Falla para realizar ejercicio</th>
+                <th scope="row">Falla para realizar ejercicio prescrito</th>
                 <td class="border-l border-r text-ctr">{{($data->falla_entrenar === 0)?"n":"s"}}</td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr @if($data->falla_entrenar === 0) bg-success @else  @endif">@if($data->falla_entrenar === 0) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
@@ -330,7 +337,7 @@
               </tr>
               <tr>
                 <th scope="row">Puntuacion ATP2000</th>
-                <td class="border-l border-r text-ctr">{{$data->puntuacion_atp2000}}%</td>
+                <td class="border-l border-r text-ctr">{{$data->puntuacion_atp2000}}</td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr @if($data->puntuacion_atp2000/100<=0.05) bg-success @else  @endif">@if(($data->puntuacion_atp2000/100)<=0.05) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
                 <td class="border-l border-r text-ctr"></td>
@@ -340,7 +347,7 @@
               </tr>
               <tr>
                 <th scope="row">HeartScore</th>
-                <td class="border-l border-r text-ctr">{{$data->heart_score}}%</td>
+                <td class="border-l border-r text-ctr">{{$data->heart_score}}</td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr @if(($data->heart_score/100)<=0.05) bg-success @else  @endif">@if(($data->heart_score/100)<=0.05) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
                 <td class="border-l border-r text-ctr"></td>
@@ -348,26 +355,16 @@
                   <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr @if(($data->heart_score/100)>=0.2) bg-danger @else  @endif">@if(($data->heart_score/100)>=0.2) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
               </tr>
-            </tbody>
-        </table>
-        <div class="contenedor ">
-          <h2 class="h5 titulo mt-1">Prueba de Esfuerzo</h2>
-          <div class="linea-p"></div>
-        </div>
-        <table class="tabla border-t table-striped m-t-1">
-            <thead class="border-t text-center">
               <tr>
-                <th scope="col">Rubro</th>
-                <th scope="col">Valor</th>
-                <th></th>
-                <th scope="col text-ctr">Bajo</th>
-                <th></th>
-                <th scope="col text-ctr">Medio</th>
-                <th></th>
-                <th scope="col text-ctr">Alto</th>
+                <th scope="row" class="h5  back-blk text-white">Prueba de Esfuerzo</th>
+                <td class="border-l border-r text-ctr back-blk"></td>
+                <td class="border-l border-r text-ctr back-blk"></td>
+                <td class="border-l border-r text-ctr back-blk "></td>
+                <td class="border-l border-r text-ctr back-blk"></td>
+                <td class="border-l border-r text-ctr back-blk"></td>
+                <td class="border-l border-r text-ctr back-blk"></td>
+                <td class="border-l border-r text-ctr back-blk"></td>
               </tr>
-            </thead>
-            <tbody>
               <tr>
                 <th scope="row">Capacidad para realizar prueba de esfuerzo</th>
                 <td class="border-l border-r text-ctr">{{($data->pe_capacidad === 0)?"n":"s"}}</td>
@@ -401,11 +398,11 @@
               <tr>
                 <th scope="row">Umbral isquémico (PE)</th>
                 <td class="border-l border-r text-ctr">{{($data->umbral_isquemico === "true")?"si":"no"}}</td>
-                <td class="border-l border-r text-ctr"> No </td>
+                <td class="border-l border-r text-ctr"> No o > 10.7 MEts </td>
                 <td class="border-l border-r text-ctr @if($data->umbral_isquemico === "false") bg-success @else  @endif">@if($data->umbral_isquemico === "false") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr"> 5 a 10.7 METs</td>
                 <td class="border-l border-r text-ctr"></td>
-                <td class="border-l border-r text-ctr"></td>
-                <td class="border-l border-r text-ctr">Si</td>
+                <td class="border-l border-r text-ctr">&lt;5 METs</td>
                 <td class="border-l border-r text-ctr @if($data->umbral_isquemico === "true") bg-danger @else  @endif">@if($data->umbral_isquemico === "true") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
               <tr>
@@ -433,9 +430,9 @@
                 <td class="border-l border-r text-ctr">{{($data->infra_st_mayor2_5mets === "false")?"n":"s"}}</td>
                 <td class="border-l border-r text-ctr">No</td>
                 <td class="border-l border-r text-ctr @if($data->infra_st_mayor2_5mets === "false") bg-success @else  @endif">@if($data->infra_st_mayor2_5mets === "false") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
-                <td class="border-l border-r text-ctr">Fc > 5METs</td>
+                <td class="border-l border-r text-ctr"> > 5METs</td>
                 <td class="border-l border-r text-ctr @if($data->infra_st_mayor2_5mets === "m_5") bg-warning @else  @endif">@if($data->infra_st_mayor2_5mets === "m_5") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
-                <td class="border-l border-r text-ctr">Fc &lt; 5Mets</td>
+                <td class="border-l border-r text-ctr"> &lt; 5Mets</td>
                 <td class="border-l border-r text-ctr @if($data->infra_st_mayor2_5mets === "me_5") bg-danger @else  @endif"> @if($data->infra_st_mayor2_5mets === "me_5") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
               <tr>
@@ -452,11 +449,11 @@
                 <th scope="row">Índice TA en esfuerzo </th>
                 <td class="border-l border-r text-ctr">{{$data->indice_ta_esf}}</td>
                 <td class="border-l border-r text-ctr"> >1.22 </td>
-                <td class="border-l border-r text-ctr @if($data->indice_ta_esf>=1.22) bg-success @else  @endif"> >1.22 @if($data->indice_ta_esf>=1.22) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->indice_ta_esf>=1.22) bg-success @else  @endif"> @if($data->indice_ta_esf>=1.22) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr">&lt;1.22</td>
-                <td class="border-l border-r text-ctr @if($data->indice_ta_esf<1.22) bg-danger @else  @endif"> &lt;1.22 @if($data->indice_ta_esf<1.22) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->indice_ta_esf<1.22) bg-danger @else  @endif"> @if($data->indice_ta_esf<1.22) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
               <tr>
                 <th scope="row">% alcanzado de la FC predicha</th>
@@ -514,7 +511,7 @@
                 <td class="border-l border-r text-ctr"> >5</td>
                 <td class="border-l border-r text-ctr @if($data->duke>5) bg-success @else  @endif">@if($data->duke>5) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-l border-r text-ctr"> 5 a (-11) </td>
-                <td class="border-l border-r text-ctr @if($data->duke>(-11) && $data->duke<5) bg-warning @else  @endif">5 a (-11) @if($data->duke>(-11) && $data->duke<5) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->duke>(-11) && $data->duke<5) bg-warning @else  @endif"> @if($data->duke>(-11) && $data->duke<5) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                   <td class="border-l border-r text-ctr"> &lt;(-11)</td>
                 <td class="border-l border-r text-ctr @if($data->duke<(-11)) bg-danger @else  @endif"> @if($data->duke<(-11)) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
@@ -612,9 +609,9 @@
                 </table>
             </div>
         </div>
-        <div class="mt-0 mb-0">
-          <p class="mb-0  f-bold f-10">Fc Diana :<span class="ml-1 f-normal">{{$data->fc_borg_12}} lpm</span> <span class="ml-1 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>
-            <span class="ml-1 f-bold">{{$data->fc_diana_str}}:<span class="ml-1 f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span></span></p>
+        <div class="m-t-1 mb-0">
+          <p class="mb-0  f-bold f-10 m-t-1">Fc Diana :<span class="ml-1 f-normal">{{$data->fc_borg_12}} lpm</span> <span class="ml-3 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>
+            <span class="ma-bo f-bold">{{$data->fc_diana_str}}:<span class="ml- f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span></span></p>
           <p class="f-bold f-10 f-10">Carga Inicial: <span class="f-normal">{{$data->carga_inicial}} Watts</span></p>
       </div>
         <div class="medio m-t-1">
