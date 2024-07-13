@@ -222,13 +222,14 @@
         <p class="f-bold f-15 text-center mb-0 mt-0">Reporte de Prueba Ergométrica</p>
         <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
         <div class="medio">
-          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
+          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
         </div>
         <br>
           <p  class="f-bold mt-2 mb-0 ">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span><span class="f-bold ml-2">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
             <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
             <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
-          <p class="f-bold mt-0 mb-1">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span>  <span class="f-bold ml-3">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></span></p>
+          <p class="f-bold mt-0 mb-0">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span> </p>
+          <p><span class="f-bold mt-0 mb-1">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></span></p>
       </div>
     </header>
     <main class="ma-t-0">
@@ -242,7 +243,7 @@
           <span class="f-bold ml-2">  Bruce: <span  class="f-normal">{{$data->bruce}}</span></span> <span class=f-bold"">  Balke: <span  class="f-normal">{{$data->balke}}</span></span>
           <span class="f-bold ml-2">  Prueba Submáxima: <span  class="f-normal">{{$data->pba_submax}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold ">  1a vez: <span  class="f-normal">{{$data->pruebaIngreso}}</span></span>
           <span class="f-bold ml-5">  Fase II: <span  class="f-normal">{{$data->pruebaFinFase2}}</span></span>  <span class="f-bold ml-5">  Fase III: <span  class="f-normal">{{$data->pruebaFinFase3}}</span></span></p>
-          <p class="mt-0 mb-0"> <span class="f-bold">  FCmax(teórica): <span  class="f-normal">{{$data->fc_max_calc}}</span></span>  <span class="f-bold ml-5">  FC(85%): <span  class="f-normal">{{$data->fc_85}}</span></span>
+          <p class="mt-0 mb-0"> <span class="f-bold">  FCmax(teórica): <span  class="f-normal">{{$data->fc_max_calc}}</span></span>  <span class="f-bold ml-5">  FC(85%): <span  class="f-normal">{{round($data->fc_85)}}</span></span>
           <span class="f-bold ml-5">  % FCmax alcanzado: <span  class="f-normal">{{round($data->fc_max_alcanzado)}}</span></span></p>
       </div>
       <table class="tabla text-lft border-t text-center mt-2">
@@ -350,9 +351,9 @@
       <span class="f-bold">  Suspensión de la prueba : <span class="f-normal">{{$data->motivoSuspension}}</span></span></p> <p class="mt-0 mb-0"> <span class="f-bold">  METs Teórico: <span  class="f-normal">{{round($data->mets_teorico_general,2)}}</span></span>
       <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
       <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
-      <span class="f-bold">  TASmax/TASbasal: <span  class="f-normal">{{round($data->indice_tas,2)}}</span></span>  <span class="f-bold">  IEM: <span  class="f-normal">{{number_format($data->iem*100,2)}}</span></span>
-      <span class="f-bold">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold">  Rec TAS (3/1): <span  class="f-normal">{{round($data->tas_3er_min/$data->tas_1er_min,2)}}</span></span>
-      <span class="f-bold">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
+      <span class="f-bold ml-3">  TASmax/TASbasal: <span  class="f-normal">{{sprintf("%.2f", floor($data->indice_tas * 100) / 100);}}</span></span>  <span class="f-bold ml-3">  IEM: <span  class="f-normal">{{number_format($data->iem*100,2)}}</span></span>
+      <span class="f-bold ml-3">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold ml-3">  Rec TAS (3/1): <span  class="f-normal">{{sprintf("%.2f", floor(($data->tas_3er_min/$data->tas_1er_min) * 100) / 100);}}</span></span>
+      <span class="f-bold ml-5">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
   <div class="paciente mt-2">
     <div class="contenedor ">
