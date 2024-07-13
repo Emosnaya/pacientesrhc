@@ -186,7 +186,7 @@
           <p class="f-bold f-17 text-center mb-0 mt-0">Estratificación de riesgo Cardiovascular</p>
           <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
           <div class="medio">
-            <p class="text-sm texto-izquierda mb-0 f-bold">Fecha Estratificación: {{ $data->estrati_fecha}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
+            <p class="text-sm texto-izquierda mb-0 f-bold">Fecha Estratificación: {{ date('d/m/Y',strtotime($data->estrati_fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
           </div>
           <br>
             <p  class="f-bold mb-0">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span>
