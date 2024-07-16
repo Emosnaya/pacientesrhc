@@ -220,6 +220,9 @@
     border-bottom: 3px solid black; /* Línea sólida negra */
     z-index: 0; /* Detrás del título */
   }
+  .bck-gray{
+    background-color: #DDDEE1  ;
+  }
     </style>
   </head>
   <body>
@@ -228,22 +231,21 @@
             <p class="f-bold f-15 text-center mb-0 mt-0">Rehabilitación Cardiaca</p>
             <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
             <div class="medio">
-              <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
+              <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
             </div>
             <br>
               <p  class="f-bold mt-2 mb-0 f-15">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span></p>
-              <p class="mt-0 mb-0"><span class="f-bold">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
-              <span class="f-bold ml-3">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold ml-3">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
-              <span class="f-bold ml-3">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>  <span class="f-bold ml-3">  Teléfono: <span  class="f-normal">{{$paciente->telefono}}</span></span>
-              <span class="f-bold ml-3">  Peso: <span  class="f-normal">{{$paciente->peso}}</span></span> <span class="f-bold ml-3">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
+              <p class="mt-0 mb-0"> <span class="f-bold">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span><span class="f-bold ml-3">  Peso (Kg) : <span class="f-normal">{{$paciente->peso}}</span></span> 
+                <span class="f-bold ml-3">  Talla (m): <span  class="f-normal">{{$paciente->talla}}</span></span> <span class="f-bold ml-3">  IMC (kg/m2):: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
+              <span class="f-bold ml-3">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>  <span class="f-bold ml-3">  Estado Civil: <span  class="f-normal">{{$paciente->estadoCivil}}</span></span>
               <span class="f-bold ml-3">  Profesión: <span  class="f-normal">{{$paciente->profesion}}</span></span>  <span class="f-bold">  F.Nacimiento: <span  class="f-normal">{{$paciente->fechaNacimiento}}</span></span>
               <span class="f-bold ml-3">  Ingreso(1vez): <span  class="f-normal">{{$data->fecha_1vez}}</span></span> <span class="f-bold ml-3">  Estratificación: <span  class="f-normal">{{$data->estratificacion}}</span></span></p>
-              <p class="f-bold mt-0 mb-0"> Domicilio: <span  class="f-normal">{{$paciente->domicilio}}</span></p>
+              <p class="f-bold mt-0 mb-0"> Domicilio: <span  class="f-normal">{{$paciente->domicilio}}</span> <span class="f-bold ml-3">  Teléfono: <span  class="f-normal">{{$paciente->telefono}}</span></span></p>
               <p class="f-bold mt-0 mb-0">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></p>  <p class="f-bold mt-0"><span class="f-bold">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span></span></p>
           </div>
     </header>
     <main class="m-t-1">
-        <table class="tabla text-lft border-t text-center mt-1 table-striped">
+        <table class="tabla text-lft border-t text-center mt-1 table-striped bck-gray ">
             <tbody>
                 <tr class="">
                   <td class="border-r">IM Anterior: <span class="f-bold">{{$data->imAnterior===null?"n":$data->imAnterior}}</span></td>
@@ -270,14 +272,14 @@
                   <td class="border-r"></td>
                 </tr>
                 <tr>
-                  <td class="border-r">I. Arterial Perif.: <span class="f-bold">{{$data->insuficiencia_art_per===null?"n":"s"}}</span></td>
-                  <td class="border-r">V. Mitral: <span class="f-bold">{{$data->v_mitral===null?"n":"s"}}</span></td>
-                  <td class="border-r">V. Aórtica: <span class="f-bold">{{$data->v_aortica===null?"n":"s"}}</span></td>
-                  <td class="border-r">V. Tricúspide: <span class="f-bold">{{$data->v_tricuspide===null?"n":"s"}}</span></td>
+                  <td class="border-r">I. Arterial Perif.: <span class="f-bold">{{$data->insuficiencia_art_per===null||$data->insuficiencia_art_per===0?"n":"s"}}</span></td>
+                  <td class="border-r">V. Mitral: <span class="f-bold">{{$data->v_mitral===null||$data->v_mitral===0?"n":"s"}}</span></td>
+                  <td class="border-r">V. Aórtica: <span class="f-bold">{{$data->v_aortica===null||$data->v_aortica===0?"n":"s"}}</span></td>
+                  <td class="border-r">V. Tricúspide: <span class="f-bold">{{$data->v_tricuspide===null||$data->v_tricuspide===0?"n":"s"}}</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r" >V. Pulmonar: <span class="f-bold">{{$data->v_pulmonar===null?"n":"s"}}</span></td>
-                  <td class="border-r" >Congénitos: <span class="f-bold">{{$data->congenitos===null?"n":"s"}}</span></td>
+                  <td class="border-r" >V. Pulmonar: <span class="f-bold">{{$data->v_pulmonar===null||$data->v_pulmonar===0?"n":"s"}}</span></td>
+                  <td class="border-r" >Congénitos: <span class="f-bold">{{$data->congenitos===null||$data->congenitos===0?"n":"s"}}</span></td>
                   <td class="border-r" ></td>
                   <td ></td>
                 </tr>
@@ -320,7 +322,7 @@
               <h2 class="h5 titulo">Tratamiento</h2>
               <div class="linea-pu"></div>
             </div>
-            <p  class="f-bold m-t-0 f-10 mb-1">Tratamiento: <span class="f-normal">{{ $data->tratamiento}}</span></p>
+            <p  class="f-bold m-t-0 f-10 mb-1 bck-gray">Tratamiento: <span class="f-normal">{{ $data->tratamiento}}</span></p>
         </div>
         <div class="paciente mt-2 mb-0">
             <div class="contenedor ">
@@ -334,16 +336,16 @@
             <h2 class="h5 titulo">Laboratorios</h2>
             <div class="linea-pu"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
                 <tr class="">
-                  <td class="border-r">Fecha BH: <span class="f-bold">{{$data->bh_fecha===null?"no tiene":$data->bh_fecha}}</span></td>
+                  <td class="border-r">Fecha BH: <span class="f-bold">{{$data->bh_fecha===null?"no tiene":date('d/m/Y',strtotime($data->bh_fecha))}}</span></td>
                   <td class="border-r">Hb: <span class="f-bold">{{$data->hb===null||$data->hb==0?"n":$data->hb}}</span></td>
                   <td class="border-r">Leuc: <span class="f-bold">{{$data->leucos===null||$data->leucos==0?"n":$data->leucos}}</span></td>
                   <td class="border-r">Plaq: <span class="f-bold">{{$data->plaquetas===null||$data->plaquetas==0?"n":$data->plaquetas}}</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r">Fecha QS: <span class="f-bold">{{$data->qs===null?"n":$data->qs}}</span></td>
+                  <td class="border-r">Fecha QS: <span class="f-bold">{{$data->qs===null?"n":date('d/m/Y',strtotime($data->qs))}}</span></td>
                   <td class="border-r">Gluc.: <span class="f-bold">{{$data->glucosa===null||$data->glucosa==0?"n":$data->glucosa}}</span></td>
                   <td class="border-r">Cr.: <span class="f-bold">{{$data->creatinina===null||$data->creatinina==0?"n":$data->creatinina}}</span></td>
                   <td class="border-r">A. Úr.: <span class="f-bold">{{$data->ac_unico===null||$data->ac_unico===0?"n":$data->ac_unico}}</span></td>
@@ -375,28 +377,28 @@
         <table class="tabla text-lft border-t text-center m-t-0 table-striped">
             <tbody>
                 <tr class="">
-                  <td class="border-r">Fecha: <span class="f-bold">{{$data->ecg_fecha===null?"no tiene":$data->ecg_fecha}}</span></td>
+                  <td class="border-r">Fecha: <span class="f-bold">{{$data->ecg_fecha===null?"no tiene": date('d/m/Y',strtotime($data->ecg_fecha))}}</span></td>
                   <td class="border-r">Ritmo: <span class="f-bold">{{$data->ritmo===null?"n":$data->ritmo}}</span></td>
                   <td class="border-r">aP: <span class="f-bold">{{$data->aP===null||$data->aP==0?"n":$data->aP}}</span></td>
-                  <td class="border-r">QRS: <span class="f-bold">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}}</span></td>
+                  <td class="border-r">PR: <span class="f-bold">{{$data->pr===null||$data->pr===0?"n":$data->pr}} ms</span></td>
                 </tr>
                 <tr>
                   <td class="border-r">Anterior/Septal: <span class="f-bold">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
-                  <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":$data->fc_ecog}}</span></td>
+                  <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":sprintf("%.2f", floor($data->fc_ecog * 100) / 100);}} lpm</span></td>
                   <td class="border-r">aQRS: <span class="f-bold">{{$data->aQRS===null||$data->aQRS==0?"n":$data->aQRS}}</span></td>
-                  <td class="border-r">QTm: <span class="f-bold">{{$data->qtm===null||$data->qtm===0?"n":$data->qtm}}</span></td>
+                  <td class="border-r">QRS: <span class="f-bold">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}} ms</span></td>
                 </tr>
                 <tr>
                 <td class="border-r">Inferior: <span class="f-bold">{{$data->q_inf===null||$data->q_inf===0?"n":"s"}}</span></td>
-                  <td class="border-r">PR: <span class="f-bold">{{$data->pr===null||$data->pr===0?"n":$data->pr}}</span></td>
+                <td class="border-r"></td>
                   <td class="border-r">aT: <span class="f-bold">{{$data->aT===0||$data->aT===null?"n":$data->aT}}</span></td>
-                  <td class="border-r">QTc: <span class="f-bold">{{$data->qtc===0||$data->qtc===null?"n":$data->qtc}}</span></td>
+                  <td class="border-r">QTm: <span class="f-bold">{{$data->qtm===null||$data->qtm===0?"n":sprintf("%.2f", floor($data->qtm * 100) / 100)}} ms</span></td>
                 </tr>
                 <tr>
                     <td class="border-r">Lateral: <span class="f-bold">{{$data->q_lat===0||$data->q_lat===null?"n":"s"}}</span></td>
                     <td class="border-r"></td>
                   <td class="border-r"></td>
-                  <td class="border-r"></td>
+                  <td class="border-r">QTc: <span class="f-bold">{{$data->qtc===0||$data->qtc===null?"n":sprintf("%.2f", floor($data->qtc * 100) / 100);}} ms</span></td>
                 </tr>
               </tbody>
         </table>
@@ -405,10 +407,10 @@
             <h2 class="h5 titulo">Ecocardiografia</h2>
             <div class="linea-eco"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
                 <tr class="">
-                  <td class="border-r">Fecha: <span class="f-bold">{{$data->eco_fecha===null?"no tiene":$data->eco_fecha}}</span></td>
+                  <td class="border-r">Fecha: <span class="f-bold">{{$data->eco_fecha===null?"no tiene": date('d/m/Y',strtotime($data->eco_fecha))}}</span></td>
                   <td class="border-r">FE: <span class="f-bold">{{$data->fe_por===null?"n":$data->fe_por}}%</span></td>
                   <td class="border-r">Rel. E/A: <span class="f-bold">{{$data->rel_e_a===null||$data->rel_e_a==0?"n":$data->rel_e_a}}</span></td>
                   <td class="border-r">DDVI: <span class="f-bold">{{$data->dd_por===null||$data->dd_por==0?"n":$data->dd_por}}</span></td>
@@ -474,10 +476,10 @@
                 <h2 class="h5 titulo">Cateterismo</h2>
                 <div class="linea-pu"></div>
             </div>
-            <p  class="f-bold m-t-0 f-10 mb-0">Fecha: <span class="f-normal">{{ $data->catet_fecha===null?"no tiene":$data->catet_fecha}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->catet_fe===null?0:$data->catet_fe}}</span></span>
+            <p  class="f-bold m-t-0 f-10 mb-0 bck-gray">Fecha: <span class="f-normal">{{ $data->catet_fecha===null?"no tiene":$data->catet_fecha}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->catet_fe===null?0:$data->catet_fe}}</span></span>
                 <span class="f-bold ml-5">  D2VI: <span class="f-normal">{{$data->catet_d2vi===null||$data->catet_d2vi===0?"n":$data->catet_d2vi}}</span></span> <span class="f-bold ml-5">  Tronco: <span class="f-normal">{{$data->tco===null?0:$data->tco}}</span></span></p>
-                <table class="tabla text-lft border-t text-center mt-0">
-                    <tbody class="text-lft">
+                <table class="tabla text-lft border-t text-center mt-0 bck-gray">
+                    <tbody class="text-lft ">
                       <tr>
                         <td scope=" border-b">Descendiente anterior</td>
                         <td class="border-t border-r text-ctr">DA(prox): {{$data->catet_da_prox===null||$data->catet_da_prox===0?"n":$data->catet_da_prox}}%</td>
@@ -485,7 +487,7 @@
                         <td class="border-t text-ctr">DA(distal): {{$data->catet_da_dist===null||$data->catet_da_dist===0?"n":$data->catet_da_dist}}%</td>
                         <td class="border-t text-ctr">1aD: {{$data->catet_1a_d===null||$data->catet_1a_d===0?"n":$data->catet_1a_d}}%</td>
                         <td class="border-t text-ctr">2aD: {{$data->catet_1a_d===null||$data->catet_1a_d===0?"n":$data->catet_1a_d}}%</td>
-                        <td class="border-t text-ctr">Otra: {{$data->catet_otros}}</td>
+                        <td class="border-t text-ctr">Otro: {{$data->catet_otros}}</td>
                       </tr>
                       <tr>
                         <td scope="  border-b">Circunfleja</td>
@@ -509,12 +511,7 @@
                 </table>
                 <p class="f-bold f-15 mb-0">Estudios: <span class="f-normal">{{$data->estudios}}</span></p>
                 <p class="f-bold f-15 mb-0">Plan: <span class="f-normal">{{$data->plan}}</span></p>
-                <div class="signature m-t-2 mb-0">
-                    <div class="line"></div>
-                </div>
-                <div class="text mt-0">
-                  <span class="txt">Dr.  {{$user->nombre . "   " . $user->apellidoPat}}</span>
-                </div>   
+                <span class="f-bold mt-0 mb-0 f-15">Realizó:</span><span class="f-15 ml-2">Dr.  {{$user->nombre . "   " . $user->apellidoPat}}</span>
     </main>
   </body>   
 </html>

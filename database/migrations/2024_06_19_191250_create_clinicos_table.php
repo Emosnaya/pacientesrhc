@@ -29,7 +29,7 @@ return new class extends Migration
             $table->date("anginaEstabale")->nullable();
             $table->date("choque_card")->nullable();
             $table->date("m_subita")->nullable();
-            $table->boolean("clase_f_ccs")->nullable();
+            $table->double("clase_f_ccs")->nullable();
             $table->boolean("falla_cardiaca")->nullable();
             $table->boolean("sobreviviente_cpr")->nullable();
             $table->boolean("incapacidad_entrenar")->nullable();
