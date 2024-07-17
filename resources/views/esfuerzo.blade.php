@@ -401,7 +401,6 @@
   <br>
   <br>
   <br>
-  <br>
   <div class="paciente mt-0">
     <p class="f-bold text-sm">Tipo de isquemia: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
     <div class="contenedor ">
@@ -410,12 +409,12 @@
     </div>
     <p  class="f-bold m-t-07">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
   </div>
-  <div class="paciente mt-0">
+  <div class="paciente mt-0 mb-0">
     <div class="contenedor ">
       <h2 class="h5 titulo m-t-07">Puntuaciones</h2>
       <div class="linea-pu"></div>
     </div>
-    <p  class="f-bold m-t-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
+    <p  class="f-bold m-t-0 mb-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
       <span class="f-bold">  Veteranos (VA): <span class="f-normal">{{round($data->veteranos,2)}}</span></span></p>
   </div>
   <div class="contenedor ">
