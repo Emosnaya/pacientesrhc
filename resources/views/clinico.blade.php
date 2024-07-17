@@ -228,7 +228,7 @@
   <body>
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
-            <p class="f-bold f-15 text-center mb-0 mt-0">Rehabilitación Cardiaca</p>
+            <p class="f-bold f-15 text-center mb-0 mt-0">Expediente Clínico</p>
             <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
             <div class="medio">
               <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
@@ -239,7 +239,7 @@
                 <span class="f-bold ml-3">  Talla (m): <span  class="f-normal">{{$paciente->talla}}</span></span> <span class="f-bold ml-3">  IMC (kg/m2):: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
               <span class="f-bold ml-3">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>  <span class="f-bold ml-3">  Estado Civil: <span  class="f-normal">{{$paciente->estadoCivil}}</span></span>
               <span class="f-bold ml-3">  Profesión: <span  class="f-normal">{{$paciente->profesion}}</span></span>  <span class="f-bold">  F.Nacimiento: <span  class="f-normal">{{$paciente->fechaNacimiento}}</span></span>
-              <span class="f-bold ml-3">  Ingreso(1vez): <span  class="f-normal">{{$data->fecha_1vez}}</span></span> <span class="f-bold ml-3">  Estratificación: <span  class="f-normal">{{$data->estratificacion}}</span></span></p>
+              <span class="f-bold ml-3">  Ingreso(1vez): <span  class="f-normal">{{date('d/m/Y',strtotime($data->fecha_1vez))}}</span></span> <span class="f-bold ml-3">  Estratificación: <span  class="f-normal">{{ date('d/m/Y',strtotime($data->estratificacion))}}</span></span></p>
               <p class="f-bold mt-0 mb-0"> Domicilio: <span  class="f-normal">{{$paciente->domicilio}}</span> <span class="f-bold ml-3">  Teléfono: <span  class="f-normal">{{$paciente->telefono}}</span></span></p>
               <p class="f-bold mt-0 mb-0">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></p>  <p class="f-bold mt-0"><span class="f-bold">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span></span></p>
           </div>
@@ -248,26 +248,26 @@
         <table class="tabla text-lft border-t text-center mt-1 table-striped bck-gray ">
             <tbody>
                 <tr class="">
-                  <td class="border-r">IM Anterior: <span class="f-bold">{{$data->imAnterior===null?"n":$data->imAnterior}}</span></td>
-                  <td class="border-r">IM Septal: <span class="f-bold">{{$data->imSeptal===null?"n":$data->imSeptal}}</span></td>
-                  <td class="border-r">IM Apical: <span class="f-bold">{{$data->imApical===null?"n":$data->imApical}}</span></td>
-                  <td class="border-r">IM Lateral: <span class="f-bold">{{$data->imLateral===null?"n":$data->imLateral}}</span></td>
+                  <td class="border-r">IM Anterior: <span class="f-bold">{{$data->imAnterior===null?"n": date('d/m/Y',strtotime($data->imAnterior))}}</span></td>
+                  <td class="border-r">IM Septal: <span class="f-bold">{{$data->imSeptal===null?"n":date('d/m/Y',strtotime($data->imSeptal))}}</span></td>
+                  <td class="border-r">IM Apical: <span class="f-bold">{{$data->imApical===null?"n":date('d/m/Y',strtotime($data->imApical))}}</span></td>
+                  <td class="border-r">IM Lateral: <span class="f-bold">{{$data->imLateral===null?"n":date('d/m/Y',strtotime($data->imLateral))}}</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r">IM Inferior: <span class="f-bold">{{$data->imInferior===null?"n":$data->imInferior}}</span></td>
-                  <td class="border-r">IM del VD: <span class="f-bold">{{$data->imdelVD===null?"n":$data->imdelVD}}</span></td>
+                  <td class="border-r">IM Inferior: <span class="f-bold">{{$data->imInferior===null?"n":date('d/m/Y',strtotime($data->imInferior))}}</span></td>
+                  <td class="border-r">IM del VD: <span class="f-bold">{{$data->imdelVD===null?"n":date('d/m/Y',strtotime($data->imdelVD))}}</span></td>
                   <td class="border-r">A. Inestable: <span class="f-bold">{{$data->anginaInestabale===null?"n":$data->anginaInestabale}}</span></td>
                   <td class="border-r">A. Estable: <span class="f-bold">{{$data->anginaEstabale===null?"n":$data->anginaEstabale}}</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r">Ch. Cardiogénico: <span class="f-bold">{{$data->choque_card===null?"n":$data->choque_card}}</span></td>
-                  <td class="border-r">Muerte Súbita: <span class="f-bold">{{$data->m_subita===null?"n":$data->m_subita}}</span></td>
+                  <td class="border-r">Ch. Cardiogénico: <span class="f-bold">{{$data->choque_card===null?"n":date('d/m/Y',strtotime($data->choque_card))}}</span></td>
+                  <td class="border-r">Muerte Súbita: <span class="f-bold">{{$data->m_subita===null?"n":date('d/m/Y',strtotime($data->m_subita))}}</span></td>
                   <td class="border-r"></td>
                   <td class="border-r"></td>
                 </tr>
                 <tr>
                   <td class="border-r">Falla Cardiaca: <span class="f-bold">{{$data->falla_cardiaca===null||$data->falla_cardiaca===0?"n":"s"}}</span></td>
-                  <td class="border-r">CRVC: <span class="f-bold">{{$data->crvc===null?"n":$data->crvc}}</span></td>
+                  <td class="border-r">CRVC: <span class="f-bold">{{$data->crvc===null?"n":date('d/m/Y',strtotime($data->crvc))}}</span></td>
                   <td class="border-r">CRVC (HV): <span class="f-bold">{{$data->crvc_hemoductos===null?"n":$data->crvc_hemoductos}}</span></td>
                   <td class="border-r"></td>
                 </tr>
@@ -428,8 +428,8 @@
             <h2 class="h5 titulo">Medicina Nuclear</h2>
             <div class="linea-des"></div>
         </div>
-        <p  class="f-bold m-t-0 f-10 mb-0">Fecha: <span class="f-normal">{{ $data->mn_fecha===null?"no tiene":$data->mn_fecha}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->fe_por_mn}}</span></span>
-            <span class="f-bold ml-5">  VRIE: <span class="f-normal">{{$data->vrie===null||$data->vrie===0?"n":"s"}}</span></span> <span class="f-bold ml-5">  VRIE Fecha: <span class="f-normal">{{$data->vrie_fcha===null?"n":$data->vrie_fcha}}</span></span></p>
+        <p  class="f-bold m-t-0 f-10 mb-0">Fecha: <span class="f-normal">{{ $data->mn_fecha===null?"no tiene":date('d/m/Y',strtotime($data->mn_fecha))}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->fe_por_mn}}</span></span>
+            <span class="f-bold ml-5">  VRIE: <span class="f-normal">{{$data->vrie===null||$data->vrie===0?"n":"s"}}</span></span> <span class="f-bold ml-5">  VRIE Fecha: <span class="f-normal">{{$data->vrie_fcha===null?"n":date('d/m/Y',strtotime($data->vrie_fcha))}}</span></span></p>
             <table class="tabla text-lft border-t text-center mt-0">
                 <thead class="border-t">
                   <tr>
@@ -476,7 +476,7 @@
                 <h2 class="h5 titulo">Cateterismo</h2>
                 <div class="linea-pu"></div>
             </div>
-            <p  class="f-bold m-t-0 f-10 mb-0 bck-gray">Fecha: <span class="f-normal">{{ $data->catet_fecha===null?"no tiene":$data->catet_fecha}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->catet_fe===null?0:$data->catet_fe}}</span></span>
+            <p  class="f-bold m-t-0 f-10 mb-0 bck-gray">Fecha: <span class="f-normal">{{ $data->catet_fecha===null?"no tiene":date('d/m/Y',strtotime($data->catet_fecha))}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->catet_fe===null?0:$data->catet_fe}}</span></span>
                 <span class="f-bold ml-5">  D2VI: <span class="f-normal">{{$data->catet_d2vi===null||$data->catet_d2vi===0?"n":$data->catet_d2vi}}</span></span> <span class="f-bold ml-5">  Tronco: <span class="f-normal">{{$data->tco===null?0:$data->tco}}</span></span></p>
                 <table class="tabla text-lft border-t text-center mt-0 bck-gray">
                     <tbody class="text-lft ">
