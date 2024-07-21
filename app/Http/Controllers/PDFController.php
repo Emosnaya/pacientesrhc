@@ -6,6 +6,7 @@ use App\Models\Clinico;
 use App\Models\Esfuerzo;
 use App\Models\Estratificacion;
 use App\Models\Paciente;
+use App\Models\ReporteFinal;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -42,5 +43,17 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user'));
         return $pdf->stream('Clinico.pdf'); 
+    }
+    public function reportePdf(Request $request)
+    {
+        $data = ReporteFinal::find($request->id);
+        $esfuerzoUno = Esfuerzo::find($data->pe_1);
+        $esfuerzoDos = Esfuerzo::find($data->pe_2);
+        $paciente =  Paciente::find($data->paciente_id);
+        $user = User::find($data->user_id);
+        $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
+
+        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos'));
+        return $pdf->stream('Reporte_Final.pdf'); 
     }
 }

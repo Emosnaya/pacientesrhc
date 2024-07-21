@@ -221,6 +221,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->icc =  $icc;
         $pesfuerzo->FEVI =  $data['fevi'];
         $pesfuerzo->metodo = $data['metodo'];
+        $pesfuerzo->ectopia_ventricular =($data['ectopia'] == 'true') ? 1:0;
         $pesfuerzo->disfuncionDias = ($data['disfuncion'] == 'true') ? 1:0;
         $pesfuerzo->nyha = $data['nya'];
         $pesfuerzo->ccs = $data['ccs'];
@@ -373,6 +374,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->cv_u_isq =  $cvUisq;
         $pesfuerzo->conclusiones =  $data['comentarios'];
         $pesfuerzo->fecha =  $data['fecha'];
+        $pesfuerzo->recup_tas = $tasMax/$tasBasal;
 
         $pesfuerzo->user_id = Auth::user()->id;
         $pesfuerzo->tipo_exp = 1;
@@ -720,6 +722,7 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->cv_u_isq =  $cvUisq;
         $esfuerzoFind->conclusiones =  $request['conclusiones'];
         $esfuerzoFind->fecha =  $request['fecha'];
+        $esfuerzoFind->recup_tas = $tasMax/$tasBasal;
         $esfuerzoFind->tipo_exp = 1;
         
         $esfuerzoFind->save();

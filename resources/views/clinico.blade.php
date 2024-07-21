@@ -241,7 +241,7 @@
               <span class="f-bold ml-3">  Profesión: <span  class="f-normal">{{$paciente->profesion}}</span></span>  <span class="f-bold">  F.Nacimiento: <span  class="f-normal">{{$paciente->fechaNacimiento}}</span></span>
               <span class="f-bold ml-3">  Ingreso(1vez): <span  class="f-normal">{{date('d/m/Y',strtotime($data->fecha_1vez))}}</span></span> <span class="f-bold ml-3">  Estratificación: <span  class="f-normal">{{ date('d/m/Y',strtotime($data->estratificacion))}}</span></span></p>
               <p class="f-bold mt-0 mb-0"> Domicilio: <span  class="f-normal">{{$paciente->domicilio}}</span> <span class="f-bold ml-3">  Teléfono: <span  class="f-normal">{{$paciente->telefono}}</span></span></p>
-              <p class="f-bold mt-0 mb-0">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></p>  <p class="f-bold mt-0"><span class="f-bold">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span></span></p>
+              <p class="f-bold mt-0 mb-0">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></p>
           </div>
     </header>
     <main class="m-t-1">
@@ -322,7 +322,7 @@
               <h2 class="h5 titulo">Tratamiento</h2>
               <div class="linea-pu"></div>
             </div>
-            <p  class="f-bold m-t-0 f-10 mb-1 bck-gray">Tratamiento: <span class="f-normal">{{ $data->tratamiento}}</span></p>
+            <p  class="f-bold m-t-0 f-10 mb-1 bck-gray">Tratamiento: <span class="f-normal">{{ $paciente->medicamentos}}</span></p>
         </div>
         <div class="paciente mt-2 mb-0">
             <div class="contenedor ">

@@ -99,6 +99,7 @@ return new class extends Migration
             $table->string('tipoArritmias')->nullable();
             $table->boolean('positiva')->nullable();
             $table->string('tipoCambioElectrico')->nullable();
+            $table->boolean('ectopia_ventricular')->nullable();
             $table->double('MaxInfra')->nullable();
             $table->double('veteranos')->nullable();
             $table->double('duke')->nullable();
@@ -165,12 +166,13 @@ return new class extends Migration
             $table->double('vel_max_mh')->nullable();
             $table->double('vel_u_isq_mh')->nullable();
             $table->double('ch_borg_12')->nullable();
+            $table->double('recup_tas')->nullable();
             $table->double('ch_max')->nullable();
             $table->double('ch_u_isq')->nullable();
             $table->double('cv_borg_12')->nullable();
             $table->double('cv_max')->nullable();
             $table->double('cv_u_isq')->nullable();
-            $table->string('conclusiones')->nullable();
+            $table->string('conclusiones',450)->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('paciente_id')->constrained()->onDelete('cascade');
             $table->integer('tipo_exp')->nullable();

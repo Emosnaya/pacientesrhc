@@ -86,6 +86,7 @@ return new class extends Migration
             $table->string('riesgo_global')->nullable();
             $table->string('grupo')->nullable();
             $table->integer('semanas')->nullable();
+            $table->integer('sesiones')->nullable();
             $table->integer('borg')->nullable();
             $table->string('fc_diana_str')->nullable();
             $table->double('karvonen')->nullable();
@@ -94,7 +95,7 @@ return new class extends Migration
             $table->double('fc_diana')->nullable();
             $table->double('dp_diana')->nullable();
             $table->double('carga_inicial')->nullable();
-            $table->string('comentarios')->nullable();
+            $table->string('comentarios',450)->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('paciente_id')->constrained()->onDelete('cascade');
             $table->integer('tipo_exp')->nullable();
