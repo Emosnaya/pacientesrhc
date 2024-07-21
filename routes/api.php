@@ -7,6 +7,7 @@ use App\Http\Controllers\EstratificacionController;
 use App\Http\Controllers\InfoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PDFController;
+use App\Http\Controllers\ReporteFinalController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,12 +36,15 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::apiResource('/estratificacion',EstratificacionController::class);
     Route::apiResource('/users',UserController::class);
     Route::apiResource('/clinico',ClinicoController::class);
+    Route::apiResource('/reporte',ReporteFinalController::class);
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
+    Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::get('/clinicos/{id}',[InfoController::class,'clinicos']);
     Route::get('/esfuerzos/{id}',[InfoController::class,'esfuerzos']);
     Route::get('/estratificaciones/{id}',[InfoController::class,'estratificaciones']);
+    Route::get('/reportes/{id}',[InfoController::class,'reportes']);
 });
 
 Route::post('/registro', [AuthController::class, 'signup']);

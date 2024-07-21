@@ -83,6 +83,7 @@ class EstratificacionController extends Controller
         $estratificacion->pe_fecha = $data['pe'];
         $estratificacion->estrati_fecha = $data['estrati'];
         $estratificacion->c_isquemia = $data['cIsquemia'];
+        $estratificacion->sesiones =$data['sesiones'];
         $estratificacion->im = ($data['im'] == 'true') ? 1:0;
         $estratificacion->ima = ($data['ima'] == 'true') ? 1:0;
         $estratificacion->imas = ($data['imas'] == 'true') ? 1:0;
@@ -231,6 +232,7 @@ class EstratificacionController extends Controller
         $expedienteFind->pe_fecha = $request['pe_fecha'];
         $expedienteFind->estrati_fecha = $request['estrati_fecha'];
         $expedienteFind->c_isquemia = $request['c_isquemia'];
+        $estratificacion->sesiones =$request['sesiones'];
         $expedienteFind->im = ($request['im'] == 'true' || $request['im'] == 1) ? 1:0;
         $expedienteFind->ima = ($request['ima'] == 'true'|| $request['ima'] == 1) ? 1:0;
         $expedienteFind->imas = ($request['imas'] == 'true' || $request['imas'] == 1) ? 1:0;
