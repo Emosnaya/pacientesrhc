@@ -223,6 +223,9 @@
   .bck-gray{
     background-color: #DDDEE1  ;
   }
+  .text-lf{
+    text-align: left
+  }
     </style>
   </head>
   <body>
@@ -383,14 +386,14 @@
                   <td class="border-r">PR: <span class="f-bold">{{$data->pr===null||$data->pr===0?"n":$data->pr}} ms</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r f-bold">Ondas Q:</td>
-                  <td class="border-r">Anterior/Septal: <span class="f-bold">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
+                  <td class="border-r"><span class="text-lft">Ondas Q:</span>Anterior/Septal: <span class="f-bold">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
+                  <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":sprintf("%.2f", floor($data->fc_ecog * 100) / 100);}} lpm</span></td>
                   <td class="border-r">aQRS: <span class="f-bold">{{$data->aQRS===null||$data->aQRS==0?"n":$data->aQRS}}</span></td>
                   <td class="border-r">QRS: <span class="f-bold">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}} ms</span></td>
                 </tr>
                 <tr>
                 <td class="border-r">Inferior: <span class="f-bold">{{$data->q_inf===null||$data->q_inf===0?"n":"s"}}</span></td>
-                <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":sprintf("%.2f", floor($data->fc_ecog * 100) / 100);}} lpm</span></td>
+                <td class="border-t"></td>
                   <td class="border-r">aT: <span class="f-bold">{{$data->aT===0||$data->aT===null?"n":$data->aT}}</span></td>
                   <td class="border-r">QTm: <span class="f-bold">{{$data->qtm===null||$data->qtm===0?"n":sprintf("%.2f", floor($data->qtm * 100) / 100)}} ms</span></td>
                 </tr>
