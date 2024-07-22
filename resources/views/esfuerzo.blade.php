@@ -394,7 +394,7 @@
         <span class="f-7 m-t-07">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
       </div>
       <div class="ml-2 text-container-g">
-        <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}} lpm</span></p>
+        <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}}</span></p>
         <p class="f-bold mb-1"> Depresión max ST (mm): <span class="ml-1 mr-2 f-normal">{{$data->MaxInfra}}</span></p>
       </div>
   </div>
