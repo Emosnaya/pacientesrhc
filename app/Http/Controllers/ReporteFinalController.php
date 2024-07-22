@@ -57,7 +57,7 @@ class ReporteFinalController extends Controller
         $reporteFinal->umbral_isq_fc = $data['fcUisq'];
         $reporteFinal->max_des_st = $data['MaxInfra'];
         $reporteFinal->indice_ta_es = $data['indiceTas'];
-        $reporteFinal->recup_tas = $data['respCrono'];
+        $reporteFinal->recup_tas = $data['recuptas'];
         $reporteFinal->resp_crono = $data['respCrono'];
         $reporteFinal->iem = $data['iem'];
         $reporteFinal->pod_car_eje = $data['pce'];
@@ -107,6 +107,7 @@ class ReporteFinalController extends Controller
      */
     public function destroy(ReporteFinal $reporteFinal)
     {
-        //
+        $reporteFinal->delete();
+        return response()->json('',204);
     }
 }
