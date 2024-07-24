@@ -51,8 +51,9 @@ class PDFController extends Controller
         $esfuerzoDos = Esfuerzo::find($data->pe_2);
         $paciente =  Paciente::find($data->paciente_id);
         $user = User::find($data->user_id);
+        $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
 
-        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'esfuerzoUno', 'esfuerzoDos'));
+        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos'));
         return $pdf->stream('Reporte_Final.pdf'); 
     }
 }
