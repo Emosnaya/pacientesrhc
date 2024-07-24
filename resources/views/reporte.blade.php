@@ -209,7 +209,7 @@
       <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
     </div>
     <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{}}</span></span>
+      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span>
     </div>
     <div class="paciente mt-4">
       <h2 class="h5 titulo">Metodología: </h2>
@@ -237,129 +237,129 @@
         </tr>
         <tr>
           <th scope="row border-r">Fc basal (lpm)*</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->fcBasal  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->fcBasal  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->fc_basal}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcBasal }}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcBasal}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->fc_basal,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Doble Producto basal**</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->dapBasal  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->dapBasal  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->doble_pr_bas}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dapBasal}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dapBasal}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->doble_pr_bas,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">FC máxima</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->fcMax  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->fcMax  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->fc_maxima}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcMax}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcMax}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->fc_maxima,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Doble Producto máximo</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->dpMax  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->dpMax  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->doble_pr_max}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dpMax}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dpMax}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->doble_pr_max,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">FC Borg 12</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->fcBorg12  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->fcBorg12  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->fc_borg12}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcBorg12}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcBorg12}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->fc_borg12,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Doble Producto Borg 12</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->dpBorg12  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->dpBorg12  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->doble_pr_b12}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dpBorg12 }}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dpBorg12}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->doble_pr_b12,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Carga máxima (METs)</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->mets_max  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->mets_max  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->carga_max}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->mets_max,1)}}</td>
+          <td class="border-l border-r text-ctr">{{ round($esfuerzoDos->mets_max,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->carga_max,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">% METs alcanzado</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->vo2_alcanzado  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->vo2_alcanzado  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->mets_por}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->vo2_alcanzado,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->vo2_alcanzado,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->mets_por,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Tiempo de ejercicio (min)^</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->tiempoEsfuerzo  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->tiempoEsfuerzo  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->tiempo_ejer}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->tiempoEsfuerzo,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->tiempoEsfuerzo,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->tiempo_ejer,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Recuperación de la FC 1'(lpm)</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->fcmax_fc1er  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->fcmax_fc1er  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->recup_fc}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcmax_fc1er}}</td>
+          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcmax_fc1er}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->recup_fc,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Umbral Isquémico (METs)</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->mets_U_isq  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->mets_U_isq  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->umbral_isq}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->mets_U_isq,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->mets_U_isq,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->umbral_isq,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Umbral Isquémico (FC)</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->fc_U_isq  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{ sprintf("%.2f", floor($esfuerzoDos->fc_U_isq  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->umbral_isq_fc }}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->fc_U_isq,1)}}</td>
+          <td class="border-l border-r text-ctr">{{ round($esfuerzoDos->fc_U_isq,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->umbral_isq_fc,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Máximo Desnivel ST</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->MaxInfra  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->MaxInfra  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->max_des_st}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->MaxInfra,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->MaxInfra,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->max_des_st,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Índice TA en esfuerzo</th>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->indice_tas  * 100) / 100);}}</td>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->indice_tas  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->indice_ta_es}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->indice_ta_es,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Recuperación de la TAS 1/3</th>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->recup_tas  * 100) / 100);}}</td>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->recup_tas   * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->recup_tas}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->recup_tas,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Resp. Cronotrópica (lpm/MET)</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->resp_crono  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->resp_crono  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->resp_crono}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->resp_crono,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->resp_crono,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->resp_crono,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">IEM***</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->iem  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->iem  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->iem}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->iem,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->iem,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->iem,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Poder Cardiaco en ejercicio</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->pce  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->pce  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->pod_car_eje}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->pce,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->pce,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->pod_car_eje,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Puntuación de Duke</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->duke  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->duke  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->duke}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->duke,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->duke,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->duke,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Puntuación de Veteranos</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->veteranos  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->veteranos  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->veteranos}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->veteranos,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->veteranos,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->veteranos,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Score de Angor</th>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->scoreAngina  * 100) / 100);}}</td>
           <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->scoreAngina  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{$data->score_ang}}</td>
+          <td class="border-l border-r text-ctr">{{round($data->score_ang,1)}}</td>
         </tr>
         <tr>
           <th scope="row border-r">Ectopia Ventricular Frecuente</th>
@@ -389,7 +389,7 @@
       <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
     </div>
     <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{}}</span></span>
+      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span>
     </div>
     <div class="paciente mt-5">
       <p class="f-15 f-normal mb-2">Como parte del programa  y con el fin de supervisar esta etapa promoviendo el apego al método, se llevará la asesoría intermitente de la realización de la terapia ergométrica del paciente por medio de la programación de refuerzos (en los siguientes seis meses)  para así disminuir la incidencia de deserción del paciente durante la parte domiciliaria del programa. Esta supervisión se realizará siempre en estrecha colaboración con su médico tratante. </p>
