@@ -374,7 +374,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->cv_u_isq =  $cvUisq;
         $pesfuerzo->conclusiones =  $data['comentarios'];
         $pesfuerzo->fecha =  $data['fecha'];
-        $pesfuerzo->recup_tas = $tasMax/$tasBasal;
+        $pesfuerzo->recup_tas = $tas3ermin/$tas1ermin;
 
         $pesfuerzo->user_id = Auth::user()->id;
         $pesfuerzo->tipo_exp = 1;
@@ -722,7 +722,7 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->cv_u_isq =  $cvUisq;
         $esfuerzoFind->conclusiones =  $request['conclusiones'];
         $esfuerzoFind->fecha =  $request['fecha'];
-        $esfuerzoFind->recup_tas = $tasMax/$tasBasal;
+        $esfuerzoFind->recup_tas = $tas3ermin/$tas1ermin;
         $esfuerzoFind->tipo_exp = 1;
         
         $esfuerzoFind->save();
