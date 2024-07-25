@@ -339,8 +339,8 @@
         </tr>
         <tr>
           <th scope="row border-r">Poder Cardiaco en ejercicio</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->pce,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->pce,1)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->pce)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->pce)}}</td>
           <td class="border-l border-r text-ctr">{{round($data->pod_car_eje,1)}}</td>
         </tr>
         <tr>
@@ -357,8 +357,8 @@
         </tr>
         <tr>
           <th scope="row border-r">Score de Angor</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->scoreAngina  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->scoreAngina  * 100) / 100);}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->scoreAngina)}}</td>
+          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->scoreAngina)}}</td>
           <td class="border-l border-r text-ctr">{{round($data->score_ang,1)}}</td>
         </tr>
         <tr>
