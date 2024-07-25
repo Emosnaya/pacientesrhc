@@ -65,7 +65,7 @@ class ReporteFinalController extends Controller
         $reporteFinal->pe_1 = $id;
         $reporteFinal->pe_2 = $idDos;
         $reporteFinal->veteranos = $data['veteranos'];
-        $reporteFinal->score_ang = $data['fecha'];
+        $reporteFinal->score_ang = $data['scoreAngina'];
         $reporteFinal->tipo_exp = 4;
 
         $reporteFinal->user_id = Auth::user()->id;
