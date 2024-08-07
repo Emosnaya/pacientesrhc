@@ -286,7 +286,7 @@
                 <td class="border-l border-r text-ctr @if($data->enf_coronaria === "alto") bg-danger @else  @endif">@if($data->enf_coronaria === "alto") <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
               </tr>
               <tr>
-                <th scope="row">Sobreviviente de Reanimacion Pulmonar</th>
+                <th scope="row">Sobreviviente de Reanimacion Cardiopulmonar</th>
                 <td class="border-l border-r text-ctr">{{($data->reanimacion_cardio === 0)?"n":"s"}}</td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr @if($data->reanimacion_cardio === 0) bg-success @else  @endif">@if($data->reanimacion_cardio === 0) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
