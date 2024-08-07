@@ -333,7 +333,7 @@
           </tr>
           <tr>
             <th scope="row">Umbral Isq4</th>
-            <td class="border-t text-ctr">{{$data->mets_banda_U_isq}}</td>
+            <td class="border-t text-ctr">{{round($data->mets_banda_U_isq,1)}}</td>
             <td class="border-t text-ctr">{{$data->fc_U_isq}}</td>
             <td class="border-t text-ctr">{{$data->tas_U_isq}}</td>
             <td class="border-l border-r text-ctr">{{$data->tad_U_isq}}</td>
@@ -353,7 +353,7 @@
       <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
       <span class="f-bold ml-3">  TASmax/TASbasal: <span  class="f-normal">{{sprintf("%.2f", floor($data->indice_tas * 100) / 100);}}</span></span>  <span class="f-bold ml-3">  IEM: <span  class="f-normal">{{sprintf("%.2f", floor($data->iem * 100) / 100);}}</span></span>
       <span class="f-bold ml-3">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold ml-3">  Rec TAS (3/1): <span  class="f-normal">{{sprintf("%.2f", floor(($data->tas_3er_min/$data->tas_1er_min) * 100) / 100);}}</span></span>
-      <span class="f-bold ml-3">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
+      <span class="f-bold ml-5">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
   <div class="paciente mt-2">
     <div class="contenedor ">
