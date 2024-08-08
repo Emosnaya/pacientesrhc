@@ -481,7 +481,7 @@
                 <td class="border-l border-r text-ctr"> >=9000 </td>
                 <td class="border-l border-r text-ctr @if($data->porder_cardiaco>=9000) bg-success @else  @endif">@if($data->porder_cardiaco>=9000) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-l border-r text-ctr"> 5mil a 9mil </td>
-                <td class="border-l border-r text-ctr @if($data->porder_cardiaco<9000 && $data->respuesta_presora>=5000) bg-warning @else  @endif"> @if($data->porder_cardiaco<9000 && $data->respuesta_presora>=5000) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if( ($data->porder_cardiaco>=5000) && ($data->porder_cardiaco<9000)) bg-warning @else  @endif"> @if($data->porder_cardiaco<9000 && $data->porder_cardiaco>=5000) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                   <td class="border-l border-r text-ctr"> &lt;5000</td>
                 <td class="border-l border-r text-ctr @if($data->porder_cardiaco<5000) bg-danger @else  @endif"> @if($data->porder_cardiaco<5000) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
@@ -610,7 +610,7 @@
             </div>
         </div>
         <div class="m-t-1 mb-0">
-          <p class="mb-0  f-bold f-10 m-t-1">Fc Diana :<span class="ml-1 f-normal">{{$data->fc_borg_12}} lpm</span> <span class="ml-4 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>  <span class="ml-4 f-bold">Carga Inicial:<span class="ml-3 f-normal"> {{$data->carga_inicial}}Watts</span></span></p>
+          <p class="mb-0  f-bold f-10 m-t-1">Fc Diana :<span class="ml-1 f-normal">{{$data->fc_diana}} lpm</span> <span class="ml-4 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>  <span class="ml-4 f-bold">Carga Inicial:<span class="ml-3 f-normal"> {{$data->carga_inicial}}Watts</span></span></p>
           <p class="f-bold f-10 f-10 mt-0 mb-0">{{$data->fc_diana_str}}: <span class="f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span> </p>
       </div>
       <div class="mt-1">
