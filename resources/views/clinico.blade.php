@@ -387,7 +387,7 @@
                 </tr>
                 <tr>
                   <td class="border-r"><span class="text-lft">Ondas Q:</span>Anterior/Septal: <span class="f-bold">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
-                  <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":sprintf("%.2f", floor($data->fc_ecog * 100) / 100);}} lpm</span></td>
+                  <td class="border-r">FC: <span class="f-bold">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":round($data->fc_ecog)}} lpm</span></td>
                   <td class="border-r">aQRS: <span class="f-bold">{{$data->aQRS===null||$data->aQRS==0?"n":$data->aQRS}}</span></td>
                   <td class="border-r">QRS: <span class="f-bold">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}} ms</span></td>
                 </tr>
