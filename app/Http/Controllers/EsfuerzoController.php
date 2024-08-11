@@ -591,8 +591,8 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->vpp = $vpp;
         $esfuerzoFind->vpn = $vpn;
         $esfuerzoFind->pruebaIngreso = ($request['pruebaIngreso']== 'true' ||$request['pruebaIngreso'] === 1) ? 1:0;
-        $esfuerzoFind->pruebaFinFase2 = ( $request['pruebaFin2']== 'true' ||$request['pruebaFin2'] === 1) ? 1:0;
-        $esfuerzoFind->pruebaFinFase3 = ( $request['pruebaFin3']== 'true' ||$request['pruebaFin3'] === 1) ? 1:0;
+        $esfuerzoFind->pruebaFinFase2 = ( $request['pruebaFinFase2']== 'true' ||$request['pruebaFinFase2'] === 1) ? 1:0;
+        $esfuerzoFind->pruebaFinFase3 = ( $request['pruebaFinFase3']== 'true' ||$request['pruebaFinFase3'] === 1) ? 1:0;
         $esfuerzoFind->fechaDeInicio =  $request['fechaDeInicio'];
         $esfuerzoFind->balke = ($request['balke'] == 'true' ||$request['balke'] === 1) ? 1:0;
         $esfuerzoFind->bruce = ($request['bruce'] == 'true' ||$request['bruce'] === 1) ? 1:0;
