@@ -155,7 +155,7 @@ class EstratificacionController extends Controller
         $estratificacion->fc_diana_str = $data['fcDiana'];
         $estratificacion->dp_diana = $data['dpDiana'];
 
-        $karvonen = (($data['fcMax']-$data['fcBasal'])*0.7);
+        $karvonen = (($data['fcMax']-$data['fcBasal'])*0.7)+$data['fcBasal'];
         $blackburn = ($data['fcMax']*0.8);
         $narita = (78.4+((0.76*$data['fcBasal'])-(0.27*$nuevoPaciente->edad)));
 
@@ -304,7 +304,7 @@ class EstratificacionController extends Controller
         $expedienteFind->fc_diana_str = $request['fc_diana_str'];
         $expedienteFind->dp_diana = $request['dp_diana'];
 
-        $karvonen = (($request['fc_maxima']-$request['fc_basal'])*0.7);
+        $karvonen = (($request['fc_maxima']-$request['fc_basal'])*0.7)+$request['fc_basal'];
         $blackburn = ($request['fc_maxima']*0.8);
         $narita = (78.4+((0.76*$request['fc_basal'])-(0.27*$paciente->edad)));
 
