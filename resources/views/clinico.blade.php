@@ -480,7 +480,7 @@
                 <div class="linea-pu"></div>
             </div>
             <p  class="f-bold m-t-0 f-10 mb-0 bck-gray">Fecha: <span class="f-normal">{{ $data->catet_fecha===null?"no tiene":date('d/m/Y',strtotime($data->catet_fecha))}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->catet_fe===null?0:$data->catet_fe}}</span></span>
-                <span class="f-bold ml-5">  D2VI: <span class="f-normal">{{$data->catet_d2vi===null||$data->catet_d2vi===0?"n":$data->catet_d2vi}}</span></span> <span class="f-bold ml-5">  Tronco: <span class="f-normal">{{$data->tco===null?0:$data->tco}}</span></span></p>
+                <span class="f-bold ml-5">  D2VI: <span class="f-normal">{{$data->catet_d2vi===null||$data->catet_d2vi===0?"n":$data->catet_d2vi}}</span></span> <span class="f-bold ml-5">  Tronco: <span class="f-normal">{{$data->catet_tco===null?0:$data->catet_tco}}</span></span></p>
                 <table class="tabla text-lft border-t text-center mt-0 bck-gray">
                     <tbody class="text-lft ">
                       <tr>
