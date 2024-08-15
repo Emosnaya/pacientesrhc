@@ -415,14 +415,14 @@
                 <tr class="">
                   <td class="border-r">Fecha: <span class="f-bold">{{$data->eco_fecha===null?"no tiene": date('d/m/Y',strtotime($data->eco_fecha))}}</span></td>
                   <td class="border-r">FE: <span class="f-bold">{{$data->fe_por===null?"n":$data->fe_por}}%</span></td>
-                  <td class="border-r">Rel. E/A: <span class="f-bold">{{$data->rel_e_a===null||$data->rel_e_a==0?"n":$data->rel_e_a}}</span></td>
-                  <td class="border-r">DDVI: <span class="f-bold">{{$data->dd_por===null||$data->dd_por==0?"n":$data->dd_por}}</span></td>
+                  <td class="border-r">Tapse: <span class="f-bold">{{$data->rel_e_a===null||$data->rel_e_a==0?"n":$data->rel_e_a}} mm</span></td>
+                  <td class="border-r">SGL: <span class="f-bold">{{$data->dd_por===null||$data->dd_por==0?"n":$data->dd_por}} %</span></td>
                 </tr>
                 <tr>
-                  <td class="border-r">TRIVI: <span class="f-bold">{{$data->trivi_por===null||$data->trivi_por===0?"n":$data->trivi_por}}</span></td>
-                  <td class="border-r">DSVI: <span class="f-bold">{{$data->ds_por===null||$data->ds_por==0?"n":$data->ds_por}}</span></td>
-                  <td class="border-r"></td>
-                  <td class="border-r"></td>
+                  <td class="border-r">Movilidad: <span class="f-bold">{{$data->trivi_por===null||$data->trivi_por===0?"n":$data->trivi_por}}</span></td>
+                  <td class="border-r">PSAP: <span class="f-bold">{{$data->ds_por===null||$data->ds_por==0?"n":$data->ds_por}} mmHg</span></td>
+                  <td class="border-r">Valvulopatía: </td>
+                  <td class="border-r">Otro: <span class="f-bold">{{$data->otros_eco===null?"n":$data->otros_eco}}</span> </td>
                 </tr>
               </tbody>
         </table>
