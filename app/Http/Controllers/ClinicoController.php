@@ -183,6 +183,7 @@ class ClinicoController extends Controller
         $clinico->ds_por = $data['dsPor'];
         $clinico->trivi_por = $data['triviPor'];
         $clinico->rel_e_a = $data['relEA'];
+        $clinico->valvulopatia = $data['valvulopatia']==="true"?1:0;;
         $clinico->otros_eco = $data['otrosEco'];
         $clinico->mn_fecha = $data['mnFecha'];
         $clinico->fe_por_mn = $data['feporMn'];
@@ -418,6 +419,7 @@ class ClinicoController extends Controller
         $clinico->ds_por = $data['ds_por'];
         $clinico->trivi_por = $data['trivi_por'];
         $clinico->rel_e_a = $data['rel_e_a'];
+        $clinico->valvulopatia = $data['valvulopatia']==="true"||$data['valvulopatia']===1?1:0;;
         $clinico->otros_eco = $data['otros_eco'];
         $clinico->mn_fecha = $data['mn_fecha'];
         $clinico->fe_por_mn = $data['fe_por_mn'];
