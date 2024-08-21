@@ -422,7 +422,7 @@
                   <td class="border-r">Movilidad: <span class="f-bold">{{$data->trivi_por===null||$data->trivi_por===0?"n":$data->trivi_por}}</span></td>
                   <td class="border-r">PSAP: <span class="f-bold">{{$data->ds_por===null||$data->ds_por==0?"n":$data->ds_por}} mmHg</span></td>
                   <td class="border-r">Valvulopatía: <span class="f-bold">{{$data->valvulopatia===0||$data->valvulopatia===null?"n":"s"}}</span> </td>
-                  <td class="border-r">Otro: <span class="f-bold">{{$data->otros_eco===null?"n":$data->otros_eco}}</span> </td>
+                  <td class="border-r"></td>
                 </tr>
               </tbody>
         </table>
