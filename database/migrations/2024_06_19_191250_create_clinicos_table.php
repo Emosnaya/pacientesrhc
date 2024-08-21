@@ -119,7 +119,7 @@ return new class extends Migration
             $table->double("fe_por")->nullable();
             $table->double("dd_por")->nullable();
             $table->double("ds_por")->nullable();
-            $table->double("trivi_por")->nullable();
+            $table->string("trivi_por")->nullable();
             $table->double("rel_e_a")->nullable();
             $table->string("otros_eco")->nullable();
             $table->date("mn_fecha")->nullable();
