@@ -221,7 +221,7 @@
                 <td class="border-r text-ctr"> &lt;=25 </td>
                 <td class="border-r text-ctr @if(round($paciente->imc,2) <= 25) bg-success @else  @endif">@if(round($paciente->imc,2) <= 25) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-r text-ctr">26 a 29</td>
-                <td class="border-r text-ctr @if(round($paciente->imc,2) > 25) bg-warning @else  @endif">@if(round($paciente->imc,2) > 25) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-r text-ctr @if((round($paciente->imc,2) > 25) && (round($paciente->imc,2) <= 29) ) bg-warning @else  @endif">@if((round($paciente->imc,2) > 25) && (round($paciente->imc,2) <= 29) ) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-r text-ctr"> >=30 </td>
                 <td class="text-ctr  @if(round($paciente->imc,2) >= 30) bg-danger @else  @endif">@if(round($paciente->imc,2) >= 30) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif</td>
               </tr>
