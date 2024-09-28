@@ -160,8 +160,7 @@ class ClinicoController extends Controller
         $clinico->otro_lab = $data['otroLab'];
         $clinico->ecg_fecha = $data['ecgFecha'];
         $clinico->ritmo = $data['ritmo'];
-        $clinico->r_r_mm = $data['rrmm'];
-        $clinico->fc_ecog = $data['rrmm']!=null?60/($data['rrmm']*0.04):null;
+        $clinico->fc_ecog = $data['rrmm'];
         $clinico->aP = $data['aP'];
         $clinico->aQRS = $data['aQRS'];
         $clinico->aT = $data['aT'];
@@ -396,8 +395,7 @@ class ClinicoController extends Controller
         $clinico->otro_lab = $data['otro_lab'];
         $clinico->ecg_fecha = $data['ecg_fecha'];
         $clinico->ritmo = $data['ritmo'];
-        $clinico->r_r_mm = $data['r_r_mm'];
-        $clinico->fc_ecog = $data['r_r_mm']!=null && !empty($data['r_r_mm']) ?60/($data['r_r_mm']*0.04):$data['fc_ecog'];
+        $clinico->fc_ecog = $data['fc_ecog'];
         $clinico->aP = $data['aP'];
         $clinico->aQRS = $data['aQRS'];
         $clinico->aT = $data['aT'];

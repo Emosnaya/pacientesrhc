@@ -157,6 +157,14 @@
     border-bottom: 3px solid black; /* Línea sólida negra */
     z-index: 0; /* Detrás del título */
   }
+  .linea-irm {
+    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
+    left: 13rem; /* Comienza desde el borde izquierdo del contenedor */
+    right: 0;
+    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
+    border-bottom: 3px solid black; /* Línea sólida negra */
+    z-index: 0; /* Detrás del título */
+  }
   .linea-des {
     position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
     left: 10rem; /* Comienza desde el borde izquierdo del contenedor */
@@ -428,8 +436,8 @@
         </table>
         <p class="f-bold f-10 mb-0">Otros: <span class="f-normal">{{$data->otros_eco}}</span></p>
         <div class="contenedor mt-1">
-            <h2 class="h5 titulo">Medicina Nuclear</h2>
-            <div class="linea-des"></div>
+            <h2 class="h5 titulo">Medicina Nuclear/IRM</h2>
+            <div class="linea-irm"></div>
         </div>
         <p  class="f-bold m-t-0 f-10 mb-0">Fecha: <span class="f-normal">{{ $data->mn_fecha===null?"no tiene":date('d/m/Y',strtotime($data->mn_fecha))}}</span> <span class="f-bold ml-5">  FE: <span class="f-normal">{{$data->fe_por_mn}}</span></span>
             <span class="f-bold ml-5">  VRIE: <span class="f-normal">{{$data->vrie===null||$data->vrie===0?"n":"s"}}</span></span> <span class="f-bold ml-5">  VRIE Fecha: <span class="f-normal">{{$data->vrie_fcha===null?"n":date('d/m/Y',strtotime($data->vrie_fcha))}}</span></span></p>
