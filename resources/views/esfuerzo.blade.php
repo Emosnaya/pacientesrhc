@@ -323,7 +323,7 @@
             <td class="border-t text-ctr">{{$data->fc_5to_min*$data->tas_5to_min}}</td>
           </tr>
           <tr>
-            <td scope="row">6to min</td>
+            <td scope="row">8vo min</td>
             <td class="border-t text-ctr">-</td>
             <td class="border-t text-ctr">{{$data->fc_8vo_min}}</td>
             <td class="border-t text-ctr">{{$data->tas_8vo_min}}</td>

@@ -613,8 +613,11 @@
           <p class="mb-0  f-bold f-10 m-t-1">Fc Diana :<span class="ml-1 f-normal">{{round($data->fc_diana)}} lpm</span> <span class="ml-4 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>  <span class="ml-4 f-bold">Carga Inicial:<span class="ml-3 f-normal"> {{$data->carga_inicial}}Watts</span></span></p>
           <p class="f-bold f-10 f-10 mt-0 mb-0">{{$data->fc_diana_str}}: <span class="f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span> </p>
       </div>
-      <div class="mt-1">
+      <div class="mt-1 mb-0">
         <span class="f-bold mt-0 mb-0 f-10">Realizó:</span><span class="f-10 ml-2">Dr.  {{$user->nombre . "   " . $user->apellidoPat}}</span>
+      </div>
+      <div class="mt-0">
+        <span class="f-bold mt-0 mb-0 f-10">Comentarios:</span><span class="f-10 ml-2">{{$data->comentarios}}</span>
       </div>
 
     </main>
