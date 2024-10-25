@@ -521,7 +521,7 @@
                 <td class="border-l border-r text-ctr"> &lt;(-2)</td>
                 <td class="border-l border-r text-ctr @if($data->veteranos<(-2)) bg-success @else  @endif"> @if($data->veteranos<(-2)) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                   <td class="border-l border-r text-ctr"> (-2) a 2 </td>
-                <td class="border-l border-r text-ctr @if($data->veteranos>=(-2) && $data->duke<=2) bg-warning @else  @endif">@if($data->veteranos>=(-2) && $data->duke<=2) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->veteranos>=(-2) && $data->veteranos<=2) bg-warning @else  @endif">@if($data->veteranos>=(-2) && $data->veteranos<=2) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-l border-r text-ctr"> >2 </td>
                 <td class="border-l border-r text-ctr @if($data->veteranos>2) bg-danger @else  @endif"> @if($data->veteranos>2) <img src="img/check-solid.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>

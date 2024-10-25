@@ -246,16 +246,16 @@
             </div>
             <br>
               <p  class="f-bold mt-2 mb-0 f-15">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span></p>
+              <p class="f-bold mb-0">Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span> </p>
               <p class="mt-0 mb-0"> <span class="f-bold">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span><span class="f-bold ml-3">  Peso (Kg) : <span class="f-normal">{{$paciente->peso}}</span></span> 
                 <span class="f-bold ml-3">  Talla (m): <span  class="f-normal">{{$paciente->talla}}</span></span> <span class="f-bold ml-3">  IMC (kg/m2):: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
               <span class="f-bold ml-3">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>  <span class="f-bold ml-3">  Estado Civil: <span  class="f-normal">{{$paciente->estadoCivil}}</span></span>
               <span class="f-bold ml-3">  Profesión: <span  class="f-normal">{{$paciente->profesion}}</span></span>  <span class="f-bold">  F.Nacimiento: <span  class="f-normal">{{$paciente->fechaNacimiento}}</span></span>
               <span class="f-bold ml-3">  Ingreso(1vez): <span  class="f-normal">{{date('d/m/Y',strtotime($data->fecha_1vez))}}</span></span> <span class="f-bold ml-3">  Estratificación: <span  class="f-normal">{{ date('d/m/Y',strtotime($data->estratificacion))}}</span></span></p>
               <p class="f-bold mt-0 mb-0"> Domicilio: <span  class="f-normal">{{$paciente->domicilio}}</span> <span class="f-bold ml-3">  Teléfono: <span  class="f-normal">{{$paciente->telefono}}</span></span></p>
-              <p class="f-bold mt-0 mb-0">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></p>
           </div>
     </header>
-    <main class="m-t-1">
+    <main class="mt-0">
         <table class="tabla text-lft border-t text-center mt-1 table-striped bck-gray ">
             <tbody>
                 <tr class="">
