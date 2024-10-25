@@ -214,6 +214,9 @@
   .backgr-black{
     background-color: #000
   }
+  .bck-gray{
+    background-color: #DDDEE1  ;
+  }
     </style>
   </head>
   <body>
@@ -238,15 +241,15 @@
           <h2 class="h5 titulo">Prueba</h2>
           <div class="linea"></div>
         </div>
-          <p  class="f-bold mb-0 m-t-2">Banda: <span class="f-normal">{{ $data->banda}}</span>
-          <span class="f-bold ml-2">  Cicloergómetro : <span class="f-normal">{{$data->ciclo}}</span></span> <span class=f-bold"">  VO2(directo): <span  class="f-normal">{{$data->medicionGases}}</span></span>
-          <span class="f-bold ml-2">  Bruce: <span  class="f-normal">{{$data->bruce}}</span></span> <span class=f-bold"">  Balke: <span  class="f-normal">{{$data->balke}}</span></span>
-          <span class="f-bold ml-2">  Prueba Submáxima: <span  class="f-normal">{{$data->pba_submax}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold ">  1a vez: <span  class="f-normal">{{$data->pruebaIngreso}}</span></span>
-          <span class="f-bold ml-5">  Fase II: <span  class="f-normal">{{$data->pruebaFinFase2}}</span></span>  <span class="f-bold ml-5">  Fase III: <span  class="f-normal">{{$data->pruebaFinFase3}}</span></span></p>
+          <p  class="f-bold mb-0 m-t-2">Banda: <span class="f-normal">@if($data->banda===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;" class="font-light"> @else  <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span>
+          <span class="f-bold ml-2">  Cicloergómetro : <span class="f-normal">@if($data->ciclo===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span> <span class=f-bold"">  VO2(directo): <span  class="f-normal">@if($data->medicionGases===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span>
+          <span class="f-bold ml-2">  Bruce: <span  class="f-normal">@if($data->bruce===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span> <span class=f-bold"">  Balke: <span  class="f-normal">@if($data->balke===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span>
+          <span class="f-bold ml-2">  Prueba Submáxima: <span  class="f-normal">@if($data->pba_submax===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold ">  1a vez: <span  class="f-normal">@if($data->pruebaIngreso===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span>
+          <span class="f-bold ml-5">  Fase II: <span  class="f-normal">@if($data->pruebaFinFase2===1) <img src="img/check-solid.svg" alt="" style="height: 14px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span>  <span class="f-bold ml-5">  Fase III: <span  class="f-normal">@if($data->pruebaFinFase3===1) <img src="img/check-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @else <img src="img/x-solid.svg" alt="" style="height: 12px ;margin-top:1px;color:green;" class="font-light"> @endif</span></span></p>
           <p class="mt-0 mb-0"> <span class="f-bold">  FCmax(teórica): <span  class="f-normal">{{$data->fc_max_calc}}</span></span>  <span class="f-bold ml-5">  FC(85%): <span  class="f-normal">{{round($data->fc_85)}}</span></span>
           <span class="f-bold ml-5">  % FCmax alcanzado: <span  class="f-normal">{{round($data->fc_max_alcanzado)}}</span></span></p>
       </div>
-      <table class="tabla text-lft border-t text-center mt-2">
+      <table class="tabla text-lft border-t table-striped text-center mt-2">
         <thead class="border-t">
           <tr>
             <th scope="col border-t">Etapa</th>
@@ -342,12 +345,13 @@
           </tr>
         </tbody>
     </table>
+    <div class="bck-gray">
     <div class="paciente mt-1">
       <div class="contenedor ">
         <h2 class="h5 titulo">Desempeño</h2>
         <div class="linea-des"></div>
       </div>
-      <p  class="f-bold mb-0 m-t-2">Tiempo de esfuerzo: <span class="f-normal">{{ round($data->tiempoEsfuerzo,2)}}  min (tiempo calculado correspondiente a protocolo de Bruce) </span>
+        <p  class="f-bold mb-0 m-t-2">Tiempo de esfuerzo: <span class="f-normal">{{ round($data->tiempoEsfuerzo,2)}}  min (tiempo calculado correspondiente a protocolo de Bruce) </span>
       <span class="f-bold">  Suspensión de la prueba : <span class="f-normal">{{$data->motivoSuspension}}</span></span></p> <p class="mt-0 mb-0"> <span class="f-bold">  METs Teórico: <span  class="f-normal">{{round($data->mets_teorico_general,2)}}</span></span>
       <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
       <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
@@ -355,6 +359,7 @@
       <span class="f-bold ml-3">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold ml-3">  Rec TAS (3/1): <span  class="f-normal">{{sprintf("%.2f", floor(($data->tas_3er_min/$data->tas_1er_min) * 100) / 100);}}</span></span>
       <span class="f-bold ml-5">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
+</div>
   <div class="paciente mt-2">
     <div class="contenedor ">
       <h2 class="h5 titulo">Medición de Gases Espirados</h2>
@@ -362,14 +367,15 @@
     </div>
     <p  class="f-bold m-t-2">VO2max (mlO2/Kg/min): <span class="f-normal">{{ round($data->vo2_max_gases,2)}}</span>
     <span class="f-bold">  VO2pico (mlO2/Kg/min): <span class="f-normal">{{round($data->vo2_pico_gases,2)}}</span></span> <span class=f-bold"">  R/Q(max.esf): <span  class="f-normal">{{round($data->r_qmax,2)}}</span></span>
-    <span class=f-bold"">  Umbral A/An(mlO2/Kg/min): <span  class="f-normal">{{$data->umbral_aeer_anaer}}</span></span> <span class=f-bold"">  %PO 2 teórico: <span  class="f-normal">{{$data->po2_teor}}</span></span></p>
+    <span class=f-bold"">  Umbral A/An(mlO2/Kg/min): <span  class="f-normal">{{$data->umbral_aeer_anaer==null?0:$data->umbral_aeer_anaer}}</span></span> <span class=f-bold"">  %PO 2 teórico: <span  class="f-normal">{{$data->po2_teor==null?0:$data->po2_teor}}</span></span></p>
   </div>
+  <div class="bck-gray">
   <div class="container-g f-10 mt-0">
-    <div class="contenedor ">
+    <div class="contenedor">
       <h2 class="h5 titulo">Isquemia</h2>
       <div class="linea-is"></div>
     </div>
-    <div class="table-container-g ml-2">
+    <div class="table-container-g ml-2 bck-gray">
       <table class="table-g">  
         <thead class="thead-striped">
           <tr>
@@ -393,7 +399,7 @@
         </table>
         <span class="f-7 m-t-07">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
       </div>
-      <div class="ml-2 text-container-g">
+      <div class="ml-2 text-container-g bck-gray">
         <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}}</span></p>
         <p class="f-bold mb-1"> Depresión max ST (mm): <span class="ml-1 mr-2 f-normal">{{$data->MaxInfra}}</span></p>
       </div>
@@ -401,14 +407,16 @@
   <br>
   <br>
   <br>
+  </div>
   <div class="paciente mt-0">
-    <p class="f-bold text-sm">Tipo de isquemia: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
+    <p class="f-bold text-sm bck-gray" >Tipo de isquemia: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
     <div class="contenedor ">
       <h2 class="h5 titulo m-t-0">Arritmias</h2>
       <div class="linea-ar"></div>
     </div>
     <p  class="f-bold m-t-07">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
   </div>
+  <div class="bck-gray">
   <div class="paciente mt-0 mb-0">
     <div class="contenedor ">
       <h2 class="h5 titulo m-t-07">Puntuaciones</h2>
@@ -421,6 +429,7 @@
     <h2 class="h5 titulo"></h2>
     <div class="linea-t"></div>
   </div>
+</div>
   <div class="paciente mt-1 mb-1">
     <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
     <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
