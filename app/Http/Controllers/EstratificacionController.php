@@ -83,7 +83,7 @@ class EstratificacionController extends Controller
         $estratificacion->pe_fecha = $data['pe'];
         $estratificacion->estrati_fecha = $data['estrati'];
         $estratificacion->c_isquemia = $data['cIsquemia'];
-        $estratificacion->sesiones =$data['sesiones'];
+        $estratificacion->sesiones = intval($data['sesiones']);
         $estratificacion->im = ($data['im'] == 'true') ? 1:0;
         $estratificacion->ima = ($data['ima'] == 'true') ? 1:0;
         $estratificacion->imas = ($data['imas'] == 'true') ? 1:0;
@@ -234,7 +234,7 @@ class EstratificacionController extends Controller
         $expedienteFind->pe_fecha = $request['pe_fecha'];
         $expedienteFind->estrati_fecha = $request['estrati_fecha'];
         $expedienteFind->c_isquemia = $request['c_isquemia'];
-        $estratificacion->sesiones =$request['sesiones'];
+        $expedienteFind->sesiones = intval($request['sesiones']);
         $expedienteFind->im = ($request['im'] == 'true' || $request['im'] == 1) ? 1:0;
         $expedienteFind->ima = ($request['ima'] == 'true'|| $request['ima'] == 1) ? 1:0;
         $expedienteFind->imas = ($request['imas'] == 'true' || $request['imas'] == 1) ? 1:0;
@@ -274,8 +274,8 @@ class EstratificacionController extends Controller
         $expedienteFind->pcr = $request['pcr'];
         $expedienteFind->enf_coronaria = $request['enf_coronaria'];
         $expedienteFind->isquemia = $request['isquemia'];
-        $estratificacion->isquemia_irm = $request['isquemia_irm'];
-        $estratificacion->eco_estres = $request['eco_estres'];
+        $expedienteFind->isquemia_irm = $request['isquemia_irm'];
+        $expedienteFind->eco_estres = $request['eco_estres'];
         $expedienteFind->holter = $request['holter'];
         $expedienteFind->pe_capacidad =  ($request['pe_capacidad'] == 'true') ? 1:0;
         $expedienteFind->fc_basal = $request['fc_basal'];

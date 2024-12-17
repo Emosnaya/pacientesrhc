@@ -209,7 +209,7 @@
       <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
     </div>
     <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span>
+      <p class="text-sm texto-izquierda mb-0 f-bold mt-1"> <span class="f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span> </p> 
     </div>
     <div class="paciente mt-4">
       <h2 class="h5 titulo">Metodología: </h2>
@@ -389,7 +389,7 @@
       <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
     </div>
     <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold"> </p> <span class="ml-5 text-right texto-derecha f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span>
+      <p class="text-sm texto-izquierda mb-0 f-bold mt-1"> <span class="f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span> </p> 
     </div>
     <div class="paciente mt-5">
       <p class="f-15 f-normal mb-2">Como parte del programa  y con el fin de supervisar esta etapa promoviendo el apego al método, se llevará la asesoría intermitente de la realización de la terapia ergométrica del paciente por medio de la programación de refuerzos (en los siguientes seis meses)  para así disminuir la incidencia de deserción del paciente durante la parte domiciliaria del programa. Esta supervisión se realizará siempre en estrecha colaboración con su médico tratante. </p>
