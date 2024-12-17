@@ -738,8 +738,6 @@ class EsfuerzoController extends Controller
      */
     public function destroy(Esfuerzo $esfuerzo)
     {
-        $esfuerzo->delete();
-        
         return response("",204);
     }
 

@@ -510,6 +510,9 @@ class ClinicoController extends Controller
      */
     public function destroy(Clinico $clinico)
     {
+        if($clinico->user_id != Auth::user()->id){
+            return response()->json('Error de permisos', 404);
+        }
         $clinico->delete();
         
         return response("",204);

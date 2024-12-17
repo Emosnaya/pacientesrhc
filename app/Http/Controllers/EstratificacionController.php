@@ -165,6 +165,8 @@ class EstratificacionController extends Controller
             $fcDiana = $blackburn;
         }else if($data['fcDiana'] === 'N'){
             $fcDiana = $narita;
+        }else if($data['fcDiana'] === 'UISQ'){
+            $fcDiana = $data['fcdianaNumber'];    
         }else{
             $fcDiana = $data['fcBorg12'];
         }
@@ -314,7 +316,10 @@ class EstratificacionController extends Controller
             $fcDiana = $blackburn;
         }else if($request['fc_diana_str'] === 'N'){
             $fcDiana = $narita;
-        }else{
+        }else if($request['fcDiana'] === 'UISQ'){
+            $fcDiana = $request['fcdianaNumber'];    
+        }
+        else{
             $fcDiana = $request['fc_borg_12'];
         }
 
