@@ -60,6 +60,7 @@ class PacienteController extends Controller
         $paciente->fechaNacimiento = $fechaNacimiento;
         $paciente->edad = $edad;
         $paciente->imc = $imc;
+        $paciente->email = $request->email;
 
         $paciente->user_id = Auth::user()->id;
 
@@ -137,6 +138,7 @@ class PacienteController extends Controller
         $pacientefind->fechaNacimiento = $fechaNacimiento;
         $pacientefind->edad = $edad;
         $pacientefind->imc = $imc;
+        $paciente->email = $request->email;
 
         $pacientefind->save();
 
@@ -152,6 +154,9 @@ class PacienteController extends Controller
      */
     public function destroy(Paciente $paciente)
     {
+        if($paciente->user_id != Auth::user()->id){
+            return response()->json('Error de permisos', 404);
+        }
         $paciente->delete();
         return response()->json('',204);
 
