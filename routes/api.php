@@ -65,12 +65,12 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/nutrio/{id}',[InfoController::class,'nutriIndex']);
     Route::get('/psicolog/{id}',[InfoController::class,'psicoIndex']);
     Route::prefix('fisio')->group(function () {
-        Route::get('/{pacienteId}', [ReporteFisioController::class, 'index']); // Lista expedientes de un paciente
-        Route::post('/', [ReporteFisioController::class, 'store']); // Crear expediente
+        Route::get('/{pacienteId}', [ReporteFisioController::class, 'index']); // Lista expedientes de un paciente // Crear expediente
         Route::get('/detalle/{id}', [ReporteFisioController::class, 'show']); // Mostrar detalle
         Route::put('/{id}', [ReporteFisioController::class, 'update']); // Actualizar expediente
         Route::delete('/{id}', [ReporteFisioController::class, 'destroy']);
     });
+    Route::post('/fis', [ReporteFisioController::class, 'store']);
     Route::get('/fisio/{id}/imprimir', [ReporteFisioController::class, 'imprimir']);
 });
 
