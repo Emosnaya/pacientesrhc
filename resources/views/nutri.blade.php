@@ -274,7 +274,7 @@
 
         /* Actividad Física */
         .actividad {
-            top: 240px;
+            top: 160px;
             left: 0;
             width: 220px;
             height: 130px;
@@ -290,7 +290,7 @@
 
         /* Medicamentos */
         .medicamentos {
-            top: 390px;
+            top: 310px;
             left: 0;
             width: 220px;
             height: 160px;
@@ -335,7 +335,7 @@
 
 /* Sección con título */
 .section-diag {
-    margin-bottom: 35px; /* Espacio entre secciones */
+    margin-bottom: 12px; /* Espacio entre secciones */
     border: 1px solid #ccc;
 }
 
@@ -350,6 +350,7 @@
 /* Líneas entre los párrafos */
 .section-content p {
     margin: 10px 0;
+    text-align: justify;
     border-bottom: 1px solid #ccc;
     padding-bottom: 5px;
 }
@@ -444,38 +445,31 @@
   <body>
     <header class="mb-0">
       <div class="paciente ma-t-0 mb-0">
-        <p class="f-bold f-15 text-center mb-0 mt-0">Nota Nutricional</p>
+        <p class="f-bold f-15 text-center mb-0 mt-0">Valoración Nutricional</p>
         <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
         <div class="medio">
-          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->created_at))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
+          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->created_at))}} </p>
         </div>
-        <br>
-          <p  class="f-bold mt-2 mb-0 text-2xl">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span>
+          <p class="f-bold mt-4 mb-0">Registro: {{$paciente->registro}}</p>
+          <p  class="f-bold mt-0 mb-0 text-2xl">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span>
             <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span>
             <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>
             <span class="f-bold">  Correo: <span  class="f-normal">{{$paciente->email}}</span></span>
             <span class="f-bold ml-2">  Teléfono: <span  class="f-normal">{{($paciente->telefono)}}</span></span>
           </p>
+          <p class=" texto-izquierda mb-0 f-bold mt-0">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
       </div>
     </header>
     <div class="container mt-4">
       <!-- Bloques de información -->
       <div class="section liquidos">
-          <h3>Líquidos</h3>
-          <p>Agua simple (ml): <span class="linea-bott">{{$data->aguaSimple}}</span></p>
-          <p>Café o té (ml): <span class="linea-bott">{{$data->cafe_te}}</span></p>
-          <p>Bebidas azucaradas (ml): <span class="linea-bott">{{$data->bebidas}}</span></p>
-          <p>Bebidas light (ml): <span class="linea-bott">{{$data->light}}</span></p>
+          <h3>Recordatorio de 24h</h3>
+          <p>{{$data->recomendacion ?? 'Sin recordatorio.'}}</p>
       </div>
 
       <div class="section presion">
           <h3>Presión arterial</h3>
           <p class="ml-2 mt-2 font-bold"><span class="linea-bott">{{$data->sistolica}}</span> / <span class="linea-bott mr-2">{{$data->diastolica}}</span>  mmHG</p>
-      </div>
-
-      <div class="section comidas">
-          <h3>Comidas</h3>
-          <p>Comidas al día: <span class="linea-bott">{{$data->comidas ?? 0}}</span></p>
       </div>
 
       <div class="section cintura">
@@ -501,10 +495,10 @@
 
       <div class="section medicamentos">
           <h3>Medicamentos</h3>
-          <p>Control de glucosa: @if ($data->Controlglucosa === 1 || $data->Controlglucosa === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Control de lípidos: @if ($data->lipidos === 1 || $data->lipidos === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Control de peso: @if ($data->controlPeso === 1 || $data->controlPeso === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Otro: @if ($data->otro) <span class="f-normal">{{$data->otro}}</span>  @else <span class="f-normal">N/A</span> @endif</p>
+          <p>Control de glucosa: @if ($data->Controlglucosa === "1" || $data->Controlglucosa === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
+          <p>Control de lípidos: @if ($data->lipidos === "1" || $data->lipidos === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
+          <p>Control de peso: @if ($data->controlPeso === "1" || $data->controlPeso === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
+          <p>Control de presión: @if ($data->controlPresion === "1" || $data->controlPresion === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
       </div>
 
       <div class="section indicadores">
@@ -514,6 +508,7 @@
           <p>HDL: <span  class="f-normal linea-bott">{{$data->hdl ?? 0}}</span></p>
           <p>Colesterol total: <span  class="f-normal linea-bott">{{$data->colesterol ?? 0}}</span></p>
           <p>LDL: <span  class="f-normal linea-bott">{{$data->ldl ?? 0}}</span></p>
+          <p>Otro: @if ($data->otro) <span class="f-normal">{{$data->otro}}</span>  @else <span class="f-normal">N/A</span> @endif</p>
       </div>
 
       @if ($paciente->genero==1)
@@ -562,56 +557,132 @@
         </div>
     </div>
 
+    <div class="section-diag">
+      <div class="section-title text-xl">Observaciones</div>
+      <div class="section-content ">
+          <p class="ml-1 p-2">{{$data->observaciones ?? 'Sin Observaciones.'}}</p>
+      </div>
+  </div>
+
     <!-- Sección Recomendaciones específicas -->
     <div class="section-diag">
-        <div class="section-title">Recomendaciones específicas</div>
-        <div class="section-content">
-            <p  class="ml-2">@if ($data->recomendaciones[0]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Evitar el consumo de azúcares (azúcar de mesa, mascabado, mieles, mermeladas, cajeta, lechera) así como productos con azúcares simples (jugos, refrescos, yogurt con frutas, postres, etc).</p>
-            <p <p  class="ml-2">@if ($data->recomendaciones[1]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Evitar el consumo de bebidas azucaradas e intercambiarlo por agua simple.</p>
-            <p class="ml-2">@if ($data->recomendaciones[2]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Formar horarios para las tres principales comidas del día.</p>
-            <p class="ml-2">@if ($data->recomendaciones[3]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Realizar 3 comidas principales al día.</p>
-            <p class="ml-2">@if ($data->recomendaciones[4]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Aumentar el consumo de agua simple (la sed es la señal más confiable de que necesita agua).</p>
-            <p class="ml-2">@if ($data->recomendaciones[5]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Mantener actividad física.</p>
-            <p class="ml-2">@if ($data->recomendaciones[6]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Iniciar actividad física moderada-ligera (caminar, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos.</p>
-            <p class="ml-2">@if ($data->recomendaciones[7]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Aumentar  actividad física moderada-ligera caminata, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos a la semana o 75 minutos a la semana de actividad vigorosa (correr, tenis, natación continua, bicicleta de subida) a la semana.</p>
-            <p class="ml-2">@if ($data->recomendaciones[8]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif A la hora de la comida elegir una opción entre arroz, frijoles, pasta o papa como acompañamiento.</p>
-            <p class="ml-2">@if ($data->recomendaciones[9]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Disminuir la cantidad de cereales (arroz, tortilla, pan, papa, pasta).</p>
-            <p class="ml-2">@if ($data->recomendaciones[10]==="true")
-              <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Siempre y cuando realice 1 hora o más de ejercicio: consumir una colación antes de la actividad y otra después.</p>
-        </div>
-    </div>
+      <div class="section-title">Recomendaciones específicas</div>
+      @php
+          // Decodifica las recomendaciones almacenadas como JSON
+          $recomendaciones = json_decode($data->recomendaciones);
+      @endphp
+      <div class="section-content">
+          <!-- Recomendación 1 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[0]) && $recomendaciones[0] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Evitar el consumo de azúcares (azúcar de mesa, mascabado, mieles, mermeladas, cajeta, lechera) así como productos con azúcares simples (jugos, refrescos, yogurt con frutas, postres, etc.).
+          </p>
+  
+          <!-- Recomendación 2 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[1]) && $recomendaciones[1] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Evitar el consumo de bebidas azucaradas e intercambiarlo por agua simple.
+          </p>
+  
+          <!-- Recomendación 3 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[2]) && $recomendaciones[2] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Formar horarios para las tres principales comidas del día.
+          </p>
+  
+          <!-- Recomendación 4 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[3]) && $recomendaciones[3] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Realizar 3 comidas principales al día.
+          </p>
+  
+          <!-- Recomendación 5 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[4]) && $recomendaciones[4] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Aumentar el consumo de agua simple (la sed es la señal más confiable de que necesita agua).
+          </p>
+  
+          <!-- Recomendación 6 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[5]) && $recomendaciones[5] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Mantener actividad física.
+          </p>
+  
+          <!-- Recomendación 7 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[6]) && $recomendaciones[6] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Iniciar actividad física moderada-ligera (caminar, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos.
+          </p>
+  
+          <!-- Recomendación 8 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[7]) && $recomendaciones[7] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Aumentar actividad física moderada-ligera (caminata, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos a la semana o 75 minutos a la semana de actividad vigorosa (correr, tenis, natación continua, bicicleta de subida) a la semana.
+          </p>
+  
+          <!-- Recomendación 9 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[8]) && $recomendaciones[8] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              A la hora de la comida elegir una opción entre arroz, frijoles, pasta o papa como acompañamiento.
+          </p>
+  
+          <!-- Recomendación 10 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[9]) && $recomendaciones[9] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Disminuir la cantidad de cereales (arroz, tortilla, pan, papa, pasta).
+          </p>
+  
+          <!-- Recomendación 11 -->
+          <p class="ml-2">
+              @if (isset($recomendaciones[10]) && $recomendaciones[10] === true)
+                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
+              @else
+                  __
+              @endif
+              Siempre y cuando realice 1 hora o más de ejercicio: consumir una colación antes de la actividad y otra después.
+          </p>
+      </div>
+  </div>
     <br>
     <br>
     <br>
