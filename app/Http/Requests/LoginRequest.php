@@ -32,10 +32,9 @@ class LoginRequest extends FormRequest
 
     public function messages(){
         return [
-            'cedula' => 'La cédula es obligatoria',
-            'cedula.unique' => 'El usuario ya está registrado',
-            'cedula.exists' => 'El usuario no existe',
-            'password' => 'El Password es Obligatorio',
+            'cedula.required' => 'La cédula es obligatoria',
+            'cedula.exists' => 'Usuario o contraseña incorrectos',
+            'password.required' => 'El Password es Obligatorio',
         ];
     }
 }

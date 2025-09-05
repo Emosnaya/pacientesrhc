@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -467,13 +466,13 @@
               </tr>
               <tr>
                 <th scope="row">Respuesta cronotrópica</th>
-                <td class="border-l border-r text-ctr">{{$data->r_cronotr * 0.1}}</td>
+                <td class="border-l border-r text-ctr">{{$data->r_cronotr}}</td>
                 <td class="border-l border-r text-ctr"> >=0.8</td>
-                <td class="border-l border-r text-ctr @if($data->r_cronotr*0.1>=0.8) bg-success @else  @endif"> @if($data->r_cronotr*0.1>=0.8) <img src="img/check-solid-black.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->r_cronotr>=0.8) bg-success @else  @endif"> @if($data->r_cronotr>=0.8) <img src="img/check-solid-black.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr"></td>
                 <td class="border-l border-r text-ctr"> &lt;0.8</td>
-                <td class="border-l border-r text-ctr @if($data->r_cronotr*0.1<0.8) bg-danger @else  @endif">@if($data->r_cronotr*0.1<0.8) <img src="img/check-solid-black.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
+                <td class="border-l border-r text-ctr @if($data->r_cronotr<0.8) bg-danger @else  @endif">@if($data->r_cronotr<0.8) <img src="img/check-solid-black.svg" alt="" style="height: 13px" class="font-light"> @else &nbsp; @endif </td>
               </tr>
               <tr>
                 <th scope="row">Poder cardiaco en ejercicio</th>

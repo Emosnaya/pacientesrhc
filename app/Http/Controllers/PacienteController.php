@@ -35,7 +35,7 @@ class PacienteController extends Controller
         $edad = Carbon::parse($fechaNacimiento)->age;
         $genero = $request->genero;
 
-        if ($genero === 'masculino'){
+        if ($genero === 1){
             $paciente->genero = 1;
         }else{
             $paciente->genero = 0;
@@ -105,46 +105,44 @@ class PacienteController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Paciente $paciente)
-    {
-        $pacientefind = Paciente::find($request->id);
-
-        $peso = $request->peso;
-        $talla = $request->talla;
-        $imc = ($peso)/($talla*$talla);
-        $fechaNacimiento = $request->fechaNacimiento;
-        $edad = Carbon::parse($fechaNacimiento)->age;
-        $genero = $request->genero;
-
-        if ($genero === 'masculino'){
-            $paciente->genero = 1;
-        }else{
-            $paciente->genero = 0;
-        }
-
-        $pacientefind->registro = $request->registro;
-        $pacientefind->nombre = $request->nombre;
-        $pacientefind->apellidoPat = $request->apellidoPat;
-        $pacientefind->apellidoMat = $request->apellidoMat;
-        $pacientefind->telefono = $request->telefono;
-        $pacientefind->domicilio = $request->domicilio;
-        $pacientefind->profesion = $request->profesion;
-        $pacientefind->cintura = $request->cintura;
-        $pacientefind->estadoCivil = $request->estadoCivil;
-        $paciente->diagnostico = $request->diagnostico;
-        $paciente->medicamentos = $request->medicamentos;
-        $paciente->envio = $request->envio;
-        $pacientefind->talla = $request->talla;
-        $pacientefind->peso = $request->peso;
-        $pacientefind->fechaNacimiento = $fechaNacimiento;
-        $pacientefind->edad = $edad;
-        $pacientefind->imc = $imc;
-        $paciente->email = $request->email;
-
-        $pacientefind->save();
-
-        // Devolver una respuesta de éxito con el paciente actualizado
-        return response()->json('', 204);
+{
+    // Verificar permisos primero
+    if($paciente->user_id != Auth::user()->id){
+        return response()->json('Error de permisos', 403);
     }
+
+    // Calcular valores derivados
+    $peso = $request->peso;
+    $talla = $request->talla;
+    $imc = ($peso)/($talla*$talla);
+    $fechaNacimiento = $request->fechaNacimiento;
+    $edad = Carbon::parse($fechaNacimiento)->age;
+
+    // Actualizar todos los campos del paciente
+    $paciente->update([
+        'registro' => $request->registro,
+        'nombre' => $request->nombre,
+        'apellidoPat' => $request->apellidoPat,
+        'apellidoMat' => $request->apellidoMat,
+        'telefono' => $request->telefono,
+        'domicilio' => $request->domicilio,
+        'profesion' => $request->profesion, // Corregí "profesion" (antes tenía typo)
+        'cintura' => $request->cintura,
+        'estadoCivil' => $request->estadoCivil,
+        'diagnostico' => $request->diagnostico,
+        'medicamentos' => $request->medicamentos,
+        'envio' => $request->envio,
+        'talla' => $talla,
+        'peso' => $peso,
+        'fechaNacimiento' => $fechaNacimiento,
+        'edad' => $edad,
+        'imc' => $imc,
+        'email' => $request->email,
+        'genero' => $request->genero == 1 ? 1 : 0 // Simplificada la asignación de género
+    ]);
+
+    return response()->json($paciente, 200);
+}
 
     /**
      * Remove the specified resource from storage.

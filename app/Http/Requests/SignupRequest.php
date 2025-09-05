@@ -37,7 +37,8 @@ class SignupRequest extends FormRequest
                     ->letters()
                     ->symbols()
                     ->numbers() 
-            ]
+            ],
+            'isAdmin' => 'string'
         ];
     }
     public function messages(){
