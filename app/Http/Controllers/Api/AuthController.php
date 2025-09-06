@@ -11,35 +11,39 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function signup(SignupRequest $request){
-        
+    public function signup(SignupRequest $request)
+    {
         $data = $request->validated();
 
+        // Crea el usuario
         /** @var \App\Models\User $user */
         $user = User::create([
             'nombre' => $data['nombre'],
             'apellidoPat' => $data['apellidoPat'],
-            'apellidoMat' => $data['apellidoMat'],
+            'apellidoMat' => $data['apellidoMat'] ?? null,
             'email' => $data['email'],
             'cedula' => $data['cedula'],
-            'password'=> bcrypt($data['password'])
+            'password' => bcrypt($data['password']),
+            'isAdmin' => $data['isAdmin'] === 'true' ? true : false,
         ]);
 
-
-        return [
+        // Retorna token y usuario
+        return response()->json([
             'token' => $user->createToken('token')->plainTextToken,
             'user' => $user
-        ];
+        ], 201);
     }
 
-    public function login(LoginRequest $request){
-        $credentials = $request->validated();
+    public function login(LoginRequest $request)
+    {
+        $credentials = $request->only('cedula', 'password');
 
-        if(!Auth::attempt($credentials)){
+        // Intentamos autenticar
+        if (!Auth::attempt($credentials)) {
             return response()->json([
-                'message' => 'Usuario o password incorrecto',
+                'message' => 'cedula o password incorrectos',
                 'errors' => [
-                    'error' => ['Cedula o password incorrecto']
+                    'error' => ['cedula o password incorrectos.']
                 ]
             ], 422);
         }
@@ -47,20 +51,23 @@ class AuthController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        return [
+        return response()->json([
             'token' => $user->createToken('token')->plainTextToken,
             'user' => $user
-        ];
+        ]);
     }
 
-    public function logout(Request $request){
-         /** @var User $user */
-         $user = $request->user();
-         $user->currentAccessToken()->delete;
+    public function logout(Request $request)
+    {
+        /** @var User $user */
+        $user = $request->user();
 
-         return [
+        // Corregir para llamar al método delete()
+        $user->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Sesión cerrada correctamente',
             'user' => null
-        ];
+        ]);
     }
-
 }
