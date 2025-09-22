@@ -140,11 +140,11 @@ class User extends Authenticatable
     public function getAccessibleResources(string $resourceType = null)
     {
         if ($this->isAdmin()) {
-            // Los admins tienen acceso a todos los recursos
+            // Los admins solo tienen acceso a sus propios recursos
             if ($resourceType === 'pacientes') {
-                return Paciente::all();
+                return $this->pacientes;
             } elseif ($resourceType === 'expedientes') {
-                return ReporteFinal::all();
+                return $this->expedientes;
             }
             return collect();
         }
@@ -164,7 +164,8 @@ class User extends Authenticatable
     public function getAccessiblePacientes()
     {
         if ($this->isAdmin()) {
-            return \App\Models\Paciente::all();
+            // Los administradores solo pueden ver los pacientes que ellos han creado
+            return $this->pacientes;
         }
 
         $pacienteIds = collect();
