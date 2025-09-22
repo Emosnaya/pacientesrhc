@@ -17,7 +17,19 @@ class ReportePsicoController extends Controller
      */
     public function index()
     {
-        return new ReportePsicoCollection(ReportePsico::where('user_id', Auth::user()->id)->get());
+        $user = Auth::user();
+        
+        if ($user->isAdmin()) {
+            // Los administradores solo ven sus propios reportes psicológicos
+            $reportes = ReportePsico::where('user_id', $user->id)->with('paciente')->get();
+        } else {
+            // Los usuarios no admin solo ven los reportes a los que tienen acceso
+            $accessibleReportes = $user->getAccessibleResources('reporte_psicos');
+            $reporteIds = $accessibleReportes->pluck('permissionable_id')->toArray();
+            $reportes = ReportePsico::whereIn('id', $reporteIds)->with('paciente')->get();
+        }
+        
+        return new ReportePsicoCollection($reportes);
     }
 
     /**
@@ -28,10 +40,20 @@ class ReportePsicoController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
         $reportePsico = new ReportePsico();
         $data = $request->input('datos');
         $id = intval($request->input('id'));
         $paciente = Paciente::find($id);
+        
+        // Verificar permisos de escritura para usuarios no admin
+        if (!$user->isAdmin()) {
+            $permission = $user->permissions()->where('can_write', true)->first();
+            if (!$permission) {
+                return response()->json(['error' => 'No tienes permisos para crear reportes psicológicos'], 403);
+            }
+        }
+        
         $reportePsico->paciente_id = $paciente->id;
 
         $reportePsico->motivo_consulta = $data['motivo_consulta'];
@@ -67,7 +89,14 @@ class ReportePsicoController extends Controller
         $reportePsico->drogas_recreativas = $data['drogas_recreativas'];
         $reportePsico->tabaco_consumo = $data['tabaco_consumo']=== 'true' ? true : false;
         $reportePsico->tipo_exp = 5;
-        $reportePsico->user_id = Auth::user()->id;
+        // Asignar user_id según el tipo de usuario
+        if (!$user->isAdmin()) {
+            // Usar el user_id del admin que otorgó los permisos
+            $reportePsico->user_id = $permission->granted_by;
+        } else {
+            // Si es admin, usar su propio user_id
+            $reportePsico->user_id = $user->id;
+        }
         $reportePsico->save();
         $reportePsico->psicologo = $data['psicologo'];
         $reportePsico->cedula_psicologo = $data['cedula_psicologo'];
@@ -83,20 +112,24 @@ class ReportePsicoController extends Controller
      */
     public function show(ReportePsico $reportePsico)
     {
-        $reportePsicoResponse = ReportePsico::find($reportePsico->id);
-
-        if($reportePsicoResponse->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden ver sus propios reportes psicológicos
+        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para ver este reporte psicológico'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_read')) {
+            return response()->json(['error' => 'No tienes permisos para ver este reporte psicológico'], 403);
         }
 
-        // Verificar si se encontró el paciente
-        if (!$reportePsicoResponse) {
-            // Si no se encontró, devolver una respuesta de error
-            return response()->json(['error' => 'Expediente no encontrado'], 404);
+        // Verificar si se encontró el reporte
+        if (!$reportePsico) {
+            return response()->json(['error' => 'Reporte psicológico no encontrado'], 404);
         }
 
-        // Si se encontró el paciente, devolverlo como respuesta
-        return response()->json($reportePsicoResponse);
+        return response()->json($reportePsico->load('paciente'));
     }
 
     /**
@@ -108,6 +141,17 @@ class ReportePsicoController extends Controller
      */
     public function update(Request $data, ReportePsico $reportePsico)
     {
+        $user = Auth::user();
+        
+        // Los administradores solo pueden editar sus propios reportes psicológicos
+        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para editar este reporte psicológico'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_edit')) {
+            return response()->json(['error' => 'No tienes permisos para editar este reporte psicológico'], 403);
+        }
         $psicoFind = ReportePsico::find($data->id);
         $psicoFind->motivo_consulta = $data['motivo_consulta']?$data['motivo_consulta']:null;
         $psicoFind->antecedentes_medicos = $data['antecedentes_medicos']?$data['antecedentes_medicos']:null;
@@ -159,10 +203,19 @@ class ReportePsicoController extends Controller
      */
     public function destroy(ReportePsico $reportePsico)
     {
-        if($reportePsico->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden eliminar sus propios reportes psicológicos
+        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este reporte psicológico'], 403);
         }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_delete')) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este reporte psicológico'], 403);
+        }
+        
         $reportePsico->delete();
-        return response()->json('',204);
+        return response()->json(['message' => 'Reporte psicológico eliminado exitosamente'], 204);
     }
 }

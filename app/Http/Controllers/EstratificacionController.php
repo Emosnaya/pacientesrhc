@@ -18,7 +18,19 @@ class EstratificacionController extends Controller
      */
     public function index()
     {
-        return new EstratificacionCollection(Estratificacion::where('user_id', Auth::user()->id)->get());
+        $user = Auth::user();
+        
+        if ($user->isAdmin()) {
+            // Los administradores solo ven sus propias estratificaciones
+            $estratificaciones = Estratificacion::where('user_id', $user->id)->with('paciente')->get();
+        } else {
+            // Los usuarios no admin solo ven las estratificaciones a las que tienen acceso
+            $accessibleEstratificaciones = $user->getAccessibleResources('estratificaciones');
+            $estratificacionIds = $accessibleEstratificaciones->pluck('permissionable_id')->toArray();
+            $estratificaciones = Estratificacion::whereIn('id', $estratificacionIds)->with('paciente')->get();
+        }
+        
+        return new EstratificacionCollection($estratificaciones);
     }
 
     /**
@@ -29,9 +41,19 @@ class EstratificacionController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
         $estratificacion = new Estratificacion();
         $data = $request->input('datos');
         $nuevoPaciente = null;
+
+        // Verificar permisos de escritura para usuarios no admin
+        $permission = null;
+        if (!$user->isAdmin()) {
+            $permission = $user->permissions()->where('can_write', true)->first();
+            if (!$permission) {
+                return response()->json(['error' => 'No tienes permisos para crear expedientes de estratificación'], 403);
+            }
+        }
 
 
         if($request->input('paciente')){
@@ -69,7 +91,12 @@ class EstratificacionController extends Controller
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
 
-            $nuevoPaciente->user_id = Auth::user()->id;
+            // Usar la misma lógica para el paciente
+            if (!$user->isAdmin()) {
+                $nuevoPaciente->user_id = $permission->granted_by;
+            } else {
+                $nuevoPaciente->user_id = $user->id;
+            }
 
 
         }else{
@@ -178,7 +205,14 @@ class EstratificacionController extends Controller
         $estratificacion->carga_inicial = ($data['carga_maxima']*0.6)*10;
         $estratificacion->comentarios = $data['comentarios'];
         $estratificacion->tipo_exp = 2;
-        $estratificacion->user_id = Auth::user()->id;
+        // Asignar user_id según el tipo de usuario
+        if (!$user->isAdmin()) {
+            // Usar el user_id del admin que otorgó los permisos
+            $estratificacion->user_id = $permission->granted_by;
+        } else {
+            // Si es admin, usar su propio user_id
+            $estratificacion->user_id = $user->id;
+        }
 
         if($nuevoPaciente != null){
             $nuevoPaciente->save();
@@ -199,20 +233,24 @@ class EstratificacionController extends Controller
      */
     public function show(Estratificacion $estratificacion)
     {
-        $pexpedienteRespose = Estratificacion::find($estratificacion->id);
-
-        if($pexpedienteRespose->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden ver sus propias estratificaciones
+        if ($user->isAdmin() && $estratificacion->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para ver este expediente de estratificación'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($estratificacion, 'can_read')) {
+            return response()->json(['error' => 'No tienes permisos para ver este expediente de estratificación'], 403);
         }
 
-        // Verificar si se encontró el paciente
-        if (!$pexpedienteRespose) {
-            // Si no se encontró, devolver una respuesta de error
-            return response()->json(['error' => 'Expediente no encontrado'], 404);
+        // Verificar si se encontró la estratificación
+        if (!$estratificacion) {
+            return response()->json(['error' => 'Expediente de estratificación no encontrado'], 404);
         }
 
-        // Si se encontró el paciente, devolverlo como respuesta
-        return response()->json($pexpedienteRespose);
+        return response()->json($estratificacion->load('paciente'));
     }
 
     /**
@@ -224,6 +262,18 @@ class EstratificacionController extends Controller
      */
     public function update(Request $request, Estratificacion $estratificacion)
     {
+        $user = Auth::user();
+        
+        // Los administradores solo pueden editar sus propias estratificaciones
+        if ($user->isAdmin() && $estratificacion->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para editar este expediente de estratificación'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($estratificacion, 'can_edit')) {
+            return response()->json(['error' => 'No tienes permisos para editar este expediente de estratificación'], 403);
+        }
+
         $expedienteFind = Estratificacion::find($request->id);
 
         $paciente = Paciente::find($request->paciente_id);
@@ -345,7 +395,19 @@ class EstratificacionController extends Controller
      */
     public function destroy(Estratificacion $estratificacion)
     {
+        $user = Auth::user();
+        
+        // Los administradores solo pueden eliminar sus propias estratificaciones
+        if ($user->isAdmin() && $estratificacion->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este expediente de estratificación'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($estratificacion, 'can_delete')) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este expediente de estratificación'], 403);
+        }
+        
         $estratificacion->delete();
-        return response("",204);
+        return response()->json(['message' => 'Expediente de estratificación eliminado exitosamente'], 204);
     }
 }

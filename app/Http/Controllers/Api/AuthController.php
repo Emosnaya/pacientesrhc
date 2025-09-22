@@ -6,63 +6,77 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\SignupRequest;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
-    public function signup(SignupRequest $request)
+    public function signup(SignupRequest $request): JsonResponse
     {
-        $data = $request->validated();
-
-        // Crea el usuario
-        /** @var \App\Models\User $user */
+        $validated = $request->validated();
+        
         $user = User::create([
-            'nombre' => $data['nombre'],
-            'apellidoPat' => $data['apellidoPat'],
-            'apellidoMat' => $data['apellidoMat'] ?? null,
-            'email' => $data['email'],
-            'cedula' => $data['cedula'],
-            'password' => bcrypt($data['password']),
-            'isAdmin' => $data['isAdmin'] === 'true' ? true : false,
+            'nombre' => $validated['nombre'],
+            'apellidoPat' => $validated['apellidoPat'],
+            'apellidoMat' => $validated['apellidoMat'] ?? null,
+            'email' => $validated['email'],
+            'cedula' => $validated['cedula'],
+            'password' => Hash::make($validated['password']),
+            'isAdmin' => filter_var($validated['isAdmin'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'imagen' => 'perfiles/avatar-default.png' // Imagen por defecto
         ]);
 
-        // Retorna token y usuario
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
-            'token' => $user->createToken('token')->plainTextToken,
-            'user' => $user
-        ], 201);
+            'token' => $token,
+            'user' => $user->fresh()
+        ], JsonResponse::HTTP_CREATED);
     }
 
-    public function login(LoginRequest $request)
+    public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->only('cedula', 'password');
+    $credentials = $request->only('cedula', 'password');
 
-        // Intentamos autenticar
-        if (!Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'cedula o password incorrectos',
-                'errors' => [
-                    'error' => ['cedula o password incorrectos.']
-                ]
-            ], 422);
-        }
+    $userExists = User::where('cedula', $credentials['cedula'])->exists();
 
-        /** @var User $user */
-        $user = Auth::user();
 
+
+    if (!$userExists) {
         return response()->json([
-            'token' => $user->createToken('token')->plainTextToken,
-            'user' => $user
-        ]);
+            'message' => 'Usuario no encontrado',
+            'errors' => [
+                'cedula' => ['No existe ningún usuario registrado con esta cédula. ¿Deseas crear una cuenta?']
+            ]
+        ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
     }
 
-    public function logout(Request $request)
+    if (!Auth::attempt($credentials)) {
+        return response()->json([
+            'message' => 'Credenciales incorrectas',
+            'errors' => [
+                'auth' => ['Cédula o Contraseña incorrectas.']
+            ]
+        ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /** @var User $user */
+    $user = Auth::user();
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'token' => $token,
+        'user' => $user
+    ]);
+    }
+
+    public function logout(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-
-        // Corregir para llamar al método delete()
         $user->currentAccessToken()->delete();
 
         return response()->json([

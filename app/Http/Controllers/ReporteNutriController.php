@@ -17,7 +17,19 @@ class ReporteNutriController extends Controller
      */
     public function index()
     {
-        return new ReporteNutriCollection(ReporteNutri::where('user_id', Auth::user()->id)->get());
+        $user = Auth::user();
+        
+        if ($user->isAdmin()) {
+            // Los administradores solo ven sus propios reportes nutricionales
+            $reportes = ReporteNutri::where('user_id', $user->id)->with('paciente')->get();
+        } else {
+            // Los usuarios no admin solo ven los reportes a los que tienen acceso
+            $accessibleReportes = $user->getAccessibleResources('reporte_nutris');
+            $reporteIds = $accessibleReportes->pluck('permissionable_id')->toArray();
+            $reportes = ReporteNutri::whereIn('id', $reporteIds)->with('paciente')->get();
+        }
+        
+        return new ReporteNutriCollection($reportes);
     }
 
     /**
@@ -28,10 +40,20 @@ class ReporteNutriController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
         $reporteNutri = new ReporteNutri();
         $data = $request->input('datos');
         $id = intval($request->input('id'));
         $paciente = Paciente::find($id);
+        
+        // Verificar permisos de escritura para usuarios no admin
+        if (!$user->isAdmin()) {
+            $permission = $user->permissions()->where('can_write', true)->first();
+            if (!$permission) {
+                return response()->json(['error' => 'No tienes permisos para crear reportes nutricionales'], 403);
+            }
+        }
+        
         $reporteNutri->paciente_id = $paciente->id;
 
         $reporteNutri->sistolica = $data['sistolica'];
@@ -62,7 +84,14 @@ class ReporteNutriController extends Controller
         $reporteNutri->observaciones= $data['observaciones'];
         $reporteNutri->controlPresion= $data['controlPresion'] === 'true' ? true : false;;
         $reporteNutri->tipo_exp = 6;
-        $reporteNutri->user_id = Auth::user()->id;
+        // Asignar user_id según el tipo de usuario
+        if (!$user->isAdmin()) {
+            // Usar el user_id del admin que otorgó los permisos
+            $reporteNutri->user_id = $permission->granted_by;
+        } else {
+            // Si es admin, usar su propio user_id
+            $reporteNutri->user_id = $user->id;
+        }
         $reporteNutri->nutriologo = $data['nutriologo'];
         $reporteNutri->cedula_nutriologo = $data['cedula_nutriologo'];
         $reporteNutri->save();
@@ -81,20 +110,24 @@ class ReporteNutriController extends Controller
      */
     public function show(ReporteNutri $reporteNutri)
     {
-        $reporteNutriResponse = ReporteNutri::find($reporteNutri->id);
-
-        if($reporteNutriResponse->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden ver sus propios reportes nutricionales
+        if ($user->isAdmin() && $reporteNutri->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para ver este reporte nutricional'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteNutri, 'can_read')) {
+            return response()->json(['error' => 'No tienes permisos para ver este reporte nutricional'], 403);
         }
 
-        // Verificar si se encontró el paciente
-        if (!$reporteNutriResponse) {
-            // Si no se encontró, devolver una respuesta de error
-            return response()->json(['error' => 'Expediente no encontrado'], 404);
+        // Verificar si se encontró el reporte
+        if (!$reporteNutri) {
+            return response()->json(['error' => 'Reporte nutricional no encontrado'], 404);
         }
 
-        // Si se encontró el paciente, devolverlo como respuesta
-        return response()->json($reporteNutriResponse);
+        return response()->json($reporteNutri->load('paciente'));
     }
 
     /**
@@ -106,6 +139,17 @@ class ReporteNutriController extends Controller
      */
     public function update(Request $data, ReporteNutri $reporte)
     {
+        $user = Auth::user();
+        
+        // Los administradores solo pueden editar sus propios reportes nutricionales
+        if ($user->isAdmin() && $reporte->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para editar este reporte nutricional'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reporte, 'can_edit')) {
+            return response()->json(['error' => 'No tienes permisos para editar este reporte nutricional'], 403);
+        }
         $reporteNutri = ReporteNutri::find($data->id);
         $reporteNutri->sistolica = $data['sistolica'];
         $reporteNutri->diastolica = $data['diastolica'];
@@ -150,10 +194,19 @@ class ReporteNutriController extends Controller
      */
     public function destroy(ReporteNutri $reporteNutri)
     {
-        if($reporteNutri->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden eliminar sus propios reportes nutricionales
+        if ($user->isAdmin() && $reporteNutri->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este reporte nutricional'], 403);
         }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteNutri, 'can_delete')) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este reporte nutricional'], 403);
+        }
+        
         $reporteNutri->delete();
-        return response()->json('',204);
+        return response()->json(['message' => 'Reporte nutricional eliminado exitosamente'], 204);
     }
 }

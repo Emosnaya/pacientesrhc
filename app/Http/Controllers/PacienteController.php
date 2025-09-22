@@ -16,7 +16,12 @@ class PacienteController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function index(){
-        return new PacienteCollection(Paciente::where('user_id',Auth::user()->id)->get());
+        $user = Auth::user();
+        
+        // Usar el nuevo método que incluye pacientes asociados a reportes con permisos
+        $pacientes = $user->getAccessiblePacientes();
+        
+        return new PacienteCollection($pacientes);
     }
 
     /**
@@ -62,7 +67,22 @@ class PacienteController extends Controller
         $paciente->imc = $imc;
         $paciente->email = $request->email;
 
-        $paciente->user_id = Auth::user()->id;
+        $user = Auth::user();
+        
+        // Si es usuario no admin, necesita permisos de escritura para crear pacientes
+        if (!$user->isAdmin()) {
+            // Verificar si tiene permisos de escritura (can_write) en algún recurso
+            // Para crear pacientes, necesitamos obtener el user_id del admin que le otorgó permisos
+            $permission = $user->permissions()->where('can_write', true)->first();
+            if (!$permission) {
+                return response()->json(['error' => 'No tienes permisos para crear pacientes'], 403);
+            }
+            // Usar el user_id del admin que otorgó los permisos
+            $paciente->user_id = $permission->granted_by;
+        } else {
+            // Si es admin, usar su propio user_id
+            $paciente->user_id = $user->id;
+        }
 
         $paciente->save();
 
@@ -81,20 +101,24 @@ class PacienteController extends Controller
      */
     public function show(Paciente $paciente)
     {
-        $pacienteRespose = Paciente::find($paciente->id);
-
-        if($pacienteRespose->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden ver sus propios pacientes
+        if ($user->isAdmin() && $paciente->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para ver este paciente'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
+            return response()->json(['error' => 'No tienes permisos para ver este paciente'], 403);
         }
 
         // Verificar si se encontró el paciente
-        if (!$pacienteRespose) {
-            // Si no se encontró, devolver una respuesta de error
+        if (!$paciente) {
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Si se encontró el paciente, devolverlo como respuesta
-        return response()->json($pacienteRespose);
+        return response()->json($paciente);
     }
 
     /**
@@ -106,9 +130,16 @@ class PacienteController extends Controller
      */
     public function update(Request $request, Paciente $paciente)
 {
-    // Verificar permisos primero
-    if($paciente->user_id != Auth::user()->id){
-        return response()->json('Error de permisos', 403);
+    $user = Auth::user();
+    
+    // Los administradores solo pueden editar sus propios pacientes
+    if ($user->isAdmin() && $paciente->user_id !== $user->id) {
+        return response()->json(['error' => 'No tienes permisos para editar este paciente'], 403);
+    }
+    
+    // Los usuarios no admin verifican permisos específicos
+    if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_edit')) {
+        return response()->json(['error' => 'No tienes permisos para editar este paciente'], 403);
     }
 
     // Calcular valores derivados
@@ -152,11 +183,19 @@ class PacienteController extends Controller
      */
     public function destroy(Paciente $paciente)
     {
-        if($paciente->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden eliminar sus propios pacientes
+        if ($user->isAdmin() && $paciente->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este paciente'], 403);
         }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_delete')) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este paciente'], 403);
+        }
+        
         $paciente->delete();
-        return response()->json('',204);
-
+        return response()->json(['message' => 'Paciente eliminado exitosamente'], 204);
     }
 }
