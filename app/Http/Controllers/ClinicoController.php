@@ -18,7 +18,19 @@ class ClinicoController extends Controller
      */
     public function index()
     {
-        return new ClinicoCollection(Clinico::where('user_id', Auth::user()->id)->get());
+        $user = Auth::user();
+        
+        if ($user->isAdmin()) {
+            // Los administradores solo ven sus propios clínicos
+            $clinicos = Clinico::where('user_id', $user->id)->with('paciente')->get();
+        } else {
+            // Los usuarios no admin solo ven los clínicos a los que tienen acceso
+            $accessibleClinicos = $user->getAccessibleResources('clinicos');
+            $clinicoIds = $accessibleClinicos->pluck('permissionable_id')->toArray();
+            $clinicos = Clinico::whereIn('id', $clinicoIds)->with('paciente')->get();
+        }
+        
+        return new ClinicoCollection($clinicos);
     }
 
     /**
@@ -29,10 +41,19 @@ class ClinicoController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
         $clinico = new Clinico();
         $data = $request->input('datos');
         $nuevoPaciente = null;
 
+        // Verificar permisos de escritura para usuarios no admin
+        $permission = null;
+        if (!$user->isAdmin()) {
+            $permission = $user->permissions()->where('can_write', true)->first();
+            if (!$permission) {
+                return response()->json(['error' => 'No tienes permisos para crear expedientes clínicos'], 403);
+            }
+        }
 
         if($request->input('paciente')){
 
@@ -69,7 +90,12 @@ class ClinicoController extends Controller
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
 
-            $nuevoPaciente->user_id = Auth::user()->id;
+            // Usar la misma lógica para el paciente
+            if (!$user->isAdmin()) {
+                $nuevoPaciente->user_id = $permission->granted_by;
+            } else {
+                $nuevoPaciente->user_id = $user->id;
+            }
 
 
         }else{
@@ -263,7 +289,14 @@ class ClinicoController extends Controller
         $clinico->plan = $data['plan'];
         $clinico->tipo_exp = 3;
         $clinico->dasi =(0.43*((2.75*$clinico->comer_vestirse)+(1.75*$clinico->caminar_casa)+(2.75*$clinico->caminar_2_cuadras)+(5.5*$clinico->subir_piso)+(8*$clinico->correr_corta)+(2.7*$clinico->lavar_trastes)+(3.5*$clinico->aspirar_casa)+(8*$clinico->trapear)+(4.5*$clinico->jardineria)+(5.25*$clinico->relaciones)+(6*$clinico->jugar)+(7.5*$clinico->deportes_extenuantes))+9.6)/3.5 ;
-        $clinico->user_id = Auth::user()->id;
+        // Asignar user_id según el tipo de usuario
+        if (!$user->isAdmin()) {
+            // Usar el user_id del admin que otorgó los permisos
+            $clinico->user_id = $permission->granted_by;
+        } else {
+            // Si es admin, usar su propio user_id
+            $clinico->user_id = $user->id;
+        }
 
         if($nuevoPaciente != null){
             $nuevoPaciente->save();
@@ -284,20 +317,24 @@ class ClinicoController extends Controller
      */
     public function show(Clinico $clinico)
     {
-        $clinicoRespose = Clinico::find($clinico->id);
-
-        if($clinicoRespose->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Los administradores solo pueden ver sus propios clínicos
+        if ($user->isAdmin() && $clinico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para ver este expediente clínico'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($clinico, 'can_read')) {
+            return response()->json(['error' => 'No tienes permisos para ver este expediente clínico'], 403);
         }
 
-        // Verificar si se encontró el paciente
-        if (!$clinicoRespose) {
-            // Si no se encontró, devolver una respuesta de error
-            return response()->json(['error' => 'Expediente no encontrado'], 404);
+        // Verificar si se encontró el clínico
+        if (!$clinico) {
+            return response()->json(['error' => 'Expediente clínico no encontrado'], 404);
         }
 
-        // Si se encontró el paciente, devolverlo como respuesta
-        return response()->json($clinicoRespose);
+        return response()->json($clinico->load('paciente'));
     }
 
     /**
@@ -309,6 +346,18 @@ class ClinicoController extends Controller
      */
     public function update(Request $data, Clinico $clinico)
     {
+        $user = Auth::user();
+        
+        // Los administradores solo pueden editar sus propios clínicos
+        if ($user->isAdmin() && $clinico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para editar este expediente clínico'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($clinico, 'can_edit')) {
+            return response()->json(['error' => 'No tienes permisos para editar este expediente clínico'], 403);
+        }
+
         $clinicoFind = Clinico::find($data->id);
         $nuevoPaciente = Paciente::find($data->paciente_id);
 
@@ -321,9 +370,9 @@ class ClinicoController extends Controller
         $clinico->imApical = $data['imApical'];
         $clinico->imLateral = $data['imLateral'];
         $clinico->imInferior = $data['imInferior'];
-        $clinico->imdelVD = $data['imdelVd'];
-        $clinico->anginaInestabale = $data['anginaInestable'];
-        $clinico->anginaEstabale = $data['anginaEstable'];
+        $clinico->imdelVD = $data['imdelVD'];
+        $clinico->anginaInestabale = $data['anginaInestabale'];
+        $clinico->anginaEstabale = $data['anginaEstabale'];
         $clinico->choque_card = $data['choque_card'];
         $clinico->m_subita = $data['m_subita'];
         $clinico->clase_f_ccs = $data['clase_f_ccs'];
@@ -510,11 +559,19 @@ class ClinicoController extends Controller
      */
     public function destroy(Clinico $clinico)
     {
-        if($clinico->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
-        }
-        $clinico->delete();
+        $user = Auth::user();
         
-        return response("",204);
+        // Los administradores solo pueden eliminar sus propios clínicos
+        if ($user->isAdmin() && $clinico->user_id !== $user->id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este expediente clínico'], 403);
+        }
+        
+        // Los usuarios no admin verifican permisos específicos
+        if (!$user->isAdmin() && !$user->hasPermissionOn($clinico, 'can_delete')) {
+            return response()->json(['error' => 'No tienes permisos para eliminar este expediente clínico'], 403);
+        }
+        
+        $clinico->delete();
+        return response()->json(['message' => 'Expediente clínico eliminado exitosamente'], 204);
     }
 }

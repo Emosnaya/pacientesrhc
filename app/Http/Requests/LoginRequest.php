@@ -23,18 +23,18 @@ class LoginRequest extends FormRequest
      * @return array<string, mixed>
      */
     public function rules()
-    {
-        return [
-            'cedula' => 'required|exists:users,cedula',
-            'password' => 'required'
-        ];
-    }
+{
+    return [
+        'cedula' => 'required|string',
+        'password' => 'required|string',
+    ];
+}
 
-    public function messages(){
-        return [
-            'cedula.required' => 'La cédula es obligatoria',
-            'cedula.exists' => 'Usuario o contraseña incorrectos',
-            'password.required' => 'El Password es Obligatorio',
-        ];
-    }
+public function messages()
+{
+    return [
+        'cedula.required' => 'La Cédula es Obligatoria',
+        'password.required' => 'El Password es Obligatorio',
+    ];
+}
 }
