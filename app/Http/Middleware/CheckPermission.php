@@ -28,11 +28,6 @@ class CheckPermission
             return response()->json(['error' => 'No autenticado'], 401);
         }
 
-        // Los administradores tienen acceso completo
-        if ($user->isAdmin()) {
-            return $next($request);
-        }
-
         // Si no se especifica recurso, verificar permisos generales
         if (!$resource) {
             return $next($request);
@@ -50,6 +45,16 @@ class CheckPermission
         
         if (!$resourceModel) {
             return response()->json(['error' => 'Recurso no encontrado'], 404);
+        }
+
+        // Los administradores solo pueden acceder a sus propios recursos
+        if ($user->isAdmin()) {
+            if ($resource === 'paciente' && $resourceModel->user_id !== $user->id) {
+                return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);
+            } elseif ($resource === 'expediente' && $resourceModel->user_id !== $user->id) {
+                return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);
+            }
+            return $next($request);
         }
 
         // Verificar si el usuario tiene el permiso específico sobre el recurso

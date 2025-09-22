@@ -30,14 +30,8 @@ class ReporteFisioController extends Controller
             return response()->json(['error' => 'No tienes permisos para ver los expedientes de este paciente'], 403);
         }
         
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            $expedientes = ReporteFisio::where('paciente_id', $pacienteId)->get();
-            return response()->json($expedientes);
-        }
-        
         // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
+        if ($user->isAdmin() && $paciente->user_id == $user->id) {
             $expedientes = ReporteFisio::where('paciente_id', $pacienteId)->get();
             return response()->json($expedientes);
         }
