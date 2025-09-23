@@ -12,9 +12,18 @@
     <style>
         /* Estilo para la línea de firma */
         .signature {
-        text-align: center;
+        text-align: left;
         width: 100%;
-        margin-top: 5rem
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .signature img {
+        max-width: 200px;
+        max-height: 80px;
+        object-fit: contain;
+        border: none;
+        filter: none;
     }
     body {
         font-family: 'Arial', sans-serif; /* Cambia 'Arial' por una fuente que soporte Unicode si es necesario */
@@ -404,9 +413,15 @@
     <div class="paciente mt-5">
       <p  class="f-15 f-normal mb-5">Atentamente,</p>
     </div>
-    <div class="paciente mt-5">
-      <p  class="f-15 f-bold mb-0">Dr <span>{{$user->nombre . $user->apellidoPat }}</span></p>
+    <div class="paciente mt-5 text-left">
+      @if($firmaBase64)
+        <div class="signature">
+          <img src="{{ $firmaBase64 }}" alt="Firma Digital">
+        </div>
+      @endif
+      <p  class="f-15 f-bold mb-0">Dr <span>{{$user->nombre . ' ' . $user->apellidoPat }}</span></p>
       <p  class="f-15 f-normal mb-2">Rehabilitación Cardiaca.</p>
+      
     </div>
     <div class="medio marg-final">
       <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">CERCAP</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">5526255547/<span class="f-normal txt-r marg-final">cercapmx</span></span>

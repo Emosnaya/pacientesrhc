@@ -25,7 +25,8 @@ class User extends Authenticatable
         'email',
         'password',
         'isAdmin',
-        'imagen'
+        'imagen',
+        'firma_digital'
     ];
 
     /**

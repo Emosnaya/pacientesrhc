@@ -212,7 +212,7 @@ class EsfuerzoController extends Controller
         $chUisq = ($velUisq*0.1)+3.5;
         $cvBorg = ($velBorg12*1.8)*($data['inclinBorg']*0.01);
         $cvMax = ($velMax*1.8)*($data['inclMax']*0.01);
-        $cvUisq = ($velUisq*1.8)*($data['inclUmIsq']*0.01);        
+        $cvUisq = ($velUisq*1.8)*($data['inclUmIsq']*0.01);
         $vor2Max = $chMax+$cvMax;
         $metsMaxBanda = $banda*($vor2Max/3.5);
         $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;

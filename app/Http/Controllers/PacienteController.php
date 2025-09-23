@@ -33,9 +33,13 @@ class PacienteController extends Controller
     public function store(Request $request)
     {
         $paciente = new Paciente;
-        $peso = $request->peso;
-        $talla = $request->talla;
-        $imc = ($peso)/($talla*$talla);
+        $peso = $request->peso ?? 0;
+        $talla = $request->talla ?? 0;
+        if($talla > 0 && $peso > 0){
+            $imc = ($peso)/($talla*$talla);
+        }else{
+            $imc = 0;
+        }
         $fechaNacimiento = $request->fechaNacimiento;
         $edad = Carbon::parse($fechaNacimiento)->age;
         $genero = $request->genero;
@@ -51,14 +55,14 @@ class PacienteController extends Controller
         $paciente->registro = $request->registro;
         $paciente->nombre = $request->nombre;
         $paciente->apellidoPat = $request->apellidoPat;
-        $paciente->apellidoMat = $request->apellidoMat;
+        $paciente->apellidoMat = $request->apellidoMat ?? null;
         $paciente->telefono = $request->telefono;
-        $paciente->domicilio = $request->domicilio;
-        $paciente->profesion = $request->profesion;
-        $paciente->cintura = $request->cintura;
-        $paciente->estadoCivil = $request->estadoCivil;
-        $paciente->diagnostico = $request->diagnostico;
-        $paciente->medicamentos = $request->medicamentos;
+        $paciente->domicilio = $request->domicilio?? null;
+        $paciente->profesion = $request->profesion?? null;
+        $paciente->cintura = $request->cintura?? 0;
+        $paciente->estadoCivil = $request->estadoCivil?? null;
+        $paciente->diagnostico = $request->diagnostico?? null;
+        $paciente->medicamentos = $request->medicamentos?? null;
         $paciente->envio = $request->envio;
         $paciente->talla = $request->talla;
         $paciente->peso = $request->peso;

@@ -57,7 +57,16 @@ class PDFController extends Controller
         $user = User::find($data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
 
-        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos'));
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64'));
         return $pdf->stream('Reporte_Final.pdf'); 
     }
     public function psicoPdf(Request $request)

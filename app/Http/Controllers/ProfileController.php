@@ -139,4 +139,48 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Subir firma digital
+     */
+    public function uploadSignature(Request $request, $id): JsonResponse
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'firma_digital' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:1024'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            // Eliminar firma anterior si existe
+            if ($user->firma_digital) {
+                Storage::disk('public')->delete($user->firma_digital);
+            }
+
+            $firma = $request->file('firma_digital');
+            $extension = $firma->getClientOriginalExtension();
+            $nombreFirma = 'firma_' . $user->cedula . '_' . time() . '.' . $extension;
+            $rutaFirma = $firma->storeAs('firmas', $nombreFirma, 'public');
+            
+            $user->update(['firma_digital' => $rutaFirma]);
+
+            return response()->json([
+                'message' => 'Firma digital actualizada exitosamente',
+                'user' => $user->fresh(),
+                'firma_url' => asset('storage/' . $rutaFirma)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al subir la firma digital: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

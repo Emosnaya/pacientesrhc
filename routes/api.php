@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/users/{id}', [ProfileController::class, 'show']);
     Route::put('/users/{id}', [ProfileController::class, 'update']);
     Route::post('/users/{id}/upload-image', [ProfileController::class, 'uploadImage']);
+    Route::post('/users/{id}/upload-signature', [ProfileController::class, 'uploadSignature']);
 
     // Almacenar ordenes
     Route::apiResource('/pacientes', PacienteController::class);
@@ -98,6 +99,8 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::put('/users/{id}', [UserManagementController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserManagementController::class, 'deleteUser']);
     Route::post('/permissions/assign', [UserManagementController::class, 'assignPermission']);
+    Route::post('/permissions/assign-bulk', [UserManagementController::class, 'assignBulkPermissions']);
+    Route::post('/permissions/revoke-bulk', [UserManagementController::class, 'revokeBulkPermissions']);
     Route::post('/permissions/revoke', [UserManagementController::class, 'revokePermission']);
     Route::get('/users/{userId}/permissions', [UserManagementController::class, 'getUserPermissions']);
     Route::get('/my-resources', [UserManagementController::class, 'getMyResourcesWithPermissions']);
