@@ -244,6 +244,114 @@ class UserManagementController extends Controller
     }
 
     /**
+     * Asignar permisos a todos los recursos de un tipo
+     */
+    public function assignBulkPermissions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'No tienes permisos para asignar permisos'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'permissionable_type' => 'required|string',
+            'can_read' => 'boolean',
+            'can_write' => 'boolean',
+            'can_edit' => 'boolean',
+            'can_delete' => 'boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Verificar que el usuario no es admin
+        $targetUser = User::find($request->user_id);
+        if ($targetUser->isAdmin()) {
+            return response()->json(['error' => 'No puedes asignar permisos a otros administradores'], 403);
+        }
+
+        $resourceType = $request->permissionable_type;
+        $resourceClass = $this->getResourceClass($resourceType);
+        
+        // Obtener todos los recursos del admin actual del tipo especificado
+        $resources = $this->getAllResourcesOfType($resourceType, $user->id);
+        
+        if ($resources->isEmpty()) {
+            return response()->json([
+                'message' => 'No tienes recursos de este tipo para asignar permisos',
+                'resource_type' => $resourceType
+            ]);
+        }
+
+        $assignedPermissions = [];
+        
+        // Asignar permisos a cada recurso
+        foreach ($resources as $resource) {
+            $permission = UserPermission::updateOrCreate(
+                [
+                    'user_id' => $request->user_id,
+                    'permissionable_type' => $resourceClass,
+                    'permissionable_id' => $resource->id
+                ],
+                [
+                    'granted_by' => $user->id,
+                    'can_read' => $request->can_read ?? false,
+                    'can_write' => $request->can_write ?? false,
+                    'can_edit' => $request->can_edit ?? false,
+                    'can_delete' => $request->can_delete ?? false
+                ]
+            );
+            
+            $assignedPermissions[] = $permission;
+        }
+
+        return response()->json([
+            'message' => "Permisos asignados exitosamente a {$resources->count()} recursos",
+            'resource_type' => $resourceType,
+            'assigned_count' => $resources->count(),
+            'permissions' => $assignedPermissions
+        ]);
+    }
+
+    /**
+     * Revocar permisos masivos de un usuario
+     */
+    public function revokeBulkPermissions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'No tienes permisos para revocar permisos'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'permissionable_type' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $resourceType = $request->permissionable_type;
+        $resourceClass = $this->getResourceClass($resourceType);
+        
+        // Revocar todos los permisos del usuario sobre recursos de este tipo
+        $deletedCount = UserPermission::where('user_id', $request->user_id)
+            ->where('permissionable_type', $resourceClass)
+            ->delete();
+
+        return response()->json([
+            'message' => "Se revocaron {$deletedCount} permisos del tipo {$resourceType}",
+            'resource_type' => $resourceType,
+            'revoked_count' => $deletedCount
+        ]);
+    }
+
+    /**
      * Revocar permisos de un usuario
      */
     public function revokePermission(Request $request): JsonResponse
@@ -394,6 +502,33 @@ class UserManagementController extends Controller
                 return \App\Models\ReporteFisio::class;
             default:
                 return '';
+        }
+    }
+
+    /**
+     * Obtener todos los recursos de un tipo específico que pertenecen al usuario
+     */
+    private function getAllResourcesOfType(string $type, int $userId)
+    {
+        switch ($type) {
+            case 'pacientes':
+                return Paciente::where('user_id', $userId)->get();
+            case 'expedientes':
+                return ReporteFinal::where('user_id', $userId)->get();
+            case 'clinicos':
+                return \App\Models\Clinico::where('user_id', $userId)->get();
+            case 'esfuerzos':
+                return \App\Models\Esfuerzo::where('user_id', $userId)->get();
+            case 'estratificaciones':
+                return \App\Models\Estratificacion::where('user_id', $userId)->get();
+            case 'reporte_nutris':
+                return \App\Models\ReporteNutri::where('user_id', $userId)->get();
+            case 'reporte_psicos':
+                return \App\Models\ReportePsico::where('user_id', $userId)->get();
+            case 'reporte_fisios':
+                return \App\Models\ReporteFisio::where('user_id', $userId)->get();
+            default:
+                return collect();
         }
     }
 }

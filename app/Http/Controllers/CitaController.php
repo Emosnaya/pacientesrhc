@@ -73,32 +73,114 @@ class CitaController extends Controller
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'paciente_id' => 'required|exists:pacientes,id',
-                'fecha' => 'required|date|after_or_equal:today',
-                'hora' => 'required|date_format:H:i',
-                'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
-                'primera_vez' => 'sometimes|boolean',
-                'notas' => 'nullable|string|max:1000'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Datos de validación incorrectos',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
             $user = Auth::user();
-            $paciente = Paciente::findOrFail($request->paciente_id);
+            $paciente = null;
+            $nuevoPaciente = null;
 
-            // Verificar permisos
-            if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_write')) {
+            // Si se proporciona un paciente existente
+            if ($request->has('paciente_id') && $request->paciente_id) {
+                $validator = Validator::make($request->all(), [
+                    'paciente_id' => 'required|exists:pacientes,id',
+                    'fecha' => 'required|date|after_or_equal:today',
+                    'hora' => 'required|date_format:H:i',
+                    'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
+                    'primera_vez' => 'sometimes|boolean',
+                    'notas' => 'nullable|string|max:1000'
+                ]);
+
+                if ($validator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Datos de validación incorrectos',
+                        'errors' => $validator->errors()
+                    ], 422);
+                }
+
+                $paciente = Paciente::findOrFail($request->paciente_id);
+
+                // Verificar permisos
+                if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_write')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permisos para crear citas para este paciente'
+                    ], 403);
+                }
+            }
+            // Si se proporciona un nuevo paciente
+            elseif ($request->has('nuevo_paciente') && $request->nuevo_paciente) {
+                $validator = Validator::make($request->all(), [
+                    'nuevo_paciente' => 'required|array',
+                    'nuevo_paciente.nombre' => 'required|string|max:255',
+                    'nuevo_paciente.apellidoPat' => 'required|string|max:255',
+                    'nuevo_paciente.apellidoMat' => 'required|string|max:255',
+                    'nuevo_paciente.telefono' => 'required|string|max:20',
+                    'nuevo_paciente.email' => 'nullable|email|max:255',
+                    'nuevo_paciente.fechaNacimiento' => 'required|date',
+                    'nuevo_paciente.genero' => 'required|in:masculino,femenino',
+                    'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
+                    'fecha' => 'required|date|after_or_equal:today',
+                    'hora' => 'required|date_format:H:i',
+                    'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
+                    'primera_vez' => 'sometimes|boolean',
+                    'notas' => 'nullable|string|max:1000'
+                ]);
+
+                if ($validator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Datos de validación incorrectos',
+                        'errors' => $validator->errors()
+                    ], 422);
+                }
+
+                // Crear nuevo paciente
+                $pacienteData = $request->nuevo_paciente;
+                $peso = $pacienteData['peso'] ?? 0;
+                $talla = $pacienteData['talla'] ?? 0;
+                $imc = $talla > 0 ? ($peso / ($talla * $talla)) : 0;
+                $fechaNacimiento = $pacienteData['fechaNacimiento'];
+                $edad = Carbon::parse($fechaNacimiento)->age;
+
+                $nuevoPaciente = new Paciente();
+                $nuevoPaciente->registro = $pacienteData['registro'];
+                $nuevoPaciente->nombre = $pacienteData['nombre'];
+                $nuevoPaciente->apellidoPat = $pacienteData['apellidoPat'];
+                $nuevoPaciente->apellidoMat = $pacienteData['apellidoMat'];
+                $nuevoPaciente->telefono = $pacienteData['telefono'];
+                $nuevoPaciente->email = $pacienteData['email'] ?? null;
+                $nuevoPaciente->domicilio = $pacienteData['domicilio'] ?? null;
+                $nuevoPaciente->profesion = $pacienteData['profesion'] ?? null;
+                $nuevoPaciente->cintura = $pacienteData['cintura'] ?? null;
+                $nuevoPaciente->estadoCivil = $pacienteData['estadoCivil'] ?? null;
+                $nuevoPaciente->diagnostico = $pacienteData['diagnostico'] ?? null;
+                $nuevoPaciente->medicamentos = $pacienteData['medicamentos'] ?? null;
+                $nuevoPaciente->envio = $pacienteData['envio'] ?? null;
+                $nuevoPaciente->talla = $talla;
+                $nuevoPaciente->peso = $peso;
+                $nuevoPaciente->fechaNacimiento = $fechaNacimiento;
+                $nuevoPaciente->edad = $edad;
+                $nuevoPaciente->imc = $imc;
+                $nuevoPaciente->genero = $pacienteData['genero'] === 'masculino' ? 1 : 0;
+                
+                // Asignar el paciente al usuario actual
+                if ($user->isAdmin()) {
+                    $nuevoPaciente->user_id = $user->id;
+                } else {
+                    // Si es usuario no admin, necesita permisos de escritura para crear pacientes
+                    $permission = $user->permissions()->where('can_write', true)->first();
+                    if (!$permission) {
+                        return response()->json(['error' => 'No tienes permisos para crear pacientes'], 403);
+                    }
+                    $nuevoPaciente->user_id = $permission->granted_by;
+                }
+
+                $nuevoPaciente->save();
+                $paciente = $nuevoPaciente;
+            } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para crear citas para este paciente'
-                ], 403);
+                    'message' => 'Debe proporcionar un paciente existente o crear uno nuevo'
+                ], 422);
             }
 
             // Verificar que no haya conflicto de horario (mínimo 1 hora de diferencia)
@@ -106,23 +188,8 @@ class CitaController extends Controller
             $horaInicio = $horaCita->copy()->subHour();
             $horaFin = $horaCita->copy()->addHour();
 
-            $conflicto = Cita::where('fecha', $request->fecha)
-                            ->where('estado', '!=', 'cancelada')
-                            ->where(function($query) use ($horaInicio, $horaFin) {
-                                $query->where('hora', '>', $horaInicio->format('H:i:s'))
-                                      ->where('hora', '<', $horaFin->format('H:i:s'));
-                            })
-                            ->exists();
-
-            if ($conflicto) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ya existe una cita programada dentro de una hora de diferencia. Se requiere al menos 1 hora entre citas.'
-                ], 409);
-            }
-
             $cita = Cita::create([
-                'paciente_id' => $request->paciente_id,
+                'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
@@ -133,11 +200,19 @@ class CitaController extends Controller
 
             $cita->load(['paciente', 'admin']);
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'message' => 'Cita creada exitosamente',
                 'data' => $cita
-            ], 201);
+            ];
+
+            // Si se creó un nuevo paciente, incluir información adicional
+            if ($nuevoPaciente) {
+                $response['message'] = 'Paciente y cita creados exitosamente';
+                $response['paciente_creado'] = true;
+            }
+
+            return response()->json($response, 201);
 
         } catch (\Exception $e) {
             return response()->json([
