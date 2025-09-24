@@ -87,10 +87,12 @@
     </div>
     
     <div class="footer">
-        <p><strong>CERCAP</strong><br>
-        Clinica Reabilitación Cardiopulmonar<br>
-        Tel: 5526255547<br>
-        Email: cerc</p>
+            <p><strong>CERCAP</strong><br>
+            Clínica de Rehabilitación Cardiopulmonar<br>
+            Tel: 5526255547 / 5526255548<br>
+            Email: cercap.cardiopulmonar@gmail.com<br>
+            wwww.cercap.mx
+        </p>
     </div>
 </body>
 </html>
