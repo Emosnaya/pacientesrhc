@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class CitaController extends Controller
@@ -199,6 +200,9 @@ class CitaController extends Controller
             ]);
 
             $cita->load(['paciente', 'admin']);
+
+            // Enviar correos de notificación
+            $this->sendCitaNotificationEmails($cita, $user);
 
             $response = [
                 'success' => true,
@@ -462,6 +466,42 @@ class CitaController extends Controller
                 'success' => false,
                 'message' => 'Error al cambiar el estado de la cita: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Enviar correos de notificación de cita
+     */
+    private function sendCitaNotificationEmails($cita, $admin)
+    {
+        try {
+            // 1. Enviar correo al dueño del paciente (admin que creó el paciente) - CON TODOS LOS DETALLES
+            $pacienteOwner = User::find($cita->paciente->user_id);
+            if ($pacienteOwner && $pacienteOwner->email) {
+                Mail::send('emails.cita-admin-notification', [
+                    'cita' => $cita,
+                    'paciente' => $cita->paciente,
+                    'recipientName' => $pacienteOwner->nombre . ' ' . $pacienteOwner->apellidoPat
+                ], function ($message) use ($pacienteOwner, $cita) {
+                    $message->to($pacienteOwner->email)
+                            ->subject('Nueva Cita Programada - ' . $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat . ' - CERCAP');
+                });
+            }
+
+            // 2. Enviar correo al paciente si tiene email - SOLO DETALLES BÁSICOS DE LA CITA
+            if ($cita->paciente->email) {
+                Mail::send('emails.cita-patient-notification', [
+                    'cita' => $cita,
+                    'paciente' => $cita->paciente
+                ], function ($message) use ($cita) {
+                    $message->to($cita->paciente->email)
+                            ->subject('Confirmación de Cita - ' . $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat . ' - CERCAP');
+                });
+            }
+
+        } catch (\Exception $e) {
+            // Log error but don't fail the cita creation
+            \Log::error('Error sending cita notification emails: ' . $e->getMessage());
         }
     }
 }

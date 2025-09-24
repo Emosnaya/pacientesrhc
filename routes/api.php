@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::get('/psico/imprimir/{id}',[PDFController::class,'psicoPdf']);
     Route::get('/nutri/imprimir/{id}',[PDFController::class,'nutriPdf']);
+    Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     Route::get('/clinicos/{id}',[InfoController::class,'clinicos']);
     Route::get('/esfuerzos/{id}',[InfoController::class,'esfuerzos']);
     Route::get('/estratificaciones/{id}',[InfoController::class,'estratificaciones']);
@@ -112,5 +113,5 @@ Route::get('/analytics', [AnalyticsController::class, 'index'])->middleware('aut
 Route::post('/registro', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-Route::post('/verify-reset-token', [AuthController::class, 'verifyResetToken']);
+Route::post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
+Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
