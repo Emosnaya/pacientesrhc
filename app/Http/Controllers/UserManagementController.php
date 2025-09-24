@@ -11,6 +11,7 @@ use App\Models\ReporteFinal;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 
 class UserManagementController extends Controller
 {
@@ -47,11 +48,27 @@ class UserManagementController extends Controller
             'cedula' => $request->cedula,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'isAdmin' => $request->isAdmin ?? false
+            'isAdmin' => $request->isAdmin ?? false,
+            'email_verified' => true, // Admin created users are pre-verified
+            'email_verified_at' => now()
         ]);
 
+        // Enviar correo con credenciales
+        try {
+            Mail::send('emails.user-credentials', [
+                'user' => $newUser,
+                'password' => $request->password // Enviar la contraseña en texto plano
+            ], function ($message) use ($newUser) {
+                $message->to($newUser->email)
+                        ->subject('Credenciales de Acceso - CERCAP');
+            });
+        } catch (\Exception $e) {
+            // Log error but don't fail user creation
+            \Log::error('Error sending user credentials email: ' . $e->getMessage());
+        }
+
         return response()->json([
-            'message' => 'Usuario creado exitosamente',
+            'message' => 'Usuario creado exitosamente. Se han enviado las credenciales por correo.',
             'user' => $newUser
         ], 201);
     }
