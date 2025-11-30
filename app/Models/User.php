@@ -243,16 +243,12 @@ class User extends Authenticatable
 
     /**
      * Verificar si el usuario puede acceder a una cita específica
+     * Ahora cualquier usuario puede ver citas de su misma clínica
      */
     public function canAccessCita($cita, string $permission = 'can_read'): bool
     {
-        if ($this->isAdmin()) {
-            // Los admins solo pueden acceder a citas de sus propios pacientes
-            return $cita->paciente->user_id === $this->id;
-        } else {
-            // Usuarios no-admin verifican permisos específicos sobre el paciente
-            return $this->hasPermissionOn($cita->paciente, $permission);
-        }
+        // Verificar que la cita pertenece a la misma clínica del usuario
+        return $cita->clinica_id === $this->clinica_id;
     }
 
     /**
