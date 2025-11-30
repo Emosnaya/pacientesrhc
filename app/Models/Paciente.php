@@ -34,7 +34,9 @@ class Paciente extends Model
         'diagnostico',
         'medicamentos',
         'envio',
-        'user_id'
+        'tipo_paciente',
+        'user_id',
+        'clinica_id'
     ];
 
     /**
@@ -43,6 +45,14 @@ class Paciente extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relación con la clínica
+     */
+    public function clinica()
+    {
+        return $this->belongsTo(Clinica::class);
     }
 
     /**
@@ -115,6 +125,43 @@ class Paciente extends Model
     public function citas()
     {
         return $this->hasMany(Cita::class);
+    }
+
+    /**
+     * Relación con los expedientes pulmonares
+     */
+    public function expedientesPulmonares()
+    {
+        return $this->hasMany(ExpedientePulmonar::class);
+    }
+
+    /**
+     * Verificar si el paciente es de tipo cardíaco
+     */
+    public function isCardiaco(): bool
+    {
+        return $this->tipo_paciente === 'cardiaca' || $this->tipo_paciente === 'ambos';
+    }
+
+    /**
+     * Verificar si el paciente es de tipo pulmonar
+     */
+    public function isPulmonar(): bool
+    {
+        return $this->tipo_paciente === 'pulmonar' || $this->tipo_paciente === 'ambos';
+    }
+
+    /**
+     * Obtener el tipo de paciente formateado
+     */
+    public function getTipoPacienteFormattedAttribute(): string
+    {
+        return match($this->tipo_paciente) {
+            'cardiaca' => 'Rehabilitación Cardíaca',
+            'pulmonar' => 'Rehabilitación Pulmonar',
+            'ambos' => 'Ambos Tipos',
+            default => 'No especificado'
+        };
     }
 
 }

@@ -16,3 +16,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Rutas para Expediente Pulmonar
+Route::resource('expediente-pulmonar', \App\Http\Controllers\ExpedientePulmonarController::class);
+
+// Rutas para Clínicas
+Route::resource('clinicas', \App\Http\Controllers\ClinicaController::class);
+Route::get('clinicas/{id}/subscription', [\App\Http\Controllers\ClinicaController::class, 'checkSubscription']);
+Route::post('clinicas/{id}/renew', [\App\Http\Controllers\ClinicaController::class, 'renewSubscription']);

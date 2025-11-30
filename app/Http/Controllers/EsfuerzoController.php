@@ -275,6 +275,8 @@ class EsfuerzoController extends Controller
         $pesfuerzo->fechaDeInicio =  $data['pruebaInicio'];
         $pesfuerzo->balke = ($data['balke'] == 'true') ? 1:0;
         $pesfuerzo->bruce = ($data['bruce'] == 'true') ? 1:0;
+        $pesfuerzo->naughton = (isset($data['naughton']) && $data['naughton'] == 'true') ? 1:0;
+        $pesfuerzo->tipo_esfuerzo = isset($data['tipoEsfuerzo']) ? $data['tipoEsfuerzo'] : 'cardiaco';
         $pesfuerzo->ciclo = ($data['ciclo'] == 'true') ? 1:0;
         $pesfuerzo->banda = ($data['banda'] == 'true') ? 1:0;
         $pesfuerzo->medicionGases = ($data['medicionGases'] == 'true') ? 1:0;
@@ -646,6 +648,8 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->fechaDeInicio =  $request['fechaDeInicio'];
         $esfuerzoFind->balke = ($request['balke'] == 'true' ||$request['balke'] === 1) ? 1:0;
         $esfuerzoFind->bruce = ($request['bruce'] == 'true' ||$request['bruce'] === 1) ? 1:0;
+        $esfuerzoFind->naughton = (isset($request['naughton']) && ($request['naughton'] == 'true' || $request['naughton'] === 1)) ? 1:0;
+        $esfuerzoFind->tipo_esfuerzo = isset($request['tipo_esfuerzo']) ? $request['tipo_esfuerzo'] : (isset($request['tipoEsfuerzo']) ? $request['tipoEsfuerzo'] : 'cardiaco');
         $esfuerzoFind->ciclo = ($request['ciclo'] == 'true' ||$request['ciclo'] === 1) ? 1:0;
         $esfuerzoFind->banda = ($request['banda'] == 'true' ||$request['banda'] === 1) ? 1:0;
         $esfuerzoFind->medicionGases = ($request['medicionGases'] == 'true' ||$request['medicionGases'] === 1) ? 1:0;

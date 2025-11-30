@@ -70,6 +70,7 @@ class PacienteController extends Controller
         $paciente->edad = $edad;
         $paciente->imc = $imc;
         $paciente->email = $request->email;
+        $paciente->tipo_paciente = $request->tipo_paciente ?? 'cardiaca'; // Valor por defecto
 
         $user = Auth::user();
         
@@ -173,7 +174,8 @@ class PacienteController extends Controller
         'edad' => $edad,
         'imc' => $imc,
         'email' => $request->email,
-        'genero' => $request->genero == 1 ? 1 : 0 // Simplificada la asignación de género
+        'genero' => $request->genero == 1 ? 1 : 0, // Simplificada la asignación de género
+        'tipo_paciente' => $request->tipo_paciente ?? $paciente->tipo_paciente // Mantener valor actual si no se proporciona
     ]);
 
     return response()->json($paciente, 200);

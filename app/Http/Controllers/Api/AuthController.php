@@ -64,38 +64,36 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-    $credentials = $request->only('cedula', 'password');
+        $credentials = $request->only('email', 'password');
 
-    $userExists = User::where('cedula', $credentials['cedula'])->exists();
+        $userExists = User::where('email', $credentials['email'])->exists();
 
+        if (!$userExists) {
+            return response()->json([
+                'message' => 'Usuario no encontrado',
+                'errors' => [
+                    'email' => ['No existe ningún usuario registrado con este email. ¿Deseas crear una cuenta?']
+                ]
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
+        if (!Auth::attempt($credentials)) {
+            return response()->json([
+                'message' => 'Credenciales incorrectas',
+                'errors' => [
+                    'auth' => ['Email o Contraseña incorrectas.']
+                ]
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
-    if (!$userExists) {
+        /** @var User $user */
+        $user = Auth::user();
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
-            'message' => 'Usuario no encontrado',
-            'errors' => [
-                'cedula' => ['No existe ningún usuario registrado con esta cédula. ¿Deseas crear una cuenta?']
-            ]
-        ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
-    }
-
-    if (!Auth::attempt($credentials)) {
-        return response()->json([
-            'message' => 'Credenciales incorrectas',
-            'errors' => [
-                'auth' => ['Cédula o Contraseña incorrectas.']
-            ]
-        ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
-    }
-
-    /** @var User $user */
-    $user = Auth::user();
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    return response()->json([
-        'token' => $token,
-        'user' => $user
-    ]);
+            'token' => $token,
+            'user' => $user
+        ]);
     }
 
     public function logout(Request $request): JsonResponse

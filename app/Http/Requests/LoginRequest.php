@@ -25,7 +25,7 @@ class LoginRequest extends FormRequest
     public function rules()
 {
     return [
-        'cedula' => 'required|string',
+        'email' => 'required|email',
         'password' => 'required|string',
     ];
 }
@@ -33,7 +33,8 @@ class LoginRequest extends FormRequest
 public function messages()
 {
     return [
-        'cedula.required' => 'La Cédula es Obligatoria',
+        'email.required' => 'El Email es Obligatorio',
+        'email.email' => 'El Email debe tener un formato válido',
         'password.required' => 'El Password es Obligatorio',
     ];
 }

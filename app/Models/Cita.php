@@ -18,6 +18,7 @@ class Cita extends Model
     protected $fillable = [
         'paciente_id',
         'admin_id',
+        'clinica_id',
         'fecha',
         'hora',
         'estado',
@@ -50,6 +51,14 @@ class Cita extends Model
     public function admin()
     {
         return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    /**
+     * Relación con la clínica
+     */
+    public function clinica()
+    {
+        return $this->belongsTo(Clinica::class);
     }
 
     /**
@@ -90,6 +99,14 @@ class Cita extends Model
     public function scopeForAdmin($query, $adminId)
     {
         return $query->where('admin_id', $adminId);
+    }
+
+    /**
+     * Scope para filtrar citas por clínica
+     */
+    public function scopeForClinica($query, $clinicaId)
+    {
+        return $query->where('clinica_id', $clinicaId);
     }
 
     /**
