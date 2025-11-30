@@ -30,7 +30,7 @@ class UserManagementController extends Controller
             'nombre' => 'required|string|max:255',
             'apellidoPat' => 'required|string|max:255',
             'apellidoMat' => 'required|string|max:255',
-            'cedula' => 'required|string|unique:users,cedula',
+            'cedula' => '',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
             'isAdmin' => 'boolean',
@@ -50,7 +50,8 @@ class UserManagementController extends Controller
             'password' => Hash::make($request->password),
             'isAdmin' => $request->isAdmin ?? false,
             'email_verified' => true, // Admin created users are pre-verified
-            'email_verified_at' => now()
+            'email_verified_at' => now(),
+            'clinica_id' => $user->clinica_id // Asignar a la misma clínica que el admin
         ]);
 
         // Enviar correo con credenciales
@@ -84,7 +85,9 @@ class UserManagementController extends Controller
             return response()->json(['error' => 'No tienes permisos para ver la lista de usuarios'], 403);
         }
 
+        // Filtrar usuarios por la misma clínica que el usuario autenticado
         $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
+            ->where('clinica_id', $user->clinica_id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -107,6 +110,11 @@ class UserManagementController extends Controller
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
+        // Verificar que el usuario pertenece a la misma clínica
+        if ($targetUser->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes permisos para actualizar usuarios de otras clínicas'], 403);
+        }
+
         // No permitir que un admin quite el admin a otro admin
         if ($targetUser->isAdmin() && $request->has('isAdmin') && !$request->isAdmin) {
             return response()->json(['error' => 'No puedes quitarle el privilegio de administrador a otro administrador'], 403);
@@ -116,7 +124,7 @@ class UserManagementController extends Controller
             'nombre' => 'required|string|max:255',
             'apellidoPat' => 'required|string|max:255',
             'apellidoMat' => 'required|string|max:255',
-            'cedula' => 'required|string|unique:users,cedula,' . $id,
+            'cedula' => 'nullable|string|unique:users,cedula,' . $id,
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:8',
             'isAdmin' => 'boolean'
@@ -162,6 +170,11 @@ class UserManagementController extends Controller
         $targetUser = User::find($id);
         if (!$targetUser) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        // Verificar que el usuario pertenece a la misma clínica
+        if ($targetUser->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes permisos para eliminar usuarios de otras clínicas'], 403);
         }
 
         // No permitir que un admin se elimine a sí mismo

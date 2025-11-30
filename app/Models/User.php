@@ -28,7 +28,8 @@ class User extends Authenticatable
         'imagen',
         'firma_digital',
         'email_verification_token',
-        'email_verified'
+        'email_verified',
+        'clinica_id'
     ];
 
     /**
@@ -51,6 +52,14 @@ class User extends Authenticatable
         'isAdmin' => 'boolean',
         'email_verified' => 'boolean',
     ];
+
+    /**
+     * Relación con la clínica
+     */
+    public function clinica()
+    {
+        return $this->belongsTo(Clinica::class);
+    }
 
     /**
      * Relación con los permisos que el usuario ha recibido
@@ -82,6 +91,14 @@ class User extends Authenticatable
     public function expedientes()
     {
         return $this->hasMany(ReporteFinal::class);
+    }
+
+    /**
+     * Relación con los expedientes pulmonares del usuario
+     */
+    public function expedientesPulmonares()
+    {
+        return $this->hasMany(ExpedientePulmonar::class);
     }
 
     /**
@@ -165,11 +182,15 @@ class User extends Authenticatable
     /**
      * Obtener pacientes accesibles (incluyendo los asociados a reportes con permisos)
      */
-    public function getAccessiblePacientes()
+    public function getAccessiblePacientes($tipoPaciente = null)
     {
         if ($this->isAdmin()) {
             // Los administradores solo pueden ver los pacientes que ellos han creado
-            return $this->pacientes;
+            $query = $this->pacientes();
+            if ($tipoPaciente) {
+                $query->where('tipo_paciente', $tipoPaciente);
+            }
+            return $query->get();
         }
 
         $pacienteIds = collect();
@@ -189,7 +210,8 @@ class User extends Authenticatable
                 \App\Models\ReporteFinal::class,
                 \App\Models\ReporteNutri::class,
                 \App\Models\ReportePsico::class,
-                \App\Models\ReporteFisio::class
+                \App\Models\ReporteFisio::class,
+                \App\Models\ExpedientePulmonar::class
             ])
             ->get();
 
@@ -203,7 +225,12 @@ class User extends Authenticatable
         // 3. Obtener pacientes únicos
         $uniquePacienteIds = $pacienteIds->unique()->values()->toArray();
         
-        return \App\Models\Paciente::whereIn('id', $uniquePacienteIds)->get();
+        $query = \App\Models\Paciente::whereIn('id', $uniquePacienteIds);
+        if ($tipoPaciente) {
+            $query->where('tipo_paciente', $tipoPaciente);
+        }
+        
+        return $query->get();
     }
 
     /**
@@ -212,5 +239,33 @@ class User extends Authenticatable
     public function citasCreadas()
     {
         return $this->hasMany(Cita::class, 'admin_id');
+    }
+
+    /**
+     * Verificar si el usuario puede acceder a una cita específica
+     */
+    public function canAccessCita($cita, string $permission = 'can_read'): bool
+    {
+        if ($this->isAdmin()) {
+            // Los admins solo pueden acceder a citas de sus propios pacientes
+            return $cita->paciente->user_id === $this->id;
+        } else {
+            // Usuarios no-admin verifican permisos específicos sobre el paciente
+            return $this->hasPermissionOn($cita->paciente, $permission);
+        }
+    }
+
+    /**
+     * Verificar si el usuario puede acceder a un paciente específico
+     */
+    public function canAccessPaciente($paciente, string $permission = 'can_read'): bool
+    {
+        if ($this->isAdmin()) {
+            // Los admins solo pueden acceder a sus propios pacientes
+            return $paciente->user_id === $this->id;
+        } else {
+            // Usuarios no-admin verifican permisos específicos
+            return $this->hasPermissionOn($paciente, $permission);
+        }
     }
 }

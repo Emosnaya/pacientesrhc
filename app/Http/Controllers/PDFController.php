@@ -10,6 +10,7 @@ use App\Models\ReporteFinal;
 use App\Models\ReporteFisio;
 use App\Models\ReporteNutri;
 use App\Models\ReportePsico;
+use App\Models\ExpedientePulmonar;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -28,7 +29,11 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente','user')); // Cargar vista PDF con datos
 
-        return $pdf->stream('pe_Esfuerzo.pdf'); // Descargar el PDF
+        // Nombre del archivo según el tipo de esfuerzo
+        $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
+        $nombreArchivo = $tipoEsfuerzo === 'pulmonar' ? 'pe_Esfuerzo_Pulmonar.pdf' : 'pe_Esfuerzo_Cardiaca.pdf';
+
+        return $pdf->stream($nombreArchivo); // Descargar el PDF
     }
 
     public function estratificacionPdf(Request $request)
@@ -90,6 +95,25 @@ class PDFController extends Controller
         return $pdf->stream('Nutri.pdf'); 
     }
 
+    public function pulmonarPdf(Request $request)
+    {
+        $data = ExpedientePulmonar::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = User::find($data->user_id);
+
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+        return $pdf->stream('Expediente_Pulmonar.pdf'); 
+    }
+
     /**
      * Enviar expediente por correo
      */
@@ -97,7 +121,7 @@ class PDFController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'expediente_id' => 'required|integer',
-            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio',
+            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar',
             'email' => 'required|email',
             'subject' => 'nullable|string|max:255',
             'message' => 'nullable|string|max:1000'
@@ -124,7 +148,8 @@ class PDFController extends Controller
                     $data = Esfuerzo::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
                     $user = User::find($data->user_id);
-                    $pdfFileName = 'Prueba_Esfuerzo.pdf';
+                    $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
+                    $pdfFileName = $tipoEsfuerzo === 'pulmonar' ? 'Prueba_Esfuerzo_Pulmonar.pdf' : 'Prueba_Esfuerzo_Cardiaca.pdf';
                     break;
                 case 'estratificacion':
                     $data = Estratificacion::find($expedienteId);
@@ -162,6 +187,12 @@ class PDFController extends Controller
                     $user = User::find($paciente->user_id);
                     $pdfFileName = 'Reporte_Fisio.pdf';
                     break;
+                case 'expediente_pulmonar':
+                    $data = ExpedientePulmonar::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    $user = User::find($data->user_id);
+                    $pdfFileName = 'Expediente_Pulmonar.pdf';
+                    break;
             }
 
             if (!$data || !$paciente || !$user) {
@@ -176,10 +207,17 @@ class PDFController extends Controller
                 'reporte_final' => 'Reporte Final',
                 'reporte_psico' => 'Reporte Psicológico',
                 'reporte_nutri' => 'Reporte Nutricional',
-                'reporte_fisio' => 'Reporte de Fisioterapia'
+                'reporte_fisio' => 'Reporte de Fisioterapia',
+                'expediente_pulmonar' => 'Expediente Pulmonar'
             ];
 
             $tipoExpedienteNombre = $tipoExpedienteNombres[$expedienteType] ?? 'Expediente Médico';
+            
+            // Si es esfuerzo, agregar el tipo específico (Cardíaca o Pulmonar)
+            if ($expedienteType === 'esfuerzo' && isset($data->tipo_esfuerzo)) {
+                $tipoEsfuerzo = $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca';
+                $tipoExpedienteNombre = 'Prueba de Esfuerzo ' . $tipoEsfuerzo;
+            }
             $nombrePaciente = trim($paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . $paciente->apellidoMat);
             $subject = $tipoExpedienteNombre . ' - ' . $nombrePaciente . ' - CERCAP';
             
@@ -237,6 +275,17 @@ class PDFController extends Controller
                     } else {
                         return response()->json(['error' => 'Archivo de fisioterapia no encontrado', 'debug' => $debugInfo], 404);
                     }
+                    break;
+                case 'expediente_pulmonar':
+                    // Preparar firma digital si existe
+                    $firmaBase64 = null;
+                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+                        $imagePath = public_path('storage/' . $user->firma_digital);
+                        $imageData = file_get_contents($imagePath);
+                        $imageType = mime_content_type($imagePath);
+                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+                    }
+                    $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
             }
 

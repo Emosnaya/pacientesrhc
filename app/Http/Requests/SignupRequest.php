@@ -28,7 +28,7 @@ class SignupRequest extends FormRequest
             'nombre' => ['required', 'string'],
             'apellidoPat' => 'required',
             'apellidoMat' => 'required',
-            'cedula' => 'required|unique:users,cedula',
+            'cedula' => 'nullable|unique:users,cedula',
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => [
                 'required',
@@ -45,7 +45,7 @@ class SignupRequest extends FormRequest
         return [
             'nombre' => 'El nombre es obligatorio',
             'apellidoPat' => 'El Apellido Paterno es obligatorio',
-            'cedula' => 'La cédula es obligatoria',
+            'cedula' => 'La cédula debe ser única si se proporciona',
             'cedula.unique' => 'El usuario ya está registrado',
             'email.required' => 'El Email es obligatorio',
             'email.email' => 'El Email No es válido',

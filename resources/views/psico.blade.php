@@ -288,6 +288,10 @@
     border-right: 2px solid #ccc;
 }
 
+html {
+  margin-top: 0;
+  padding-top: 0;
+}
 .marg-final{
     margin-top: 7rem
   }
@@ -301,6 +305,7 @@
   .txt-r{
     color: #FB0006;
   }
+
 
 
 

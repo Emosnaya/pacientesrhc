@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\User;
+use App\Models\UserPermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -23,6 +24,9 @@ class CitaController extends Controller
         try {
             $user = Auth::user();
             $query = Cita::with(['paciente', 'admin']);
+
+            // Filtrar por clínica del usuario autenticado
+            $query->forClinica($user->clinica_id);
 
             // Filtros
             if ($request->has('fecha')) {
@@ -82,7 +86,7 @@ class CitaController extends Controller
             if ($request->has('paciente_id') && $request->paciente_id) {
                 $validator = Validator::make($request->all(), [
                     'paciente_id' => 'required|exists:pacientes,id',
-                    'fecha' => 'required|date|after_or_equal:today',
+                    'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
                     'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
                     'primera_vez' => 'sometimes|boolean',
@@ -100,10 +104,14 @@ class CitaController extends Controller
                 $paciente = Paciente::findOrFail($request->paciente_id);
 
                 // Verificar permisos
-                if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_write')) {
+                if (!$user->canAccessPaciente($paciente, 'can_write')) {
+                    $message = $user->isAdmin()
+                        ? 'No tienes permisos para crear citas para pacientes que no te pertenecen'
+                        : 'No tienes permisos para crear citas para este paciente';
+                    
                     return response()->json([
                         'success' => false,
-                        'message' => 'No tienes permisos para crear citas para este paciente'
+                        'message' => $message
                     ], 403);
                 }
             }
@@ -119,7 +127,9 @@ class CitaController extends Controller
                     'nuevo_paciente.fechaNacimiento' => 'required|date',
                     'nuevo_paciente.genero' => 'required|in:masculino,femenino',
                     'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
-                    'fecha' => 'required|date|after_or_equal:today',
+                    'nuevo_paciente.tipo_paciente' => 'required|in:cardiaca,pulmonar,ambos',
+                    'nuevo_paciente.user_id' => 'required|exists:users,id',
+                    'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
                     'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
                     'primera_vez' => 'sometimes|boolean',
@@ -162,9 +172,27 @@ class CitaController extends Controller
                 $nuevoPaciente->edad = $edad;
                 $nuevoPaciente->imc = $imc;
                 $nuevoPaciente->genero = $pacienteData['genero'] === 'masculino' ? 1 : 0;
+                $nuevoPaciente->tipo_paciente = $pacienteData['tipo_paciente'] ?? 'cardiaca';
                 
-                // Asignar el paciente al usuario actual
-                if ($user->isAdmin()) {
+                // Asignar el paciente al doctor seleccionado o al usuario actual
+                if (!empty($pacienteData['user_id'])) {
+                    // Si se proporcionó un doctor, asignar a ese doctor
+                    $doctorId = $pacienteData['user_id'];
+                    // Verificar que el doctor existe y pertenece a la misma clínica
+                    $doctor = User::where('id', $doctorId)
+                        ->where('clinica_id', $user->clinica_id)
+                        ->first();
+                    
+                    if (!$doctor) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'El doctor seleccionado no es válido'
+                        ], 422);
+                    }
+                    
+                    $nuevoPaciente->user_id = $doctorId;
+                } elseif ($user->isAdmin()) {
+                    // Si es admin y no se seleccionó doctor, asignar al admin actual
                     $nuevoPaciente->user_id = $user->id;
                 } else {
                     // Si es usuario no admin, necesita permisos de escritura para crear pacientes
@@ -176,6 +204,54 @@ class CitaController extends Controller
                 }
 
                 $nuevoPaciente->save();
+                
+                // Asignar permisos automáticamente
+                if (!empty($pacienteData['user_id'])) {
+                    $doctorId = $pacienteData['user_id'];
+                    
+                    // Si el doctor seleccionado es diferente del usuario actual, asignar permisos al doctor
+                    if ($doctorId != $user->id) {
+                        $doctor = User::find($doctorId);
+                        if ($doctor) {
+                            // Crear permisos completos para el doctor (dueño)
+                            UserPermission::updateOrCreate(
+                                [
+                                    'user_id' => $doctor->id,
+                                    'permissionable_type' => Paciente::class,
+                                    'permissionable_id' => $nuevoPaciente->id,
+                                ],
+                                [
+                                    'can_read' => true,
+                                    'can_write' => true,
+                                    'can_edit' => true,
+                                    'can_delete' => true,
+                                    'granted_by' => $user->id,
+                                ]
+                            );
+                        }
+                    }
+                    
+                    // Si el usuario actual NO es el dueño, también debe recibir todos los permisos
+                    if ($doctorId != $user->id) {
+                        // El usuario que crea el paciente también recibe todos los permisos
+                        UserPermission::updateOrCreate(
+                            [
+                                'user_id' => $user->id,
+                                'permissionable_type' => Paciente::class,
+                                'permissionable_id' => $nuevoPaciente->id,
+                            ],
+                            [
+                                'can_read' => true,
+                                'can_write' => true,
+                                'can_edit' => true,
+                                'can_delete' => true,
+                                'granted_by' => $user->id,
+                            ]
+                        );
+                    }
+                    // Si el usuario actual ES el dueño, ya tiene todos los permisos por ser el dueño
+                }
+                
                 $paciente = $nuevoPaciente;
             } else {
                 return response()->json([
@@ -184,14 +260,11 @@ class CitaController extends Controller
                 ], 422);
             }
 
-            // Verificar que no haya conflicto de horario (mínimo 1 hora de diferencia)
-            $horaCita = Carbon::parse($request->fecha . ' ' . $request->hora);
-            $horaInicio = $horaCita->copy()->subHour();
-            $horaFin = $horaCita->copy()->addHour();
-
+            // Crear la cita (se permiten múltiples citas al mismo tiempo)
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
+                'clinica_id' => $user->clinica_id,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
                 'estado' => $request->estado ?? 'pendiente',
@@ -239,10 +312,14 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar permisos
-            if (!$user->isAdmin() && !$user->hasPermissionOn($cita->paciente, 'can_read')) {
+            if (!$user->canAccessCita($cita, 'can_read')) {
+                $message = $user->isAdmin()
+                    ? 'No tienes permisos para ver citas de pacientes que no te pertenecen'
+                    : 'No tienes permisos para ver esta cita';
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para ver esta cita'
+                    'message' => $message
                 ], 403);
             }
 
@@ -270,7 +347,7 @@ class CitaController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'fecha' => 'sometimes|date|after_or_equal:today',
+                'fecha' => 'sometimes|date',
                 'hora' => 'sometimes|date_format:H:i',
                 'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
                 'primera_vez' => 'sometimes|boolean',
@@ -289,38 +366,18 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar permisos
-            if (!$user->isAdmin() && !$user->hasPermissionOn($cita->paciente, 'can_edit')) {
+            if (!$user->canAccessCita($cita, 'can_edit')) {
+                $message = $user->isAdmin()
+                    ? 'No tienes permisos para modificar citas de pacientes que no te pertenecen'
+                    : 'No tienes permisos para actualizar esta cita';
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para actualizar esta cita'
+                    'message' => $message
                 ], 403);
             }
 
-            // Verificar conflicto de horario si se está cambiando fecha o hora (mínimo 1 hora de diferencia)
-            if ($request->has('fecha') || $request->has('hora')) {
-                $fecha = $request->fecha ?? $cita->fecha;
-                $hora = $request->hora ?? $cita->hora;
-                
-                $horaCita = Carbon::parse($fecha . ' ' . $hora);
-                $horaInicio = $horaCita->copy()->subHour();
-                $horaFin = $horaCita->copy()->addHour();
-                
-                $conflicto = Cita::where('fecha', $fecha)
-                                ->where('id', '!=', $id)
-                                ->where('estado', '!=', 'cancelada')
-                                ->where(function($query) use ($horaInicio, $horaFin) {
-                                    $query->where('hora', '>', $horaInicio->format('H:i:s'))
-                                          ->where('hora', '<', $horaFin->format('H:i:s'));
-                                })
-                                ->exists();
-
-                if ($conflicto) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Ya existe una cita programada dentro de una hora de diferencia. Se requiere al menos 1 hora entre citas.'
-                    ], 409);
-                }
-            }
+            // Actualizar fecha y hora si se proporcionan (se permiten múltiples citas al mismo tiempo)
 
             $cita->update($request->only(['fecha', 'hora', 'estado', 'primera_vez', 'notas']));
             $cita->load(['paciente', 'admin']);
@@ -352,10 +409,14 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar permisos
-            if (!$user->isAdmin() && !$user->hasPermissionOn($cita->paciente, 'can_delete')) {
+            if (!$user->canAccessCita($cita, 'can_delete')) {
+                $message = $user->isAdmin()
+                    ? 'No tienes permisos para eliminar citas de pacientes que no te pertenecen'
+                    : 'No tienes permisos para eliminar esta cita';
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para eliminar esta cita'
+                    'message' => $message
                 ], 403);
             }
 
@@ -388,6 +449,7 @@ class CitaController extends Controller
             $ano = $request->get('año', now()->year);
 
             $query = Cita::with(['paciente', 'admin'])
+                        ->forClinica($user->clinica_id)
                         ->byMonth($mes, $ano);
 
             // Si no es admin, solo mostrar citas de pacientes accesibles
@@ -475,20 +537,7 @@ class CitaController extends Controller
     private function sendCitaNotificationEmails($cita, $admin)
     {
         try {
-            // 1. Enviar correo al dueño del paciente (admin que creó el paciente) - CON TODOS LOS DETALLES
-            $pacienteOwner = User::find($cita->paciente->user_id);
-            if ($pacienteOwner && $pacienteOwner->email) {
-                Mail::send('emails.cita-admin-notification', [
-                    'cita' => $cita,
-                    'paciente' => $cita->paciente,
-                    'recipientName' => $pacienteOwner->nombre . ' ' . $pacienteOwner->apellidoPat
-                ], function ($message) use ($pacienteOwner, $cita) {
-                    $message->to($pacienteOwner->email)
-                            ->subject('Nueva Cita Programada - ' . $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat . ' - CERCAP');
-                });
-            }
-
-            // 2. Enviar correo al paciente si tiene email - SOLO DETALLES BÁSICOS DE LA CITA
+            // Enviar correo solo al paciente si tiene email
             if ($cita->paciente->email) {
                 Mail::send('emails.cita-patient-notification', [
                     'cita' => $cita,
