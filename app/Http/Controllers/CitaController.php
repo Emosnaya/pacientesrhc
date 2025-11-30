@@ -45,12 +45,8 @@ class CitaController extends Controller
                 $query->forPaciente($request->paciente_id);
             }
 
-            // Si no es admin, solo mostrar citas de pacientes accesibles
-            if (!$user->isAdmin()) {
-                $pacientesAccesibles = $user->getAccessiblePacientes();
-                $pacienteIds = $pacientesAccesibles->pluck('id')->toArray();
-                $query->whereIn('paciente_id', $pacienteIds);
-            }
+            // Cualquier usuario puede ver todas las citas de su clínica
+            // No se requieren permisos específicos, solo pertenecer a la misma clínica
 
             $citas = $query->orderBy('fecha', 'desc')
                           ->orderBy('hora', 'desc')
@@ -311,15 +307,11 @@ class CitaController extends Controller
             $cita = Cita::with(['paciente', 'admin'])->findOrFail($id);
             $user = Auth::user();
 
-            // Verificar permisos
-            if (!$user->canAccessCita($cita, 'can_read')) {
-                $message = $user->isAdmin()
-                    ? 'No tienes permisos para ver citas de pacientes que no te pertenecen'
-                    : 'No tienes permisos para ver esta cita';
-                
+            // Verificar que la cita pertenece a la misma clínica del usuario
+            if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => 'No tienes permisos para ver esta cita'
                 ], 403);
             }
 
@@ -365,15 +357,11 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
-            // Verificar permisos
-            if (!$user->canAccessCita($cita, 'can_edit')) {
-                $message = $user->isAdmin()
-                    ? 'No tienes permisos para modificar citas de pacientes que no te pertenecen'
-                    : 'No tienes permisos para actualizar esta cita';
-                
+            // Verificar que la cita pertenece a la misma clínica del usuario
+            if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => 'No tienes permisos para actualizar esta cita'
                 ], 403);
             }
 
@@ -408,15 +396,11 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
-            // Verificar permisos
-            if (!$user->canAccessCita($cita, 'can_delete')) {
-                $message = $user->isAdmin()
-                    ? 'No tienes permisos para eliminar citas de pacientes que no te pertenecen'
-                    : 'No tienes permisos para eliminar esta cita';
-                
+            // Verificar que la cita pertenece a la misma clínica del usuario
+            if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => 'No tienes permisos para eliminar esta cita'
                 ], 403);
             }
 
@@ -452,12 +436,8 @@ class CitaController extends Controller
                         ->forClinica($user->clinica_id)
                         ->byMonth($mes, $ano);
 
-            // Si no es admin, solo mostrar citas de pacientes accesibles
-            if (!$user->isAdmin()) {
-                $pacientesAccesibles = $user->getAccessiblePacientes();
-                $pacienteIds = $pacientesAccesibles->pluck('id')->toArray();
-                $query->whereIn('paciente_id', $pacienteIds);
-            }
+            // Cualquier usuario puede ver todas las citas del calendario de su clínica
+            // No se requieren permisos específicos, solo pertenecer a la misma clínica
 
             $citas = $query->orderBy('fecha')
                           ->orderBy('hora')
@@ -506,8 +486,8 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
-            // Verificar permisos
-            if (!$user->isAdmin() && !$user->hasPermissionOn($cita->paciente, 'can_edit')) {
+            // Verificar que la cita pertenece a la misma clínica del usuario
+            if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para cambiar el estado de esta cita'
