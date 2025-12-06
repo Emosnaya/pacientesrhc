@@ -15,14 +15,11 @@ return new class extends Migration
     {
         // Agregar clinica_id a la tabla users
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('clinica_id')->nullable()->constrained('clinicas')->onDelete('cascade');
-            $table->index('clinica_id');
+
         });
 
         // Agregar clinica_id a la tabla pacientes
         Schema::table('pacientes', function (Blueprint $table) {
-            $table->foreignId('clinica_id')->nullable()->constrained('clinicas')->onDelete('cascade');
-            $table->index('clinica_id');
         });
     }
 
@@ -35,16 +32,12 @@ return new class extends Migration
     {
         // Eliminar clinica_id de la tabla pacientes
         Schema::table('pacientes', function (Blueprint $table) {
-            $table->dropForeign(['clinica_id']);
-            $table->dropIndex(['clinica_id']);
-            $table->dropColumn('clinica_id');
+
         });
 
         // Eliminar clinica_id de la tabla users
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['clinica_id']);
-            $table->dropIndex(['clinica_id']);
-            $table->dropColumn('clinica_id');
+
         });
     }
 };
