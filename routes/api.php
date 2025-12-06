@@ -118,7 +118,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 // Rutas para gestión de usuarios y permisos (solo administradores)
 Route::prefix('admin')->middleware(['auth:sanctum', 'multi.tenant'])->group(function () {
     Route::post('/users', [UserManagementController::class, 'createUser']);
-    Route::get('/users', [UserManagementController::class, 'listUsers']);
+    Route::get('/users', [UserManagementController::class, 'listAllUsers']);
+    Route::get('/users/doctors', [UserManagementController::class, 'listDoctors']);
     Route::put('/users/{id}', [UserManagementController::class, 'updateUser']);
     Route::delete('/users/{id}', [UserManagementController::class, 'deleteUser']);
     Route::post('/permissions/assign', [UserManagementController::class, 'assignPermission']);

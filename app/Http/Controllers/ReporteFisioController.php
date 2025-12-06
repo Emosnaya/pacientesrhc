@@ -25,28 +25,12 @@ class ReporteFisioController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
         
-        // Verificar permisos básicos del paciente
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los expedientes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
         
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($user->isAdmin() && $paciente->user_id == $user->id) {
-            $expedientes = ReporteFisio::where('paciente_id', $pacienteId)->get();
-            return response()->json($expedientes);
-        }
-        
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', ReporteFisio::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-        
-        $expedientes = ReporteFisio::where('paciente_id', $pacienteId)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-        
+        $expedientes = ReporteFisio::where('paciente_id', $pacienteId)->get();
         return response()->json($expedientes);
     }
 
@@ -58,12 +42,18 @@ class ReporteFisioController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
         $fisio =  new ReporteFisio();
         $validated = $request->validate([
             'archivo' => 'nullable|file|mimes:pdf,docx,jpeg,png|max:2048'
         ]);
 
         $paciente = Paciente::Find($request['paciente_id']);
+        
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+        }
 
         if ($request->hasFile('archivo')) {
             $path = $request->file('archivo')->store('expedientes/' . $paciente->apellidoPat . '_' . $paciente->apellidoMat . '_' . $paciente->id, 'public');
@@ -73,6 +63,8 @@ class ReporteFisioController extends Controller
         $fisio->paciente_id = $request['paciente_id'];
         $fisio->archivo = $validated['archivo'];
         $fisio->tipo_exp = 7;
+        // Asignar el user_id del dueño del paciente
+        $fisio->clinica_id = $user->clinica_id;
         $fisio->save();
 
         return response()->json($fisio, 201);
@@ -90,14 +82,9 @@ class ReporteFisioController extends Controller
         $expediente = ReporteFisio::findOrFail($id);
         $paciente = $expediente->paciente;
         
-        // Los administradores solo pueden ver expedientes de sus propios pacientes
-        if ($user->isAdmin() && $paciente->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente'], 403);
+        // Verificar que el expediente pertenece a la misma clínica
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         
         return response()->json($expediente);
@@ -125,17 +112,18 @@ class ReporteFisioController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
+        }
+        
         $expediente = ReporteFisio::findOrFail($id);
         $paciente = $expediente->paciente;
         
-        // Los administradores solo pueden eliminar expedientes de sus propios pacientes
-        if ($user->isAdmin() && $paciente->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_delete')) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente'], 403);
+        // Verificar que el expediente pertenece a la misma clínica
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
         // Eliminar el archivo asociado

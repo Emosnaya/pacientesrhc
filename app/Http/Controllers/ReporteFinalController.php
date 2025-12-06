@@ -22,15 +22,10 @@ class ReporteFinalController extends Controller
     {
         $user = Auth::user();
         
-        if ($user->isAdmin()) {
-            // Los administradores solo ven sus propios expedientes
-            $expedientes = ReporteFinal::where('user_id', $user->id)->with('paciente')->get();
-        } else {
-            // Los usuarios no admin solo ven los expedientes a los que tienen acceso
-            $accessibleExpedientes = $user->getAccessibleResources('expedientes');
-            $expedienteIds = $accessibleExpedientes->pluck('permissionable_id')->toArray();
-            $expedientes = ReporteFinal::whereIn('id', $expedienteIds)->with('paciente')->get();
-        }
+        // Todos los usuarios pueden ver los expedientes de su clínica
+        $expedientes = ReporteFinal::whereHas('paciente', function($query) use ($user) {
+            $query->where('clinica_id', $user->clinica_id);
+        })->with('paciente')->get();
         
         return new ReporteFinalCollection($expedientes);
     }
@@ -49,6 +44,14 @@ class ReporteFinalController extends Controller
 
         $esfuerzo = Esfuerzo::find($id);
         $esfuerzodos = Esfuerzo::find($idDos);
+        
+        $user = Auth::user();
+        $paciente = $esfuerzo->paciente;
+        
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+        }
 
         $reporteFinal = new ReporteFinal();
 
@@ -80,24 +83,10 @@ class ReporteFinalController extends Controller
         $reporteFinal->score_ang = $data['scoreAngina'];
         $reporteFinal->tipo_exp = 4;
 
-        $user = Auth::user();
-        
-        // Si es usuario no admin, necesita permisos de escritura para crear expedientes
-        if (!$user->isAdmin()) {
-            // Verificar si tiene permisos de escritura (can_write) en algún recurso
-            // Para crear expedientes, necesitamos obtener el user_id del admin que le otorgó permisos
-            $permission = $user->permissions()->where('can_write', true)->first();
-            if (!$permission) {
-                return response()->json(['error' => 'No tienes permisos para crear expedientes'], 403);
-            }
-            // Usar el user_id del admin que otorgó los permisos
-            $reporteFinal->user_id = $permission->granted_by;
-        } else {
-            // Si es admin, usar su propio user_id
-            $reporteFinal->user_id = $user->id;
-        }
-        
+        // Asignar el user_id del dueño del paciente
+        $reporteFinal->user_id = $paciente->user_id;
         $reporteFinal->paciente_id = $esfuerzo->paciente_id;
+        $reporteFinal->clinica_id = $user->clinica_id;
         
         $reporteFinal->save();
 
@@ -114,14 +103,10 @@ class ReporteFinalController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden ver sus propios expedientes
-        if ($user->isAdmin() && $reporteFinal->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteFinal, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente'], 403);
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $reporteFinal->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
         return response()->json($reporteFinal->load('paciente'));
@@ -138,18 +123,14 @@ class ReporteFinalController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden editar sus propios expedientes
-        if ($user->isAdmin() && $reporteFinal->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para editar este expediente'], 403);
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $reporteFinal->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteFinal, 'can_edit')) {
-            return response()->json(['error' => 'No tienes permisos para editar este expediente'], 403);
-        }
+        $reporteFinal->clinica_id = $user->clinica_id;
 
         // Aquí iría la lógica de actualización del expediente
-        // Por ahora solo devolvemos un mensaje de éxito
         return response()->json(['message' => 'Expediente actualizado exitosamente']);
     }
 
@@ -163,14 +144,15 @@ class ReporteFinalController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden eliminar sus propios expedientes
-        if ($user->isAdmin() && $reporteFinal->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente'], 403);
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteFinal, 'can_delete')) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente'], 403);
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $reporteFinal->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         
         $reporteFinal->delete();

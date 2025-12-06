@@ -29,33 +29,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new ClinicoCollection(Clinico::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new ClinicoCollection(Clinico::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', Clinico::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = Clinico::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new ClinicoCollection($reportes);
+        return new ClinicoCollection(Clinico::where('paciente_id', $id)->get());
     }
 
     public function esfuerzos($id)
@@ -67,33 +46,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new EsfuerzoCollection(Esfuerzo::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new EsfuerzoCollection(Esfuerzo::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', Esfuerzo::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = Esfuerzo::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new EsfuerzoCollection($reportes);
+        return new EsfuerzoCollection(Esfuerzo::where('paciente_id', $id)->get());
     }
 
     public function estratificaciones($id)
@@ -105,33 +63,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new EstratificacionCollection(Estratificacion::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new EstratificacionCollection(Estratificacion::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', Estratificacion::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = Estratificacion::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new EstratificacionCollection($reportes);
+        return new EstratificacionCollection(Estratificacion::where('paciente_id', $id)->get());
     }
 
     public function reportes($id)
@@ -143,33 +80,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new ReporteFinalCollection(ReporteFinal::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new ReporteFinalCollection(ReporteFinal::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', ReporteFinal::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = ReporteFinal::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new ReporteFinalCollection($reportes);
+        return new ReporteFinalCollection(ReporteFinal::where('paciente_id', $id)->get());
     }
 
     public function nutricional($id)
@@ -181,33 +97,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new ReporteNutriCollection(ReporteNutri::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new ReporteNutriCollection(ReporteNutri::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', ReporteNutri::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = ReporteNutri::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new ReporteNutriCollection($reportes);
+        return new ReporteNutriCollection(ReporteNutri::where('paciente_id', $id)->get());
     }
 
     public function psicologico($id)
@@ -219,33 +114,12 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, mostrar todos los reportes
-        if ($user->isAdmin()) {
-            return new ReportePsicoCollection(ReportePsico::where('paciente_id', $id)->get());
-        }
-
-        // Si es admin del paciente, mostrar todos los reportes
-        if ($paciente->user_id == $user->id) {
-            return new ReportePsicoCollection(ReportePsico::where('paciente_id', $id)->get());
-        }
-
-        // Si no es admin, solo mostrar reportes específicos con permisos
-        $accessibleReportIds = $user->permissions()
-            ->where('permissionable_type', ReportePsico::class)
-            ->where('can_read', true)
-            ->pluck('permissionable_id')
-            ->toArray();
-
-        $reportes = ReportePsico::where('paciente_id', $id)
-            ->whereIn('id', $accessibleReportIds)
-            ->get();
-
-        return new ReportePsicoCollection($reportes);
+        return new ReportePsicoCollection(ReportePsico::where('paciente_id', $id)->get());
     }
 
     /**
@@ -260,184 +134,204 @@ class InfoController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        // Verificar permisos básicos del paciente
-        if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los reportes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
-        // Si es admin, tiene todos los permisos
-        if ($user->isAdmin()) {
-            return response()->json([
-                'can_read' => true,
-                'can_edit' => true,
-                'can_delete' => true,
-                'can_create' => true,
-                'can_compare' => true
-            ]);
-        }
-
-        // Si es admin del paciente, tiene todos los permisos
-        if ($paciente->user_id == $user->id) {
-            return response()->json([
-                'can_read' => true,
-                'can_edit' => true,
-                'can_delete' => true,
-                'can_create' => true,
-                'can_compare' => true
-            ]);
-        }
-
-        // Buscar el expediente específico
-        $expediente = null;
-        switch ($expedienteType) {
-            case 'clinico':
-                $expediente = Clinico::find($expedienteId);
-                break;
-            case 'esfuerzo':
-                $expediente = Esfuerzo::find($expedienteId);
-                break;
-            case 'estratificacion':
-                $expediente = Estratificacion::find($expedienteId);
-                break;
-            case 'reporte_final':
-                $expediente = ReporteFinal::find($expedienteId);
-                break;
-            case 'reporte_nutri':
-                $expediente = ReporteNutri::find($expedienteId);
-                break;
-            case 'reporte_psico':
-                $expediente = ReportePsico::find($expedienteId);
-                break;
-            case 'reporte_fisio':
-                $expediente = \App\Models\ReporteFisio::find($expedienteId);
-                break;
-        }
-
-        if (!$expediente) {
-            return response()->json(['error' => 'Expediente no encontrado'], 404);
-        }
-
-        // Verificar que el expediente pertenece al paciente
-        if ($expediente->paciente_id != $id) {
-            return response()->json(['error' => 'El expediente no pertenece a este paciente'], 403);
-        }
-
-        // Buscar permisos específicos del expediente
-        $permission = $user->permissions()
-            ->where('permissionable_type', get_class($expediente))
-            ->where('permissionable_id', $expedienteId)
-            ->first();
-
-        if (!$permission) {
-            return response()->json([
-                'can_read' => false,
-                'can_edit' => false,
-                'can_delete' => false,
-                'can_create' => false,
-                'can_compare' => false
-            ]);
-        }
-
+        // Todos los usuarios de la misma clínica tienen permisos de ver, editar, crear y comparar
+        // Solo los admins pueden eliminar
         return response()->json([
-            'can_read' => $permission->can_read,
-            'can_edit' => $permission->can_edit,
-            'can_delete' => $permission->can_delete,
-            'can_create' => $permission->can_edit, // Si puede editar, puede crear
-            'can_compare' => $permission->can_edit // Si puede editar, puede comparar
+            'can_read' => true,
+            'can_edit' => true,
+            'can_delete' => $user->isAdmin(),
+            'can_create' => true,
+            'can_compare' => true
         ]);
     }
+
     public function destroyPsico($id)
     {
-        $reporte = ReportePsico::find($id);
-
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
         }
+        
+        $reporte = ReportePsico::find($id);
+        
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
+        }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }
+
     public function destroyNutri($id)
     {
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
+        }
+        
         $reporte = ReporteNutri::find($id);
         
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }
+
     public function nutriIndex($id)
     {
+        $user = Auth::user();
         $reporteNutriResponse = ReporteNutri::find($id);
 
-        if($reporteNutriResponse->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
-        }
-
-        // Verificar si se encontró el paciente
         if (!$reporteNutriResponse) {
-            // Si no se encontró, devolver una respuesta de error
             return response()->json(['error' => 'Expediente no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporteNutriResponse->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        }
 
-        // Si se encontró el paciente, devolverlo como respuesta
         return response()->json($reporteNutriResponse);
     }
+
     public function psicoIndex($id)
     {
+        $user = Auth::user();
         $reportePsicoResponse = ReportePsico::find($id);
 
-        if($reportePsicoResponse->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
-        }
-
-        // Verificar si se encontró el paciente
         if (!$reportePsicoResponse) {
-            // Si no se encontró, devolver una respuesta de error
             return response()->json(['error' => 'Expediente no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reportePsicoResponse->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        }
 
-        // Si se encontró el paciente, devolverlo como respuesta
         return response()->json($reportePsicoResponse);
     }
+
     public function destroyFinal($id)
     {
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
+        }
+        
         $reporte = ReporteFinal::find($id);
         
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }
+
     public function destroyEsfuer($id)
     {
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
+        }
+        
         $reporte = Esfuerzo::find($id);
         
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }
 
     public function destroyEstrati($id)
     {
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
+        }
+        
         $reporte = Estratificacion::find($id);
         
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }
+
     public function destroyClinico($id)
     {
+        $user = Auth::user();
+        
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes'], 403);
+        }
+        
         $reporte = Clinico::find($id);
         
-        if($reporte->user_id != Auth::user()->id){
-            return response()->json('Error de permisos', 404);
+        if (!$reporte) {
+            return response()->json(['error' => 'Reporte no encontrado'], 404);
         }
+        
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
+        }
+        
         $reporte->delete();
         return response()->json(['message' => 'Reporte eliminado correctamente']);
     }

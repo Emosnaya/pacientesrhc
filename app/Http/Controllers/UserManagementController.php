@@ -77,20 +77,27 @@ class UserManagementController extends Controller
     /**
      * Listar todos los usuarios (solo administradores)
      */
-    public function listUsers(Request $request): JsonResponse
+    public function listDoctors(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        if (!$user->isAdmin()) {
-            return response()->json(['error' => 'No tienes permisos para ver la lista de usuarios'], 403);
-        }
-
+    
         // Filtrar usuarios por la misma clínica que el usuario autenticado
+        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
+            ->where('clinica_id', $user->clinica_id)
+            ->where('isAdmin', true)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['users' => $users]);
+    }
+
+    public function listAllUsers(Request $request): JsonResponse
+    {
+        $user = $request->user();
         $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
             ->where('clinica_id', $user->clinica_id)
             ->orderBy('created_at', 'desc')
             ->get();
-
         return response()->json(['users' => $users]);
     }
 

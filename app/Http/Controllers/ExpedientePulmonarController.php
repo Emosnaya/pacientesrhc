@@ -26,45 +26,22 @@ class ExpedientePulmonarController extends Controller
                 return response()->json(['error' => 'Paciente no encontrado'], 404);
             }
             
-            // Verificar permisos básicos del paciente
-            if (!$user->isAdmin() && !$user->hasPermissionOn($paciente, 'can_read')) {
-                return response()->json(['error' => 'No tienes permisos para ver los expedientes de este paciente'], 403);
+            // Verificar que el paciente pertenece a la misma clínica
+            if ($paciente->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
             }
-            
-            // Si es admin del paciente, mostrar todos los expedientes
-            if ($user->isAdmin() && $paciente->user_id == $user->id) {
-                $expedientes = ExpedientePulmonar::where('paciente_id', $pacienteId)
-                    ->with(['paciente', 'user'])
-                    ->orderBy('fecha_consulta', 'desc')
-                    ->get();
-                return response()->json($expedientes);
-            }
-            
-            // Si no es admin, solo mostrar expedientes específicos con permisos
-            $accessibleExpedienteIds = $user->permissions()
-                ->where('permissionable_type', ExpedientePulmonar::class)
-                ->where('can_read', true)
-                ->pluck('permissionable_id')
-                ->toArray();
             
             $expedientes = ExpedientePulmonar::where('paciente_id', $pacienteId)
-                ->whereIn('id', $accessibleExpedienteIds)
                 ->with(['paciente', 'user'])
                 ->orderBy('fecha_consulta', 'desc')
                 ->get();
-            
             return response()->json($expedientes);
         }
         
         // Comportamiento para web (sin pacienteId)
         $expedientes = ExpedientePulmonar::with(['paciente', 'user'])
             ->whereHas('paciente', function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->where('user_id', $user->id);
-                } else {
-                    // Para usuarios no-admin, verificar permisos
-                    $query->whereIn('id', $user->getAccessiblePacientes()->pluck('id'));
-                }
+                $query->where('clinica_id', $user->clinica_id);
             })
             ->orderBy('fecha_consulta', 'desc')
             ->paginate(15);
@@ -81,16 +58,10 @@ class ExpedientePulmonarController extends Controller
     {
         $user = Auth::user();
         
-        // Obtener pacientes pulmonares accesibles
-        $pacientes = collect();
-        
-        // Obtener pacientes pulmonares
-        $pacientesPulmonares = $user->getAccessiblePacientes('pulmonar');
-        $pacientes = $pacientes->merge($pacientesPulmonares);
-        
-        // Obtener pacientes que pueden ser ambos tipos
-        $pacientesAmbos = $user->getAccessiblePacientes('ambos');
-        $pacientes = $pacientes->merge($pacientesAmbos);
+        // Obtener pacientes pulmonares de la clínica
+        $pacientes = Paciente::where('clinica_id', $user->clinica_id)
+            ->whereIn('tipo_paciente', ['pulmonar', 'ambos'])
+            ->get();
 
         return view('expediente-pulmonar.create', compact('pacientes'));
     }
@@ -112,16 +83,17 @@ class ExpedientePulmonarController extends Controller
         $user = Auth::user();
         $paciente = Paciente::findOrFail($request->paciente_id);
 
-        // Verificar permisos
-        if (!$user->canAccessPaciente($paciente, 'can_write')) {
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json(['error' => 'No tienes permisos para crear expedientes para este paciente.'], 403);
+                return response()->json(['error' => 'No tienes acceso a este paciente.'], 403);
             }
-            return redirect()->back()->with('error', 'No tienes permisos para crear expedientes para este paciente.');
+            return redirect()->back()->with('error', 'No tienes acceso a este paciente.');
         }
 
         $data = $request->all();
-        $data['user_id'] = $user->id;
+        // Asignar el user_id del dueño del paciente
+        $data['user_id'] = $paciente->user_id;
         $data['clinica_id'] = $user->clinica_id;
 
         // Procesar campos JSON
@@ -162,12 +134,13 @@ class ExpedientePulmonarController extends Controller
             $expedientePulmonar = ExpedientePulmonar::findOrFail($expedientePulmonar);
         }
         
-        // Verificar permisos
-        if (!$user->canAccessPaciente($expedientePulmonar->paciente, 'can_read')) {
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $expedientePulmonar->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             if (request()->wantsJson() || request()->is('api/*')) {
-                return response()->json(['error' => 'No tienes permisos para ver este expediente.'], 403);
+                return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }
-            return redirect()->back()->with('error', 'No tienes permisos para ver este expediente.');
+            return redirect()->back()->with('error', 'No tienes acceso a este expediente.');
         }
 
         $expedientePulmonar->load(['paciente', 'user']);
@@ -189,9 +162,10 @@ class ExpedientePulmonarController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar permisos
-        if (!$user->canAccessPaciente($expedientePulmonar->paciente, 'can_write')) {
-            return redirect()->back()->with('error', 'No tienes permisos para editar este expediente.');
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $expedientePulmonar->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return redirect()->back()->with('error', 'No tienes acceso a este expediente.');
         }
 
         $expedientePulmonar->load(['paciente']);
@@ -215,12 +189,13 @@ class ExpedientePulmonarController extends Controller
             $expedientePulmonar = ExpedientePulmonar::findOrFail($expedientePulmonar);
         }
         
-        // Verificar permisos
-        if (!$user->canAccessPaciente($expedientePulmonar->paciente, 'can_write')) {
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $expedientePulmonar->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json(['error' => 'No tienes permisos para editar este expediente.'], 403);
+                return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }
-            return redirect()->back()->with('error', 'No tienes permisos para editar este expediente.');
+            return redirect()->back()->with('error', 'No tienes acceso a este expediente.');
         }
 
         $request->validate([
@@ -263,17 +238,26 @@ class ExpedientePulmonarController extends Controller
     {
         $user = Auth::user();
         
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            if (request()->wantsJson() || request()->is('api/*')) {
+                return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes.'], 403);
+            }
+            return redirect()->back()->with('error', 'Solo los administradores pueden eliminar expedientes.');
+        }
+        
         // Si es un ID (petición API), buscar el expediente
         if (is_numeric($expedientePulmonar)) {
             $expedientePulmonar = ExpedientePulmonar::findOrFail($expedientePulmonar);
         }
         
-        // Verificar permisos
-        if (!$user->canAccessPaciente($expedientePulmonar->paciente, 'can_write')) {
+        // Verificar que el expediente pertenece a la misma clínica
+        $paciente = $expedientePulmonar->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             if (request()->wantsJson() || request()->is('api/*')) {
-                return response()->json(['error' => 'No tienes permisos para eliminar este expediente.'], 403);
+                return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }
-            return redirect()->back()->with('error', 'No tienes permisos para eliminar este expediente.');
+            return redirect()->back()->with('error', 'No tienes acceso a este expediente.');
         }
 
         $expedientePulmonar->delete();

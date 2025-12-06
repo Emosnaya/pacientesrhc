@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\User;
-use App\Models\UserPermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -44,9 +43,6 @@ class CitaController extends Controller
             if ($request->has('paciente_id')) {
                 $query->forPaciente($request->paciente_id);
             }
-
-            // Cualquier usuario puede ver todas las citas de su clínica
-            // No se requieren permisos específicos, solo pertenecer a la misma clínica
 
             $citas = $query->orderBy('fecha', 'desc')
                           ->orderBy('hora', 'desc')
@@ -99,15 +95,11 @@ class CitaController extends Controller
 
                 $paciente = Paciente::findOrFail($request->paciente_id);
 
-                // Verificar permisos
-                if (!$user->canAccessPaciente($paciente, 'can_write')) {
-                    $message = $user->isAdmin()
-                        ? 'No tienes permisos para crear citas para pacientes que no te pertenecen'
-                        : 'No tienes permisos para crear citas para este paciente';
-                    
+                // Verificar que el paciente pertenece a la misma clínica
+                if ($paciente->clinica_id !== $user->clinica_id) {
                     return response()->json([
                         'success' => false,
-                        'message' => $message
+                        'message' => 'No tienes acceso a este paciente'
                     ], 403);
                 }
             }
@@ -123,8 +115,8 @@ class CitaController extends Controller
                     'nuevo_paciente.fechaNacimiento' => 'required|date',
                     'nuevo_paciente.genero' => 'required|in:masculino,femenino',
                     'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
-                    'nuevo_paciente.tipo_paciente' => 'required|in:cardiaca,pulmonar,ambos',
-                    'nuevo_paciente.user_id' => 'required|exists:users,id',
+                    'nuevo_paciente.tipo_paciente' => 'required|in:cardiaca,pulmonar,ambos,fisioterapia',
+                    'nuevo_paciente.user_id' => 'nullable|exists:users,id',
                     'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
                     'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
@@ -187,66 +179,13 @@ class CitaController extends Controller
                     }
                     
                     $nuevoPaciente->user_id = $doctorId;
-                } elseif ($user->isAdmin()) {
-                    // Si es admin y no se seleccionó doctor, asignar al admin actual
-                    $nuevoPaciente->user_id = $user->id;
                 } else {
-                    // Si es usuario no admin, necesita permisos de escritura para crear pacientes
-                    $permission = $user->permissions()->where('can_write', true)->first();
-                    if (!$permission) {
-                        return response()->json(['error' => 'No tienes permisos para crear pacientes'], 403);
-                    }
-                    $nuevoPaciente->user_id = $permission->granted_by;
+                    // Si no se seleccionó doctor, asignar al usuario actual
+                    $nuevoPaciente->user_id = $user->id;
                 }
-
-                $nuevoPaciente->save();
                 
-                // Asignar permisos automáticamente
-                if (!empty($pacienteData['user_id'])) {
-                    $doctorId = $pacienteData['user_id'];
-                    
-                    // Si el doctor seleccionado es diferente del usuario actual, asignar permisos al doctor
-                    if ($doctorId != $user->id) {
-                        $doctor = User::find($doctorId);
-                        if ($doctor) {
-                            // Crear permisos completos para el doctor (dueño)
-                            UserPermission::updateOrCreate(
-                                [
-                                    'user_id' => $doctor->id,
-                                    'permissionable_type' => Paciente::class,
-                                    'permissionable_id' => $nuevoPaciente->id,
-                                ],
-                                [
-                                    'can_read' => true,
-                                    'can_write' => true,
-                                    'can_edit' => true,
-                                    'can_delete' => true,
-                                    'granted_by' => $user->id,
-                                ]
-                            );
-                        }
-                    }
-                    
-                    // Si el usuario actual NO es el dueño, también debe recibir todos los permisos
-                    if ($doctorId != $user->id) {
-                        // El usuario que crea el paciente también recibe todos los permisos
-                        UserPermission::updateOrCreate(
-                            [
-                                'user_id' => $user->id,
-                                'permissionable_type' => Paciente::class,
-                                'permissionable_id' => $nuevoPaciente->id,
-                            ],
-                            [
-                                'can_read' => true,
-                                'can_write' => true,
-                                'can_edit' => true,
-                                'can_delete' => true,
-                                'granted_by' => $user->id,
-                            ]
-                        );
-                    }
-                    // Si el usuario actual ES el dueño, ya tiene todos los permisos por ser el dueño
-                }
+                $nuevoPaciente->clinica_id = $user->clinica_id;
+                $nuevoPaciente->save();
                 
                 $paciente = $nuevoPaciente;
             } else {
@@ -311,7 +250,7 @@ class CitaController extends Controller
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para ver esta cita'
+                    'message' => 'No tienes acceso a esta cita'
                 ], 403);
             }
 
@@ -361,11 +300,9 @@ class CitaController extends Controller
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para actualizar esta cita'
+                    'message' => 'No tienes acceso a esta cita'
                 ], 403);
             }
-
-            // Actualizar fecha y hora si se proporcionan (se permiten múltiples citas al mismo tiempo)
 
             $cita->update($request->only(['fecha', 'hora', 'estado', 'primera_vez', 'notas']));
             $cita->load(['paciente', 'admin']);
@@ -396,11 +333,19 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
+            // Solo los administradores pueden eliminar citas
+            if (!$user->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los administradores pueden eliminar citas'
+                ], 403);
+            }
+
             // Verificar que la cita pertenece a la misma clínica del usuario
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para eliminar esta cita'
+                    'message' => 'No tienes acceso a esta cita'
                 ], 403);
             }
 
@@ -435,9 +380,6 @@ class CitaController extends Controller
             $query = Cita::with(['paciente', 'admin'])
                         ->forClinica($user->clinica_id)
                         ->byMonth($mes, $ano);
-
-            // Cualquier usuario puede ver todas las citas del calendario de su clínica
-            // No se requieren permisos específicos, solo pertenecer a la misma clínica
 
             $citas = $query->orderBy('fecha')
                           ->orderBy('hora')
@@ -490,7 +432,7 @@ class CitaController extends Controller
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No tienes permisos para cambiar el estado de esta cita'
+                    'message' => 'No tienes acceso a esta cita'
                 ], 403);
             }
 

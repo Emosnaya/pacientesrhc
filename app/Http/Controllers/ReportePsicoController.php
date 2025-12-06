@@ -19,15 +19,10 @@ class ReportePsicoController extends Controller
     {
         $user = Auth::user();
         
-        if ($user->isAdmin()) {
-            // Los administradores solo ven sus propios reportes psicológicos
-            $reportes = ReportePsico::where('user_id', $user->id)->with('paciente')->get();
-        } else {
-            // Los usuarios no admin solo ven los reportes a los que tienen acceso
-            $accessibleReportes = $user->getAccessibleResources('reporte_psicos');
-            $reporteIds = $accessibleReportes->pluck('permissionable_id')->toArray();
-            $reportes = ReportePsico::whereIn('id', $reporteIds)->with('paciente')->get();
-        }
+        // Todos los usuarios pueden ver los reportes psicológicos de su clínica
+        $reportes = ReportePsico::whereHas('paciente', function($query) use ($user) {
+            $query->where('clinica_id', $user->clinica_id);
+        })->with('paciente')->get();
         
         return new ReportePsicoCollection($reportes);
     }
@@ -46,12 +41,9 @@ class ReportePsicoController extends Controller
         $id = intval($request->input('id'));
         $paciente = Paciente::find($id);
         
-        // Verificar permisos de escritura para usuarios no admin
-        if (!$user->isAdmin()) {
-            $permission = $user->permissions()->where('can_write', true)->first();
-            if (!$permission) {
-                return response()->json(['error' => 'No tienes permisos para crear reportes psicológicos'], 403);
-            }
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
         
         $reportePsico->paciente_id = $paciente->id;
@@ -89,17 +81,13 @@ class ReportePsicoController extends Controller
         $reportePsico->drogas_recreativas = $data['drogas_recreativas'];
         $reportePsico->tabaco_consumo = $data['tabaco_consumo']=== 'true' ? true : false;
         $reportePsico->tipo_exp = 5;
-        // Asignar user_id según el tipo de usuario
-        if (!$user->isAdmin()) {
-            // Usar el user_id del admin que otorgó los permisos
-            $reportePsico->user_id = $permission->granted_by;
-        } else {
-            // Si es admin, usar su propio user_id
-            $reportePsico->user_id = $user->id;
-        }
-        $reportePsico->save();
+        
+        // Asignar el user_id del dueño del paciente
+        $reportePsico->user_id = $paciente->user_id;
+        $reportePsico->clinica_id = $user->clinica_id;
         $reportePsico->psicologo = $data['psicologo'];
         $reportePsico->cedula_psicologo = $data['cedula_psicologo'];
+        $reportePsico->save();
 
         return response()->json("Guardado");
     }
@@ -114,19 +102,10 @@ class ReportePsicoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden ver sus propios reportes psicológicos
-        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para ver este reporte psicológico'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver este reporte psicológico'], 403);
-        }
-
-        // Verificar si se encontró el reporte
-        if (!$reportePsico) {
-            return response()->json(['error' => 'Reporte psicológico no encontrado'], 404);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reportePsico->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
 
         return response()->json($reportePsico->load('paciente'));
@@ -143,15 +122,12 @@ class ReportePsicoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden editar sus propios reportes psicológicos
-        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para editar este reporte psicológico'], 403);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reportePsico->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_edit')) {
-            return response()->json(['error' => 'No tienes permisos para editar este reporte psicológico'], 403);
-        }
         $psicoFind = ReportePsico::find($data->id);
         $psicoFind->motivo_consulta = $data['motivo_consulta']?$data['motivo_consulta']:null;
         $psicoFind->antecedentes_medicos = $data['antecedentes_medicos']?$data['antecedentes_medicos']:null;
@@ -186,9 +162,9 @@ class ReportePsicoController extends Controller
         $psicoFind->drogas_recreativas = $data['drogas_recreativas'];
         $psicoFind->tabaco_consumo = $data['tabaco_consumo']=== 'true' || $data['tabaco_consumo']=== 1 ? true : false;
         $psicoFind->tipo_exp = 5;
-        $reportePsico->psicologo = $data['psicologo'];
-        $reportePsico->cedula_psicologo = $data['cedula_psicologo'];
-
+        $psicoFind->psicologo = $data['psicologo'];
+        $psicoFind->cedula_psicologo = $data['cedula_psicologo'];
+        $psicoFind->clinica_id = $user->clinica_id;
 
         $psicoFind->save();
 
@@ -205,14 +181,15 @@ class ReportePsicoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden eliminar sus propios reportes psicológicos
-        if ($user->isAdmin() && $reportePsico->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este reporte psicológico'], 403);
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes psicológicos'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reportePsico, 'can_delete')) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este reporte psicológico'], 403);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reportePsico->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         
         $reportePsico->delete();

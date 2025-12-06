@@ -152,6 +152,14 @@ class Paciente extends Model
     }
 
     /**
+     * Verificar si el paciente es de tipo fisioterapia
+     */
+    public function isFisioterapia(): bool
+    {
+        return $this->tipo_paciente === 'fisioterapia';
+    }
+
+    /**
      * Obtener el tipo de paciente formateado
      */
     public function getTipoPacienteFormattedAttribute(): string
@@ -159,6 +167,7 @@ class Paciente extends Model
         return match($this->tipo_paciente) {
             'cardiaca' => 'Rehabilitación Cardíaca',
             'pulmonar' => 'Rehabilitación Pulmonar',
+            'fisioterapia' => 'Fisioterapia',
             'ambos' => 'Ambos Tipos',
             default => 'No especificado'
         };

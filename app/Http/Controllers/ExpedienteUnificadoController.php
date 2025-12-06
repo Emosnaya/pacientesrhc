@@ -24,28 +24,15 @@ class ExpedienteUnificadoController extends Controller
         $user = Auth::user();
         $paciente = Paciente::findOrFail($pacienteId);
 
-        // Verificar permisos sobre el paciente
-        if (!$user->canAccessPaciente($paciente, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver los expedientes de este paciente'], 403);
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
         $expedientes = collect();
 
         // 1. Esfuerzos
         $esfuerzos = Esfuerzo::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    // Verificar permisos específicos sobre esfuerzos
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -60,18 +47,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 2. Estratificaciones
         $estratificaciones = Estratificacion::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -86,18 +61,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 3. Clínicos
         $clinicos = Clinico::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -112,18 +75,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 4. Reportes Finales
         $reportes = ReporteFinal::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -138,18 +89,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 5. Reportes Nutricionales
         $nutricionales = ReporteNutri::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -164,18 +103,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 6. Reportes Psicológicos
         $psicologicos = ReportePsico::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -190,18 +117,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 7. Reportes Fisiológicos
         $fisiologicos = ReporteFisio::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
@@ -216,18 +131,6 @@ class ExpedienteUnificadoController extends Controller
 
         // 8. Expedientes Pulmonares
         $pulmonares = ExpedientePulmonar::where('paciente_id', $pacienteId)
-            ->where(function($query) use ($user) {
-                if ($user->isAdmin()) {
-                    $query->whereHas('paciente', function($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
-                } else {
-                    $query->whereHas('permissions', function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->where('can_read', true);
-                    });
-                }
-            })
             ->get()
             ->map(function($item) {
                 return [
