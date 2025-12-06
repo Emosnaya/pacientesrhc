@@ -19,15 +19,10 @@ class ReporteNutriController extends Controller
     {
         $user = Auth::user();
         
-        if ($user->isAdmin()) {
-            // Los administradores solo ven sus propios reportes nutricionales
-            $reportes = ReporteNutri::where('user_id', $user->id)->with('paciente')->get();
-        } else {
-            // Los usuarios no admin solo ven los reportes a los que tienen acceso
-            $accessibleReportes = $user->getAccessibleResources('reporte_nutris');
-            $reporteIds = $accessibleReportes->pluck('permissionable_id')->toArray();
-            $reportes = ReporteNutri::whereIn('id', $reporteIds)->with('paciente')->get();
-        }
+        // Todos los usuarios pueden ver los reportes nutricionales de su clínica
+        $reportes = ReporteNutri::whereHas('paciente', function($query) use ($user) {
+            $query->where('clinica_id', $user->clinica_id);
+        })->with('paciente')->get();
         
         return new ReporteNutriCollection($reportes);
     }
@@ -46,12 +41,9 @@ class ReporteNutriController extends Controller
         $id = intval($request->input('id'));
         $paciente = Paciente::find($id);
         
-        // Verificar permisos de escritura para usuarios no admin
-        if (!$user->isAdmin()) {
-            $permission = $user->permissions()->where('can_write', true)->first();
-            if (!$permission) {
-                return response()->json(['error' => 'No tienes permisos para crear reportes nutricionales'], 403);
-            }
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
         
         $reporteNutri->paciente_id = $paciente->id;
@@ -84,22 +76,15 @@ class ReporteNutriController extends Controller
         $reporteNutri->observaciones= $data['observaciones'];
         $reporteNutri->controlPresion= $data['controlPresion'] === 'true' ? true : false;;
         $reporteNutri->tipo_exp = 6;
-        // Asignar user_id según el tipo de usuario
-        if (!$user->isAdmin()) {
-            // Usar el user_id del admin que otorgó los permisos
-            $reporteNutri->user_id = $permission->granted_by;
-        } else {
-            // Si es admin, usar su propio user_id
-            $reporteNutri->user_id = $user->id;
-        }
+        
+        // Asignar el user_id del dueño del paciente
+        $reporteNutri->user_id = $paciente->user_id;
+        $reporteNutri->clinica_id = $user->clinica_id;
         $reporteNutri->nutriologo = $data['nutriologo'];
         $reporteNutri->cedula_nutriologo = $data['cedula_nutriologo'];
         $reporteNutri->save();
 
-
-
-
-
+        return response()->json("Guardado");
     }
 
     /**
@@ -112,19 +97,10 @@ class ReporteNutriController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden ver sus propios reportes nutricionales
-        if ($user->isAdmin() && $reporteNutri->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para ver este reporte nutricional'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteNutri, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver este reporte nutricional'], 403);
-        }
-
-        // Verificar si se encontró el reporte
-        if (!$reporteNutri) {
-            return response()->json(['error' => 'Reporte nutricional no encontrado'], 404);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporteNutri->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
 
         return response()->json($reporteNutri->load('paciente'));
@@ -141,15 +117,12 @@ class ReporteNutriController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden editar sus propios reportes nutricionales
-        if ($user->isAdmin() && $reporte->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para editar este reporte nutricional'], 403);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporte->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporte, 'can_edit')) {
-            return response()->json(['error' => 'No tienes permisos para editar este reporte nutricional'], 403);
-        }
         $reporteNutri = ReporteNutri::find($data->id);
         $reporteNutri->sistolica = $data['sistolica'];
         $reporteNutri->diastolica = $data['diastolica'];
@@ -181,6 +154,7 @@ class ReporteNutriController extends Controller
         $reporteNutri->tipo_exp = 6;
         $reporteNutri->nutriologo = $data['nutriologo'];
         $reporteNutri->cedula_nutriologo = $data['cedula_nutriologo'];
+        $reporteNutri->clinica_id = $user->clinica_id;
         $reporteNutri->save();
 
         return response('Actualizado',204);
@@ -196,14 +170,15 @@ class ReporteNutriController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden eliminar sus propios reportes nutricionales
-        if ($user->isAdmin() && $reporteNutri->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este reporte nutricional'], 403);
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar reportes nutricionales'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($reporteNutri, 'can_delete')) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este reporte nutricional'], 403);
+        // Verificar que el reporte pertenece a la misma clínica
+        $paciente = $reporteNutri->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         
         $reporteNutri->delete();

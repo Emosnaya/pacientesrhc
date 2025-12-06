@@ -20,15 +20,10 @@ class EsfuerzoController extends Controller
     {
         $user = Auth::user();
         
-        if ($user->isAdmin()) {
-            // Los administradores solo ven sus propios esfuerzos
-            $esfuerzos = Esfuerzo::where('user_id', $user->id)->with('paciente')->get();
-        } else {
-            // Los usuarios no admin solo ven los esfuerzos a los que tienen acceso
-            $accessibleEsfuerzos = $user->getAccessibleResources('esfuerzos');
-            $esfuerzoIds = $accessibleEsfuerzos->pluck('permissionable_id')->toArray();
-            $esfuerzos = Esfuerzo::whereIn('id', $esfuerzoIds)->with('paciente')->get();
-        }
+        // Todos los usuarios pueden ver los esfuerzos de su clínica
+        $esfuerzos = Esfuerzo::whereHas('paciente', function($query) use ($user) {
+            $query->where('clinica_id', $user->clinica_id);
+        })->with('paciente')->get();
         
         return new EsfuerzoCollection($esfuerzos);
     }
@@ -45,16 +40,6 @@ class EsfuerzoController extends Controller
         $pesfuerzo = new Esfuerzo();
         $data = $request->input('datos');
         $nuevoPaciente = null;
-
-        // Verificar permisos de escritura para usuarios no admin
-        $permission = null;
-        if (!$user->isAdmin()) {
-            $permission = $user->permissions()->where('can_write', true)->first();
-            if (!$permission) {
-                return response()->json(['error' => 'No tienes permisos para crear expedientes de esfuerzo'], 403);
-            }
-        }
-
 
         if($request->input('paciente')){
 
@@ -90,18 +75,19 @@ class EsfuerzoController extends Controller
             $nuevoPaciente->fechaNacimiento = $fechaNacimiento;
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
+            $nuevoPaciente->user_id = $user->id;
+            $nuevoPaciente->clinica_id = $user->clinica_id;
 
-            // Usar la misma lógica para el paciente
-            if (!$user->isAdmin()) {
-                $nuevoPaciente->user_id = $permission->granted_by;
-            } else {
-                $nuevoPaciente->user_id = $user->id;
-            }
-
+            $nuevoPaciente->save();
 
         }else{
             $id = intval($request->input('id'));
             $nuevoPaciente = Paciente::find($id);
+            
+            // Verificar que el paciente pertenece a la misma clínica
+            if ($nuevoPaciente->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+            }
 
             $pesfuerzo->paciente_id = $nuevoPaciente->id;
             
@@ -405,22 +391,11 @@ class EsfuerzoController extends Controller
         $pesfuerzo->fecha =  $data['fecha'];
         $pesfuerzo->recup_tas = $tas3ermin/$tas1ermin;
 
-        // Asignar user_id según el tipo de usuario
-        if (!$user->isAdmin()) {
-            // Usar el user_id del admin que otorgó los permisos
-            $pesfuerzo->user_id = $permission->granted_by;
-        } else {
-            // Si es admin, usar su propio user_id
-            $pesfuerzo->user_id = $user->id;
-        }
+        // Asignar el user_id del dueño del paciente
+        $pesfuerzo->user_id = $nuevoPaciente->user_id;
         $pesfuerzo->tipo_exp = 1;
+        $pesfuerzo->clinica_id = $user->clinica_id;
 
-
-        if($nuevoPaciente != null){
-            $nuevoPaciente->save();
-        }
-
-        
         $pesfuerzo->paciente_id = $nuevoPaciente->id;
         $pesfuerzo->save();
         
@@ -437,19 +412,10 @@ class EsfuerzoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden ver sus propios esfuerzos
-        if ($user->isAdmin() && $esfuerzo->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente de esfuerzo'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($esfuerzo, 'can_read')) {
-            return response()->json(['error' => 'No tienes permisos para ver este expediente de esfuerzo'], 403);
-        }
-
-        // Verificar si se encontró el esfuerzo
-        if (!$esfuerzo) {
-            return response()->json(['error' => 'Expediente de esfuerzo no encontrado'], 404);
+        // Verificar que el esfuerzo pertenece a la misma clínica
+        $paciente = $esfuerzo->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
         return response()->json($esfuerzo->load('paciente'));
@@ -466,14 +432,10 @@ class EsfuerzoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden editar sus propios esfuerzos
-        if ($user->isAdmin() && $esfuerzo->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para editar este expediente de esfuerzo'], 403);
-        }
-        
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($esfuerzo, 'can_edit')) {
-            return response()->json(['error' => 'No tienes permisos para editar este expediente de esfuerzo'], 403);
+        // Verificar que el esfuerzo pertenece a la misma clínica
+        $paciente = $esfuerzo->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
         $esfuerzoFind = Esfuerzo::find($request->id);
@@ -778,6 +740,7 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->fecha =  $request['fecha'];
         $esfuerzoFind->recup_tas = $tas3ermin/$tas1ermin;
         $esfuerzoFind->tipo_exp = 1;
+        $esfuerzoFind->clinica_id = $user->clinica_id;
         
         $esfuerzoFind->save();
 
@@ -794,14 +757,15 @@ class EsfuerzoController extends Controller
     {
         $user = Auth::user();
         
-        // Los administradores solo pueden eliminar sus propios esfuerzos
-        if ($user->isAdmin() && $esfuerzo->user_id !== $user->id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente de esfuerzo'], 403);
+        // Solo los administradores pueden eliminar
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
-        // Los usuarios no admin verifican permisos específicos
-        if (!$user->isAdmin() && !$user->hasPermissionOn($esfuerzo, 'can_delete')) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este expediente de esfuerzo'], 403);
+        // Verificar que el esfuerzo pertenece a la misma clínica
+        $paciente = $esfuerzo->paciente;
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
         
         $esfuerzo->delete();
