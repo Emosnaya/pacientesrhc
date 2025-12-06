@@ -572,10 +572,12 @@
                       <th scope="col">2: <span>@if($data->semanas===2) <img src="img/check-solid-black.svg" alt="" style="height: 14px" class="font-light"> @else &nbsp; @endif</span></th>
                       <th scope="col">4: <span>@if($data->semanas===4) <img src="img/check-solid-black.svg" alt="" style="height: 14px" class="font-light"> @else &nbsp; @endif</span></th>
                       <th scope="col">6: <span>@if($data->semanas===6) <img src="img/check-solid-black.svg" alt="" style="height: 14px" class="font-light"> @else &nbsp; @endif</span></th>
+                      <th scope="col">8: <span>@if($data->semanas===8) <img src="img/check-solid-black.svg" alt="" style="height: 14px" class="font-light"> @else &nbsp; @endif</span></th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
+                        <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
