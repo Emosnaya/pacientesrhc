@@ -12,6 +12,21 @@ use Illuminate\Support\Facades\Auth;
 class EsfuerzoController extends Controller
 {
     /**
+     * División segura para evitar división por cero
+     * @param float $numerator
+     * @param float $denominator
+     * @param mixed $default Valor por defecto si el denominador es 0 (default: null)
+     * @return float|null
+     */
+    private function safeDivide($numerator, $denominator, $default = null)
+    {
+        if (empty($denominator) || $denominator == 0) {
+            return $default;
+        }
+        return $numerator / $denominator;
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
@@ -84,7 +99,6 @@ class EsfuerzoController extends Controller
             $id = intval($request->input('id'));
             $nuevoPaciente = Paciente::find($id);
             
-            // Verificar que el paciente pertenece a la misma clínica
             if ($nuevoPaciente->clinica_id !== $user->clinica_id) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
@@ -159,7 +173,7 @@ class EsfuerzoController extends Controller
 
         $fc85 = $fcMaxCalc*0.85;
 
-        $fcMaxAlcanzado = ($fcMax*100)/$fcMaxCalc;
+        $fcMaxAlcanzado = $this->safeDivide($fcMax*100, $fcMaxCalc, 0);
 
         $vo2tM = 42.3-(0.356*$nuevoPaciente->edad);
         $metsMT = $vo2tM/3.5;
@@ -174,21 +188,21 @@ class EsfuerzoController extends Controller
 
         $mediconGases = ($data['medicionGases'] === 'true')? 1 : 0;
 
-        $metsCicloB12 = $ciclo*($data['wattsCicloBorg']/16);
-        $metsGasesB12 = ($data['vo2BorgGases']/3.5)*$mediconGases;
+        $metsCicloB12 = $ciclo*$this->safeDivide($data['wattsCicloBorg'], 16, 0);
+        $metsGasesB12 = $this->safeDivide($data['vo2BorgGases'], 3.5, 0)*$mediconGases;
 
-        $metsCicloMax = $ciclo*($data['wattsCicloMax']/16);
-        $metsGasesMax = ($data['vo2picoGases']/3.5)*$mediconGases;
+        $metsCicloMax = $ciclo*$this->safeDivide($data['wattsCicloMax'], 16, 0);
+        $metsGasesMax = $this->safeDivide($data['vo2picoGases'], 3.5, 0)*$mediconGases;
 
 
-        $metsCicloUisq = $ciclo*($data['wattsCicloUmIsq']/16);
+        $metsCicloUisq = $ciclo*$this->safeDivide($data['wattsCicloUmIsq'], 16, 0);
 
         $mvo2 = ($dpMax*0.14*0.01)-6.3;
 
         $mvo2Mets = ($mvo2/3.5)*0.1;
-        $po2TM = ($vo2tM*$nuevoPaciente->peso)/(220-$nuevoPaciente->edad);
+        $po2TM = $this->safeDivide($vo2tM*$nuevoPaciente->peso, 220-$nuevoPaciente->edad, 0);
 
-        $po2TV = ($vo2tV*$nuevoPaciente->peso)/(220-$nuevoPaciente->edad);
+        $po2TV = $this->safeDivide($vo2tV*$nuevoPaciente->peso, 220-$nuevoPaciente->edad, 0);
 
         $velBorg12 = ($data['velBorg']*1609)/60;
         $velMax =  ($data['velmax']*1609)/60;
@@ -202,26 +216,26 @@ class EsfuerzoController extends Controller
         $vor2Max = $chMax+$cvMax;
         $metsMaxBanda = $banda*($vor2Max/3.5);
         $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;
-        $po2r = (($metsMax*3.5)*$nuevoPaciente->peso)/$fcMax;
-        $porvo2Alcanzado = (($metsMax*3.5)/($metsTG*3.5))*100;
+        $po2r = $this->safeDivide(($metsMax*3.5)*$nuevoPaciente->peso, $fcMax, 0);
+        $porvo2Alcanzado = $this->safeDivide(($metsMax*3.5), ($metsTG*3.5), 0)*100;
         $duke = ($metsMax+1.69)-(5*$maxInfra)-(4*$data['scoreAngina']);
         $veteranos = 5*($icc)+($maxInfra)+($tAmax_tbasal_value)-$metsMax;
         $vo2Uisq = $chUisq + $cvUisq;
         $metsUisqBanda = $banda*($vo2Uisq/3.5);
         $metsUisq = $metsUisqBanda + $metsCicloUisq;
-        $rfaM = ((($vo2tM/3.5)-$metsMax)/$metsMax)*100;
-        $rfaV = ((($vo2tV/3.5)-$metsMax)/$metsMax)*100;
-        $respPresora = ($tasMax-$tasBasal)/$metsMax;
-        $indiceTasEsfuerzo = $tasMax/$tasBasal;
-        $respCrono = ($fcMax-$fcBasal)/$metsMax;
+        $rfaM = $this->safeDivide((($vo2tM/3.5)-$metsMax), $metsMax, 0)*100;
+        $rfaV = $this->safeDivide((($vo2tV/3.5)-$metsMax), $metsMax, 0)*100;
+        $respPresora = $this->safeDivide($tasMax-$tasBasal, $metsMax, 0);
+        $indiceTasEsfuerzo = $this->safeDivide($tasMax, $tasBasal, 0);
+        $respCrono = $this->safeDivide($fcMax-$fcBasal, $metsMax, 0);
         $fcMax_fc1 = $fcMax-$fc1ermin;
         $fcMax_fc3 = $fcMax-$fc3ermin;
-        $fcPorcentajeRecu1 = ((($fc1ermin*100)/$fcMax)-100)*-1;
-        $fcPorcentajeRecu3 = ((($fc3ermin*100)/$fcMax)-100)*-1;
-        $pbp3 = $tas3ermin/$tasMax;
+        $fcPorcentajeRecu1 = ($this->safeDivide($fc1ermin*100, $fcMax, 0)-100)*-1;
+        $fcPorcentajeRecu3 = ($this->safeDivide($fc3ermin*100, $fcMax, 0)-100)*-1;
+        $pbp3 = $this->safeDivide($tas3ermin, $tasMax, 0);
         $pce = $porvo2Alcanzado*$tasMax;
-        $tce = $pce/$fcMax;
-        $iem = (($mvo2/3.5)/($metsMax)*10);
+        $tce = $this->safeDivide($pce, $fcMax, 0);
+        $iem = $this->safeDivide(($mvo2/3.5), $metsMax, 0)*10;
         $vo2rB = $chBorg+$cvBorg;
         $metsBandaBorg = $banda*(($chBorg+$cvBorg)/3.5);
         $metsBorg12 = $metsBandaBorg + $metsCicloB12 + $metsGasesB12;
@@ -389,7 +403,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->cv_u_isq =  $cvUisq;
         $pesfuerzo->conclusiones =  $data['comentarios'];
         $pesfuerzo->fecha =  $data['fecha'];
-        $pesfuerzo->recup_tas = $tas3ermin/$tas1ermin;
+        $pesfuerzo->recup_tas = $this->safeDivide($tas3ermin, $tas1ermin, 0);
 
         // Asignar el user_id del dueño del paciente
         $pesfuerzo->user_id = $nuevoPaciente->user_id;
@@ -508,7 +522,7 @@ class EsfuerzoController extends Controller
 
         $fc85 = $fcMaxCalc*0.85;
 
-        $fcMaxAlcanzado = ($fcMax*100)/$fcMaxCalc;
+        $fcMaxAlcanzado = $this->safeDivide($fcMax*100, $fcMaxCalc, 0);
 
         $vo2tM = 42.3-(0.356*$nuevoPaciente->edad);
         $metsMT = $vo2tM/3.5;
@@ -523,21 +537,21 @@ class EsfuerzoController extends Controller
 
         $mediconGases = ($request['medicionGases'] === 'true'|| $request['medicionGases'] === 1)? 1 : 0;
 
-        $metsCicloB12 = $ciclo*($request['watts_ciclo_b_12']/16);
-        $metsGasesB12 = ($request['vo2_borg_gases']/3.5)*$mediconGases;
+        $metsCicloB12 = $ciclo*$this->safeDivide($request['watts_ciclo_b_12'], 16, 0);
+        $metsGasesB12 = $this->safeDivide($request['vo2_borg_gases'], 3.5, 0)*$mediconGases;
 
-        $metsCicloMax = $ciclo*($request['watts_ciclo_max']/16);
-        $metsGasesMax = ($request['vo2_pico_gases']/3.5)*$mediconGases;
+        $metsCicloMax = $ciclo*$this->safeDivide($request['watts_ciclo_max'], 16, 0);
+        $metsGasesMax = $this->safeDivide($request['vo2_pico_gases'], 3.5, 0)*$mediconGases;
 
 
-        $metsCicloUisq = $ciclo*($request['watts_ciclo_b_12']/16);
+        $metsCicloUisq = $ciclo*$this->safeDivide($request['watts_ciclo_b_12'], 16, 0);
 
         $mvo2 = ($dpMax*0.14*0.01)-6.3;
 
         $mvo2Mets = ($mvo2/3.5)*0.1;
-        $po2TM = ($vo2tM*$nuevoPaciente->peso)/(220-$nuevoPaciente->edad);
+        $po2TM = $this->safeDivide($vo2tM*$nuevoPaciente->peso, 220-$nuevoPaciente->edad, 0);
 
-        $po2TV = ($vo2tV*$nuevoPaciente->peso)/(220-$nuevoPaciente->edad);
+        $po2TV = $this->safeDivide($vo2tV*$nuevoPaciente->peso, 220-$nuevoPaciente->edad, 0);
 
         $velBorg12 = ($request['vel_borg_12']*1609)/60;
       $velMax =  ($request['vel_max']*1609)/60;
@@ -551,27 +565,27 @@ class EsfuerzoController extends Controller
         $vor2Max = $chMax+$cvMax;
         $metsMaxBanda = $banda*($vor2Max/3.5);
          $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;
-         $po2r = (($metsMax*3.5)*$nuevoPaciente->peso)/$fcMax;
-        $porvo2Alcanzado = (($metsMax*3.5)/($metsTG*3.5))*100;
+         $po2r = $this->safeDivide(($metsMax*3.5)*$nuevoPaciente->peso, $fcMax, 0);
+        $porvo2Alcanzado = $this->safeDivide(($metsMax*3.5), ($metsTG*3.5), 0)*100;
         $duke = ($metsMax+1.69)-(5*$maxInfra)-(4*$request['scoreAngina']);
         $veteranos = 5*($icc)+($maxInfra)+($tAmax_tbasal_value)-$metsMax;
         $vo2Uisq = $chUisq + $cvUisq;
         $metsUisqBanda = $banda*($vo2Uisq/3.5);
        
         $metsUisq = $metsUisqBanda + $metsCicloUisq;
-        $rfaM = ((($vo2tM/3.5)-$metsMax)/$metsMax)*100;
-        $rfaV = ((($vo2tV/3.5)-$metsMax)/$metsMax)*100;
-        $respPresora = ($tasMax-$tasBasal)/$metsMax;
-        $indiceTasEsfuerzo = $tasMax/$tasBasal;
-        $respCrono = ($fcMax-$fcBasal)/$metsMax;
+        $rfaM = $this->safeDivide((($vo2tM/3.5)-$metsMax), $metsMax, 0)*100;
+        $rfaV = $this->safeDivide((($vo2tV/3.5)-$metsMax), $metsMax, 0)*100;
+        $respPresora = $this->safeDivide($tasMax-$tasBasal, $metsMax, 0);
+        $indiceTasEsfuerzo = $this->safeDivide($tasMax, $tasBasal, 0);
+        $respCrono = $this->safeDivide($fcMax-$fcBasal, $metsMax, 0);
         $fcMax_fc1 = $fcMax-$fc1ermin;
         $fcMax_fc3 = $fcMax-$fc3ermin;
-        $fcPorcentajeRecu1 = ((($fc1ermin*100)/$fcMax)-100)*-1;
-        $fcPorcentajeRecu3 = ((($fc3ermin*100)/$fcMax)-100)*-1;
-        $pbp3 = $tas3ermin/$tasMax;
+        $fcPorcentajeRecu1 = ($this->safeDivide($fc1ermin*100, $fcMax, 0)-100)*-1;
+        $fcPorcentajeRecu3 = ($this->safeDivide($fc3ermin*100, $fcMax, 0)-100)*-1;
+        $pbp3 = $this->safeDivide($tas3ermin, $tasMax, 0);
         $pce = $porvo2Alcanzado*$tasMax;
-        $tce = $pce/$fcMax;
-        $iem = (($mvo2/3.5)/($metsMax*10));
+        $tce = $this->safeDivide($pce, $fcMax, 0);
+        $iem = $this->safeDivide(($mvo2/3.5), ($metsMax*10), 0);
         $vo2rB = $chBorg+$cvBorg;
         $metsBandaBorg = $banda*(($chBorg+$cvBorg)/3.5);
         $metsBorg12 = $metsBandaBorg + $metsCicloB12 + $metsGasesB12;
@@ -738,7 +752,7 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->cv_u_isq =  $cvUisq;
         $esfuerzoFind->conclusiones =  $request['conclusiones'];
         $esfuerzoFind->fecha =  $request['fecha'];
-        $esfuerzoFind->recup_tas = $tas3ermin/$tas1ermin;
+        $esfuerzoFind->recup_tas = $this->safeDivide($tas3ermin, $tas1ermin, 0);
         $esfuerzoFind->tipo_exp = 1;
         $esfuerzoFind->clinica_id = $user->clinica_id;
         

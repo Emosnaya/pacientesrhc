@@ -78,7 +78,7 @@ class PacienteController extends Controller
         $user = Auth::user();
         
         // Determinar el dueño del paciente
-        if ($user->isAdmin()) {
+        if ($user->isAdmin || $user->isAdmin == 1) {
             // Si es admin, el paciente es suyo
             $paciente->user_id = $user->id;
         } else {
@@ -98,6 +98,8 @@ class PacienteController extends Controller
                 return response()->json(['error' => 'Debe seleccionar un doctor para asignar el paciente'], 400);
             }
         }
+
+        $paciente->clinica_id = $user->clinica_id;
 
         $paciente->save();
 
