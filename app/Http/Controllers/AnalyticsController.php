@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\User;
+use App\Models\Esfuerzo;
+use App\Models\ReporteFinal;
 
 class AnalyticsController extends Controller
 {
@@ -70,6 +72,12 @@ class AnalyticsController extends Controller
             $promedioCitasDia = $this->getPromedioCitasDia($startDate, $endDate, $clinicaId);
             $diaMasActivo = $this->getDiaMasActivo($startDate, $endDate, $clinicaId);
             $horaPico = $this->getHoraPico($startDate, $endDate, $clinicaId);
+            
+            // Tasa de término (pacientes con expediente final)
+            $tasaTermino = $this->getTasaTermino($clinicaId);
+            
+            // Tasa promedio de incremento en METs
+            $promedioIncrementoMets = $this->getPromedioIncrementoMets($clinicaId);
 
             $analytics = [
                 'total_citas' => $totalCitas,
@@ -90,6 +98,8 @@ class AnalyticsController extends Controller
                 'promedio_citas_dia' => $promedioCitasDia,
                 'dia_mas_activo' => $diaMasActivo,
                 'hora_pico' => $horaPico,
+                'tasa_termino' => $tasaTermino,
+                'promedio_incremento_mets' => $promedioIncrementoMets,
             ];
 
             return response()->json([
@@ -283,10 +293,11 @@ class AnalyticsController extends Controller
         $cardiaca = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca')->count();
         $pulmonar = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'pulmonar')->count();
         $ambos = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'ambos')->count();
+        $fisioterapia = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'fisioterapia')->count();
 
         return [
-            'labels' => ['Cardíaca', 'Pulmonar', 'Ambos'],
-            'data' => [$cardiaca, $pulmonar, $ambos]
+            'labels' => ['Cardíaca', 'Pulmonar', 'Ambos', 'Fisioterapia'],
+            'data' => [$cardiaca, $pulmonar, $ambos, $fisioterapia]
         ];
     }
 
@@ -372,34 +383,10 @@ class AnalyticsController extends Controller
 
     private function getHoraPico($startDate, $endDate, $clinicaId)
     {
-        // Usar SQL para extraer la hora directamente y contar
-        $resultado = Cita::select(
-                DB::raw('HOUR(TIME(hora)) as hora'),
-                DB::raw('COUNT(*) as total')
-            )
-            ->where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])
-            ->whereNotNull('hora')
-            ->where('hora', '!=', '')
-            ->whereRaw('HOUR(TIME(hora)) BETWEEN 0 AND 23')
-            ->groupBy('hora')
-            ->orderBy('total', 'desc')
-            ->first();
-
-        if ($resultado && $resultado->hora !== null) {
-            $hora = is_object($resultado->hora) ? (int) (string) $resultado->hora : (int) $resultado->hora;
-            
-            // Validar que esté en el rango válido (0-23)
-            if ($hora >= 0 && $hora <= 23) {
-                return sprintf('%02d:00', $hora);
-            }
-        }
-
-        // Si la consulta SQL falla, intentar con procesamiento manual
+        // Obtener todas las citas con hora (sin aplicar el cast de datetime)
         $citas = Cita::where('clinica_id', $clinicaId)
             ->whereBetween('fecha', [$startDate, $endDate])
             ->whereNotNull('hora')
-            ->where('hora', '!=', '')
             ->get(['hora']);
 
         if ($citas->isEmpty()) {
@@ -411,14 +398,19 @@ class AnalyticsController extends Controller
             $hora = $cita->hora;
             $horaInt = null;
             
-            // Si la hora viene en formato "HH:MM:SS" o "HH:MM", extraer solo la hora
-            if (is_string($hora) && strpos($hora, ':') !== false) {
-                $horaParts = explode(':', $hora);
-                if (isset($horaParts[0]) && is_numeric($horaParts[0])) {
-                    $horaInt = (int) $horaParts[0];
+            // Si es un objeto Carbon/DateTime, extraer la hora directamente
+            if ($hora instanceof \Carbon\Carbon || $hora instanceof \DateTime) {
+                $horaInt = (int) $hora->format('H');
+            } elseif (is_string($hora)) {
+                // Si es string con formato "HH:MM:SS" o "HH:MM"
+                if (strpos($hora, ':') !== false) {
+                    $horaParts = explode(':', $hora);
+                    if (isset($horaParts[0]) && is_numeric($horaParts[0])) {
+                        $horaInt = (int) $horaParts[0];
+                    }
+                } elseif (is_numeric($hora)) {
+                    $horaInt = (int) $hora;
                 }
-            } elseif (is_numeric($hora)) {
-                $horaInt = (int) $hora;
             }
             
             // Validar que esté en el rango válido (0-23)
@@ -439,5 +431,46 @@ class AnalyticsController extends Controller
         $horaPico = (int) array_key_first($horasCount);
 
         return sprintf('%02d:00', $horaPico);
+    }
+
+    /**
+     * Obtener la tasa de término (pacientes con expediente final / total pacientes)
+     */
+    private function getTasaTermino($clinicaId)
+    {
+        $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
+        
+        if ($totalPacientes == 0) {
+            return 0;
+        }
+
+        $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId);
+        
+        return round(($pacientesConExpFinal / $totalPacientes) * 100, 1);
+    }
+
+    /**
+     * Obtener cantidad de pacientes con reporte final (terminaron el programa)
+     */
+    private function getPacientesConExpedienteFinal($clinicaId)
+    {
+        // Contar pacientes únicos que tienen al menos un registro en reporte_finals
+        return ReporteFinal::where('clinica_id', $clinicaId)
+            ->select('paciente_id')
+            ->distinct()
+            ->count('paciente_id');
+    }
+
+    /**
+     * Obtener el promedio de incremento en METs desde reporte_finals
+     */
+    private function getPromedioIncrementoMets($clinicaId)
+    {
+        // Obtener el promedio del campo mets_por de la tabla reporte_finals
+        $promedio = ReporteFinal::where('clinica_id', $clinicaId)
+            ->whereNotNull('mets_por')
+            ->avg('mets_por');
+
+        return $promedio ? round(floatval($promedio), 1) : 0;
     }
 }
