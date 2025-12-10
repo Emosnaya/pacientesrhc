@@ -454,6 +454,108 @@ class CitaController extends Controller
     }
 
     /**
+     * Crear múltiples citas para un mismo paciente
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function storeMultiple(Request $request)
+    {
+        try {
+            $user = Auth::user();
+
+            $validator = Validator::make($request->all(), [
+                'paciente_id' => 'required|exists:pacientes,id',
+                'citas' => 'required|array|min:1',
+                'citas.*.fecha' => 'required|date',
+                'citas.*.hora' => 'required|date_format:H:i',
+                'citas.*.estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
+                'citas.*.notas' => 'nullable|string|max:1000'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Datos de validación incorrectos',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $paciente = Paciente::findOrFail($request->paciente_id);
+
+            // Verificar que el paciente pertenece a la misma clínica
+            if ($paciente->clinica_id !== $user->clinica_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes acceso a este paciente'
+                ], 403);
+            }
+
+            $citasCreadas = [];
+            $primeraVez = true; // Solo la primera cita es "primera vez"
+
+            foreach ($request->citas as $citaData) {
+                $cita = Cita::create([
+                    'paciente_id' => $paciente->id,
+                    'admin_id' => $user->id,
+                    'clinica_id' => $user->clinica_id,
+                    'fecha' => $citaData['fecha'],
+                    'hora' => $citaData['hora'],
+                    'estado' => $citaData['estado'] ?? 'confirmada',
+                    'primera_vez' => $primeraVez,
+                    'notas' => $citaData['notas'] ?? null
+                ]);
+
+                $cita->load(['paciente', 'admin']);
+                $citasCreadas[] = $cita;
+                $primeraVez = false; // Las siguientes ya no son primera vez
+            }
+
+            // Enviar correo de notificación (una sola vez con todas las citas)
+            if (!empty($citasCreadas)) {
+                $this->sendMultipleCitasNotificationEmail($citasCreadas, $paciente, $user);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => count($citasCreadas) . ' cita(s) creada(s) exitosamente',
+                'data' => $citasCreadas,
+                'total' => count($citasCreadas)
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear las citas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo de notificación para múltiples citas
+     */
+    private function sendMultipleCitasNotificationEmail($citas, $paciente, $admin)
+    {
+        try {
+            if ($paciente->email) {
+                Mail::send('emails.cita-patient-notification', [
+                    'cita' => $citas[0], // Primera cita para compatibilidad
+                    'citas' => $citas,   // Todas las citas
+                    'paciente' => $paciente,
+                    'multiple' => count($citas) > 1
+                ], function ($message) use ($paciente, $citas) {
+                    $subject = count($citas) > 1 
+                        ? 'Confirmación de ' . count($citas) . ' Citas - CERCAP'
+                        : 'Confirmación de Cita - CERCAP';
+                    $message->to($paciente->email)->subject($subject);
+                });
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error sending multiple citas notification email: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Enviar correos de notificación de cita
      */
     private function sendCitaNotificationEmails($cita, $admin)
