@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/citas', CitaController::class);
     Route::get('/citas/calendar/data', [CitaController::class, 'getCalendarData']);
     Route::put('/citas/{id}/status', [CitaController::class, 'changeStatus']);
+    Route::post('/citas/multiple', [CitaController::class, 'storeMultiple']);
 
     // Rutas para eventos/recordatorios/tareas
     Route::apiResource('/eventos', EventoController::class);

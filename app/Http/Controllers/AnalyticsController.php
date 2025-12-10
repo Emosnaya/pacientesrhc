@@ -11,6 +11,7 @@ use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Esfuerzo;
 use App\Models\ReporteFinal;
+use App\Models\Estratificacion;
 
 class AnalyticsController extends Controller
 {
@@ -78,6 +79,9 @@ class AnalyticsController extends Controller
             
             // Tasa promedio de incremento en METs
             $promedioIncrementoMets = $this->getPromedioIncrementoMets($clinicaId);
+            
+            // Duración de programa (distribución por sesiones)
+            $duracionPrograma = $this->getDuracionPrograma($clinicaId);
 
             $analytics = [
                 'total_citas' => $totalCitas,
@@ -100,6 +104,7 @@ class AnalyticsController extends Controller
                 'hora_pico' => $horaPico,
                 'tasa_termino' => $tasaTermino,
                 'promedio_incremento_mets' => $promedioIncrementoMets,
+                'duracion_programa' => $duracionPrograma,
             ];
 
             return response()->json([
@@ -438,7 +443,7 @@ class AnalyticsController extends Controller
      */
     private function getTasaTermino($clinicaId)
     {
-        $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
+        $totalPacientes = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca')->count();
         
         if ($totalPacientes == 0) {
             return 0;
@@ -472,5 +477,66 @@ class AnalyticsController extends Controller
             ->avg('mets_por');
 
         return $promedio ? round(floatval($promedio), 1) : 0;
+    }
+
+    /**
+     * Obtener distribución de pacientes por duración de programa (sesiones)
+     * Rubros: 10, 20, 30, 36 y 56 sesiones
+     */
+    private function getDuracionPrograma($clinicaId)
+    {
+        // Obtener la última estratificación de cada paciente (para tener el valor más reciente)
+        $estratificaciones = Estratificacion::where('clinica_id', $clinicaId)
+            ->whereNotNull('sesiones')
+            ->select('paciente_id', 'sesiones')
+            ->get()
+            ->unique('paciente_id'); // Tomar un registro único por paciente
+
+        // Definir los rubros de sesiones
+        $rubros = [
+            '10' => 0,
+            '20' => 0,
+            '30' => 0,
+            '36' => 0,
+            '56' => 0
+        ];
+
+        foreach ($estratificaciones as $estrat) {
+            $sesiones = (int) $estrat->sesiones;
+            
+            // Asignar al rubro correspondiente
+            if ($sesiones == 10) {
+                $rubros['10']++;
+            } elseif ($sesiones == 20) {
+                $rubros['20']++;
+            } elseif ($sesiones == 30) {
+                $rubros['30']++;
+            } elseif ($sesiones == 36) {
+                $rubros['36']++;
+            } elseif ($sesiones == 56) {
+                $rubros['56']++;
+            }
+        }
+
+        return [
+            'labels' => ['10 sesiones', '20 sesiones', '30 sesiones', '36 sesiones', '56 sesiones'],
+            'data' => array_values($rubros)
+        ];
+    }
+
+    private function getSemanasTerminadas($clinicaId)
+    {
+        return Esfuerzo::where('clinica_id', $clinicaId)
+            ->whereNotNull('semana')
+            ->groupBy('semana')
+            ->orderBy('semana')
+            ->get();
+
+        $semanas = [];
+        foreach ($esfuerzos as $esfuerzo) {
+            $semanas[] = $esfuerzo->semana;
+        }
+
+        return $semanas;
     }
 }
