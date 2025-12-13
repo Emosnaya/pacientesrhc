@@ -444,7 +444,8 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Obtener la tasa de término (pacientes con expediente final / total pacientes)
+     * Obtener la tasa de término
+     * Fórmula: (Px con reporte final - Px sin reporte final) * 100 / total de px cardíacos
      */
     private function getTasaTermino($clinicaId)
     {
@@ -458,8 +459,9 @@ class AnalyticsController extends Controller
         }
 
         $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId);
+        $pacientesSinExpFinal = $totalPacientes - $pacientesConExpFinal;
         
-        return round(($pacientesConExpFinal / $totalPacientes) * 100, 1);
+        return round((($pacientesConExpFinal - $pacientesSinExpFinal) / $totalPacientes) * 100, 1);
     }
 
     /**
@@ -467,19 +469,10 @@ class AnalyticsController extends Controller
      */
     private function getPacientesConExpedienteFinal($clinicaId)
     {
-        // Contar pacientes únicos que tienen al menos un registro en reporte_finals
-        // y también tienen reporte de fisioterapia
-        $pacientesConReporteFinal = ReporteFinal::where('clinica_id', $clinicaId)
+         return ReporteFinal::where('clinica_id', $clinicaId)
             ->select('paciente_id')
             ->distinct()
-            ->pluck('paciente_id');
-        
-        // Filtrar solo los que también tienen reporte de fisioterapia
-        return ReporteFisio::where('clinica_id', $clinicaId)
-            ->whereIn('paciente_id', $pacientesConReporteFinal)
-            ->select('paciente_id')
-            ->distinct()
-            ->count('paciente_id');
+            ->count();
     }
 
     /**
