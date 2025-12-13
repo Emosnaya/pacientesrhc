@@ -11,6 +11,7 @@ use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Esfuerzo;
 use App\Models\ReporteFinal;
+use App\Models\ReporteFisio;
 use App\Models\Estratificacion;
 
 class AnalyticsController extends Controller
@@ -467,7 +468,15 @@ class AnalyticsController extends Controller
     private function getPacientesConExpedienteFinal($clinicaId)
     {
         // Contar pacientes únicos que tienen al menos un registro en reporte_finals
-        return ReporteFinal::where('clinica_id', $clinicaId)
+        // y también tienen reporte de fisioterapia
+        $pacientesConReporteFinal = ReporteFinal::where('clinica_id', $clinicaId)
+            ->select('paciente_id')
+            ->distinct()
+            ->pluck('paciente_id');
+        
+        // Filtrar solo los que también tienen reporte de fisioterapia
+        return ReporteFisio::where('clinica_id', $clinicaId)
+            ->whereIn('paciente_id', $pacientesConReporteFinal)
             ->select('paciente_id')
             ->distinct()
             ->count('paciente_id');
