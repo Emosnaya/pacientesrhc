@@ -82,6 +82,9 @@ class AnalyticsController extends Controller
             
             // Duración de programa (distribución por sesiones)
             $duracionPrograma = $this->getDuracionPrograma($clinicaId);
+            
+            // Distribución de medicamentos
+            $medicamentos = $this->getMedicamentos($clinicaId);
 
             $analytics = [
                 'total_citas' => $totalCitas,
@@ -105,6 +108,7 @@ class AnalyticsController extends Controller
                 'tasa_termino' => $tasaTermino,
                 'promedio_incremento_mets' => $promedioIncrementoMets,
                 'duracion_programa' => $duracionPrograma,
+                'medicamentos' => $medicamentos,
             ];
 
             return response()->json([
@@ -443,7 +447,10 @@ class AnalyticsController extends Controller
      */
     private function getTasaTermino($clinicaId)
     {
-        $totalPacientes = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca')->count();
+        $totalPacientes = Paciente::where('clinica_id', $clinicaId)
+        ->where('tipo_paciente', 'cardiaca')
+        ->whereHas('esfuerzos')
+        ->count();
         
         if ($totalPacientes == 0) {
             return 0;
@@ -538,5 +545,76 @@ class AnalyticsController extends Controller
         }
 
         return $semanas;
+    }
+
+    /**
+     * Obtener distribución de medicamentos (cuántos pacientes toman cada medicamento)
+     */
+    private function getMedicamentos($clinicaId)
+    {
+        // Obtener todos los clínicos de la clínica
+        $clinicos = DB::table('clinicos')
+            ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->select([
+                DB::raw('SUM(CASE WHEN betabloqueador = 1 THEN 1 ELSE 0 END) as betabloqueador'),
+                DB::raw('SUM(CASE WHEN nitratos = 1 THEN 1 ELSE 0 END) as nitratos'),
+                DB::raw('SUM(CASE WHEN calcioantagonista = 1 THEN 1 ELSE 0 END) as calcioantagonista'),
+                DB::raw('SUM(CASE WHEN aspirina = 1 THEN 1 ELSE 0 END) as aspirina'),
+                DB::raw('SUM(CASE WHEN anticoagulacion = 1 THEN 1 ELSE 0 END) as anticoagulacion'),
+                DB::raw('SUM(CASE WHEN iecas = 1 THEN 1 ELSE 0 END) as iecas'),
+                DB::raw('SUM(CASE WHEN atii = 1 THEN 1 ELSE 0 END) as atii'),
+                DB::raw('SUM(CASE WHEN diureticos = 1 THEN 1 ELSE 0 END) as diureticos'),
+                DB::raw('SUM(CASE WHEN estatinas = 1 THEN 1 ELSE 0 END) as estatinas'),
+                DB::raw('SUM(CASE WHEN fibratos = 1 THEN 1 ELSE 0 END) as fibratos'),
+                DB::raw('SUM(CASE WHEN digoxina = 1 THEN 1 ELSE 0 END) as digoxina'),
+                DB::raw('SUM(CASE WHEN antiarritmicos = 1 THEN 1 ELSE 0 END) as antiarritmicos'),
+                DB::raw('SUM(CASE WHEN arni = 1 THEN 1 ELSE 0 END) as arni'),
+                DB::raw('SUM(CASE WHEN sglt2 = 1 THEN 1 ELSE 0 END) as sglt2'),
+                DB::raw('SUM(CASE WHEN mra = 1 THEN 1 ELSE 0 END) as mra'),
+                DB::raw('SUM(CASE WHEN ivabradina = 1 THEN 1 ELSE 0 END) as ivabradina'),
+                DB::raw('SUM(CASE WHEN pcsk0 = 1 THEN 1 ELSE 0 END) as pcsk0'),
+                DB::raw('SUM(CASE WHEN ranalozina = 1 THEN 1 ELSE 0 END) as ranalozina'),
+                DB::raw('SUM(CASE WHEN timetrazidina = 1 THEN 1 ELSE 0 END) as timetrazidina'),
+                DB::raw('SUM(CASE WHEN inhibidor_adp = 1 THEN 1 ELSE 0 END) as inhibidor_adp'),
+            ])
+            ->first();
+
+        // Convertir el resultado a arrays
+        $labels = [
+            'Betabloqueador', 'Nitratos', 'Calcioantagonista', 'Aspirina',
+            'Anticoagulación', 'IECAs', 'AT-II', 'Diuréticos',
+            'Estatinas', 'Fibratos', 'Digoxina', 'Antiarrítmicos',
+            'ARNI', 'SGLT2', 'MRA', 'Ivabradina',
+            'PCSK9', 'Ranolazina', 'Trimetazidina', 'Inhibidor ADP'
+        ];
+
+        $data = [
+            (int) $clinicos->betabloqueador,
+            (int) $clinicos->nitratos,
+            (int) $clinicos->calcioantagonista,
+            (int) $clinicos->aspirina,
+            (int) $clinicos->anticoagulacion,
+            (int) $clinicos->iecas,
+            (int) $clinicos->atii,
+            (int) $clinicos->diureticos,
+            (int) $clinicos->estatinas,
+            (int) $clinicos->fibratos,
+            (int) $clinicos->digoxina,
+            (int) $clinicos->antiarritmicos,
+            (int) $clinicos->arni,
+            (int) $clinicos->sglt2,
+            (int) $clinicos->mra,
+            (int) $clinicos->ivabradina,
+            (int) $clinicos->pcsk0,
+            (int) $clinicos->ranalozina,
+            (int) $clinicos->timetrazidina,
+            (int) $clinicos->inhibidor_adp,
+        ];
+
+        return [
+            'labels' => $labels,
+            'data' => $data
+        ];
     }
 }
