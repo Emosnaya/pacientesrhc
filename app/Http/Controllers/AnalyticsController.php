@@ -78,6 +78,9 @@ class AnalyticsController extends Controller
             // Tasa de término (pacientes con expediente final)
             $tasaTermino = $this->getTasaTermino($clinicaId);
             
+            // Pacientes que terminaron el tratamiento
+            $pacientesTerminados = $this->getPacientesConExpedienteFinal($clinicaId);
+            
             // Tasa promedio de incremento en METs
             $promedioIncrementoMets = $this->getPromedioIncrementoMets($clinicaId);
             
@@ -107,6 +110,7 @@ class AnalyticsController extends Controller
                 'dia_mas_activo' => $diaMasActivo,
                 'hora_pico' => $horaPico,
                 'tasa_termino' => $tasaTermino,
+                'pacientes_terminados' => $pacientesTerminados,
                 'promedio_incremento_mets' => $promedioIncrementoMets,
                 'duracion_programa' => $duracionPrograma,
                 'medicamentos' => $medicamentos,
@@ -445,13 +449,13 @@ class AnalyticsController extends Controller
 
     /**
      * Obtener la tasa de término
-     * Fórmula: (Px con reporte final - Px sin reporte final) * 100 / total de px cardíacos
+     * Fórmula: (Px con reporte final / total de px cardíacos) * 100
+     * Representa el porcentaje de pacientes que completaron el programa
      */
     private function getTasaTermino($clinicaId)
     {
         $totalPacientes = Paciente::where('clinica_id', $clinicaId)
         ->where('tipo_paciente', 'cardiaca')
-        ->whereHas('esfuerzos')
         ->count();
         
         if ($totalPacientes == 0) {
@@ -459,17 +463,25 @@ class AnalyticsController extends Controller
         }
 
         $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId);
-        $pacientesSinExpFinal = $totalPacientes - $pacientesConExpFinal;
+        $pacientesSinExpFinal = $totalPacientes-$pacientesConExpFinal;
         
-        return round((($pacientesConExpFinal - $pacientesSinExpFinal) / $totalPacientes) * 100, 1);
+        return round(($pacientesConExpFinal / $pacientesSinExpFinal) * 100, 1);
     }
 
     /**
      * Obtener cantidad de pacientes con reporte final (terminaron el programa)
+     * Solo cuenta pacientes cardíacos que tienen reporte final
      */
     private function getPacientesConExpedienteFinal($clinicaId)
     {
-         return ReporteFinal::where('clinica_id', $clinicaId)
+        // Obtener IDs de pacientes cardíacos de la clínica
+        $pacientesCardiacos = Paciente::where('clinica_id', $clinicaId)
+            ->where('tipo_paciente', 'cardiaca')
+            ->pluck('id');
+        
+        // Contar pacientes cardíacos que tienen reporte final
+        return ReporteFinal::where('clinica_id', $clinicaId)
+            ->whereIn('paciente_id', $pacientesCardiacos)
             ->select('paciente_id')
             ->distinct()
             ->count();
