@@ -77,26 +77,21 @@ class PacienteController extends Controller
 
         $user = Auth::user();
         
-        // Determinar el dueño del paciente
-        if ($user->isAdmin || $user->isAdmin == 1) {
-            // Si es admin, el paciente es suyo
-            $paciente->user_id = $user->id;
-        } else {
-            // Si no es admin, debe proporcionar el user_id del doctor
-            if ($request->has('user_id') && $request->user_id) {
-                // Verificar que el doctor pertenece a la misma clínica
-                $doctor = \App\Models\User::where('id', $request->user_id)
-                    ->where('clinica_id', $user->clinica_id)
-                    ->first();
-                
-                if (!$doctor) {
-                    return response()->json(['error' => 'El doctor seleccionado no es válido'], 400);
-                }
-                
-                $paciente->user_id = $doctor->id;
-            } else {
-                return response()->json(['error' => 'Debe seleccionar un doctor para asignar el paciente'], 400);
+        // Determinar el dueño del paciente (simplificado)
+        // Si envían user_id específico, validar que sea de la misma clínica
+        if ($request->has('user_id') && $request->user_id) {
+            $doctor = \App\Models\User::where('id', $request->user_id)
+                ->where('clinica_id', $user->clinica_id)
+                ->first();
+            
+            if (!$doctor) {
+                return response()->json(['error' => 'El doctor seleccionado no es válido'], 400);
             }
+            
+            $paciente->user_id = $doctor->id;
+        } else {
+            // Si no envían user_id, asignar al usuario actual
+            $paciente->user_id = $user->id;
         }
 
         $paciente->clinica_id = $user->clinica_id;

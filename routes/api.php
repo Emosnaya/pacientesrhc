@@ -9,6 +9,7 @@ use App\Http\Controllers\InfoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PDFController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DoctorFirmaController;
 use App\Http\Controllers\ReporteFinalController;
 use App\Http\Controllers\ReporteFisioController;
 use App\Http\Controllers\ReporteNutriController;
@@ -46,6 +47,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::put('/users/{id}', [ProfileController::class, 'update']);
     Route::post('/users/{id}/upload-image', [ProfileController::class, 'uploadImage']);
     Route::post('/users/{id}/upload-signature', [ProfileController::class, 'uploadSignature']);
+    Route::delete('/users/{id}/delete-image', [ProfileController::class, 'deleteImage']);
+    Route::delete('/users/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
 
     // Almacenar ordenes
     Route::apiResource('/pacientes', PacienteController::class);
@@ -73,6 +76,10 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/psico/imprimir/{id}',[PDFController::class,'psicoPdf']);
     Route::get('/nutri/imprimir/{id}',[PDFController::class,'nutriPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
+    
+    // Obtener lista de doctores con firma para seleccionar
+    Route::get('/doctores-con-firma', [DoctorFirmaController::class, 'getDoctoresConFirma']);
+    
     Route::get('/clinicos/{id}',[InfoController::class,'clinicos']);
     Route::get('/esfuerzos/{id}',[InfoController::class,'esfuerzos']);
     Route::get('/estratificaciones/{id}',[InfoController::class,'estratificaciones']);
