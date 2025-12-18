@@ -18,14 +18,57 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class PDFController extends Controller
 {
+    /**
+     * Obtener el doctor que firmará el documento
+     * Prioridad:
+     * 1. doctor_firma_id enviado en el request (si tiene firma digital)
+     * 2. Usuario actual autenticado (si tiene firma digital)
+     * 3. Primer doctor de la clínica con firma digital
+     * 4. Usuario que creó el expediente (fallback)
+     */
+    private function getDoctorParaFirma(Request $request, $creadorUserId)
+    {
+        // 1. Si envían doctor_firma_id específico
+        if ($request->has('doctor_firma_id') && $request->doctor_firma_id) {
+            $doctorSeleccionado = User::where('id', $request->doctor_firma_id)
+                ->whereNotNull('firma_digital')
+                ->first();
+            
+            if ($doctorSeleccionado) {
+                return $doctorSeleccionado;
+            }
+        }
+
+        // 2. Usuario actual si tiene firma
+        $usuarioActual = Auth::user();
+        if ($usuarioActual && $usuarioActual->firma_digital) {
+            return $usuarioActual;
+        }
+
+        // 3. Buscar cualquier doctor de la clínica con firma
+        if ($usuarioActual) {
+            $doctorConFirma = User::where('clinica_id', $usuarioActual->clinica_id)
+                ->whereNotNull('firma_digital')
+                ->first();
+            
+            if ($doctorConFirma) {
+                return $doctorConFirma;
+            }
+        }
+
+        // 4. Fallback: usuario que creó el expediente
+        return User::find($creadorUserId);
+    }
+
     public function esfuerzoPdf(Request $request)
     {
         $data = Esfuerzo::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente','user')); // Cargar vista PDF con datos
 
@@ -40,7 +83,7 @@ class PDFController extends Controller
     {
         $data = Estratificacion::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         $pdf = Pdf::loadView('estrati', compact('data', 'paciente','user'));
         return $pdf->stream('Estratificacion.pdf'); 
@@ -50,7 +93,7 @@ class PDFController extends Controller
     {
         $data = Clinico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user'));
         return $pdf->stream('Clinico.pdf'); 
@@ -61,7 +104,7 @@ class PDFController extends Controller
         $esfuerzoUno = Esfuerzo::find($data->pe_1);
         $esfuerzoDos = Esfuerzo::find($data->pe_2);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
 
         // Preparar firma digital si existe
@@ -80,7 +123,7 @@ class PDFController extends Controller
     {
         $data = ReportePsico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         $pdf = Pdf::loadView('psico', compact('data', 'paciente','user'));
         return $pdf->stream('Psico.pdf'); 
@@ -89,7 +132,7 @@ class PDFController extends Controller
     {
         $data = ReporteNutri::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         $pdf = Pdf::loadView('nutri', compact('data', 'paciente','user'));
         return $pdf->stream('Nutri.pdf'); 
@@ -99,7 +142,7 @@ class PDFController extends Controller
     {
         $data = ExpedientePulmonar::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
-        $user = User::find($data->user_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -147,50 +190,50 @@ class PDFController extends Controller
                 case 'esfuerzo':
                     $data = Esfuerzo::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
                     $pdfFileName = $tipoEsfuerzo === 'pulmonar' ? 'Prueba_Esfuerzo_Pulmonar.pdf' : 'Prueba_Esfuerzo_Cardiaca.pdf';
                     break;
                 case 'estratificacion':
                     $data = Estratificacion::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Estratificacion.pdf';
                     break;
                 case 'clinico':
                     $data = Clinico::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Clinico.pdf';
                     break;
                 case 'reporte_final':
                     $data = ReporteFinal::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Reporte_Final.pdf';
                     break;
                 case 'reporte_psico':
                     $data = ReportePsico::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Reporte_Psico.pdf';
                     break;
                 case 'reporte_nutri':
                     $data = ReporteNutri::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Reporte_Nutri.pdf';
                     break;
                 case 'reporte_fisio':
                     $data = ReporteFisio::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($paciente->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Reporte_Fisio.pdf';
                     break;
                 case 'expediente_pulmonar':
                     $data = ExpedientePulmonar::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = User::find($data->user_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Expediente_Pulmonar.pdf';
                     break;
             }

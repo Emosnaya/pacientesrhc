@@ -183,4 +183,66 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Eliminar imagen de perfil
+     */
+    public function deleteImage(Request $request, $id): JsonResponse
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        try {
+            // Eliminar imagen actual si existe y no es la por defecto
+            if ($user->imagen && $user->imagen !== 'perfiles/avatar-default.png') {
+                Storage::disk('public')->delete($user->imagen);
+            }
+
+            // Volver a la imagen por defecto
+            $user->update(['imagen' => 'perfiles/avatar-default.png']);
+
+            return response()->json([
+                'message' => 'Imagen de perfil eliminada exitosamente',
+                'user' => $user->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al eliminar la imagen: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar firma digital
+     */
+    public function deleteSignature(Request $request, $id): JsonResponse
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        try {
+            // Eliminar firma actual si existe
+            if ($user->firma_digital) {
+                Storage::disk('public')->delete($user->firma_digital);
+            }
+
+            // Actualizar campo a null
+            $user->update(['firma_digital' => null]);
+
+            return response()->json([
+                'message' => 'Firma digital eliminada exitosamente',
+                'user' => $user->fresh()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al eliminar la firma digital: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

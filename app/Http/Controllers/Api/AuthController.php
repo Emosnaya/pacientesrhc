@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -150,9 +151,17 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
         
-        // Generar token de restablecimiento
+        // Eliminar tokens antiguos de este usuario
+        DB::table('password_resets')->where('email', $user->email)->delete();
+        
         $resetToken = Str::random(60);
-        $user->update(['email_verification_token' => $resetToken]);
+        
+        // Guardar en la tabla password_resets
+        DB::table('password_resets')->insert([
+            'email' => $user->email,
+            'token' => Hash::make($resetToken),
+            'created_at' => now()
+        ]);
 
         $resetUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/reset-password/{$resetToken}";
 
@@ -171,9 +180,10 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error sending password reset email: ' . $e->getMessage());
             
+            // Aún devuelve éxito para seguridad, pero con mensaje genérico
             return response()->json([
-                'message' => 'Error al enviar el correo de restablecimiento'
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Si el correo existe, recibirás instrucciones para restablecer tu contraseña'
+            ]);
         }
     }
 
@@ -183,6 +193,7 @@ class AuthController extends Controller
     public function resetPassword(Request $request, $token): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
             'password' => 'required|string|min:8|confirmed'
         ]);
 
@@ -193,18 +204,41 @@ class AuthController extends Controller
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $user = User::where('email_verification_token', $token)->first();
+        // Buscar el token en password_resets
+        $passwordReset = DB::table('password_resets')
+            ->where('email', $request->email)
+            ->first();
 
-        if (!$user) {
+        if (!$passwordReset) {
             return response()->json([
                 'message' => 'Token de restablecimiento inválido o expirado'
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
+        // Verificar que el token coincida
+        if (!Hash::check($token, $passwordReset->token)) {
+            return response()->json([
+                'message' => 'Token de restablecimiento inválido'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Verificar que el token no tenga más de 60 minutos
+        $createdAt = \Carbon\Carbon::parse($passwordReset->created_at);
+        if ($createdAt->addMinutes(60)->isPast()) {
+            DB::table('password_resets')->where('email', $request->email)->delete();
+            return response()->json([
+                'message' => 'El token de restablecimiento ha expirado'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Actualizar la contraseña
+        $user = User::where('email', $request->email)->first();
         $user->update([
-            'password' => Hash::make($request->password),
-            'email_verification_token' => null
+            'password' => Hash::make($request->password)
         ]);
+
+        // Eliminar el token usado
+        DB::table('password_resets')->where('email', $request->email)->delete();
 
         return response()->json([
             'message' => 'Contraseña restablecida exitosamente'

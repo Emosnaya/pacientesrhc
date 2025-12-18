@@ -22,25 +22,49 @@ class AnalyticsController extends Controller
             $user = Auth::user();
             $period = $request->get('period', 30); // Por defecto 30 días
             
-            $startDate = Carbon::now()->subDays($period)->format('Y-m-d');
-            $endDate = Carbon::now()->addDay()->format('Y-m-d');
+            // Si el período es "all", no aplicar filtro de fechas
+            $allTime = $period === 'all' || $period === 'todas';
+            
+            if ($allTime) {
+                $startDate = null;
+                $endDate = null;
+            } else {
+                $startDate = Carbon::now()->subDays($period)->format('Y-m-d');
+                $endDate = Carbon::now()->addDay()->format('Y-m-d');
+            }
 
             // Cualquier usuario puede ver las analíticas de su clínica
             // Filtrar todas las consultas por clínica del usuario
             $clinicaId = $user->clinica_id;
 
             // Métricas básicas - filtradas por clínica
-            $totalCitas = Cita::where('clinica_id', $clinicaId)
-                ->whereBetween('fecha', [$startDate, $endDate])->count();
+            if ($allTime) {
+                $totalCitas = Cita::where('clinica_id', $clinicaId)->count();
+            } else {
+                $totalCitas = Cita::where('clinica_id', $clinicaId)
+                    ->whereBetween('fecha', [$startDate, $endDate])->count();
+            }
             $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
-            $citasConfirmadas = Cita::where('clinica_id', $clinicaId)
-                ->where('estado', 'confirmada')->whereBetween('fecha', [$startDate, $endDate])->count();
-            $citasPendientes = Cita::where('clinica_id', $clinicaId)
-                ->where('estado', 'pendiente')->whereBetween('fecha', [$startDate, $endDate])->count();
-            $citasCanceladas = Cita::where('clinica_id', $clinicaId)
-                ->where('estado', 'cancelada')->whereBetween('fecha', [$startDate, $endDate])->count();
-            $citasCompletadas = Cita::where('clinica_id', $clinicaId)
-                ->where('estado', 'completada')->whereBetween('fecha', [$startDate, $endDate])->count();
+            
+            if ($allTime) {
+                $citasConfirmadas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'confirmada')->count();
+                $citasPendientes = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'pendiente')->count();
+                $citasCanceladas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'cancelada')->count();
+                $citasCompletadas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'completada')->count();
+            } else {
+                $citasConfirmadas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'confirmada')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasPendientes = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'pendiente')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasCanceladas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'cancelada')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasCompletadas = Cita::where('clinica_id', $clinicaId)
+                    ->where('estado', 'completada')->whereBetween('fecha', [$startDate, $endDate])->count();
+            }
 
             // Citas por estado
             $citasPorEstado = [
@@ -51,13 +75,13 @@ class AnalyticsController extends Controller
             ];
 
             // Citas por día (últimos 7 días)
-            $citasPorDia = $this->getCitasPorDia($startDate, $endDate, $clinicaId);
+            $citasPorDia = $this->getCitasPorDia($startDate, $endDate, $clinicaId, $allTime);
 
             // Citas por semana
-            $citasPorSemana = $this->getCitasPorSemana($startDate, $endDate, $clinicaId);
+            $citasPorSemana = $this->getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime);
 
             // Citas por mes
-            $citasPorMes = $this->getCitasPorMes($startDate, $endDate, $clinicaId);
+            $citasPorMes = $this->getCitasPorMes($startDate, $endDate, $clinicaId, $allTime);
 
             // Pacientes por edad
             $pacientesPorEdad = $this->getPacientesPorEdad($clinicaId);
@@ -69,11 +93,11 @@ class AnalyticsController extends Controller
             $pacientesPulmonares = $this->getPacientesPulmonares($clinicaId);
 
             // Estadísticas adicionales
-            $tasaConfirmacion = $this->getTasaConfirmacion($startDate, $endDate, $clinicaId);
-            $citasPrimeraVez = $this->getCitasPrimeraVez($startDate, $endDate, $clinicaId);
-            $promedioCitasDia = $this->getPromedioCitasDia($startDate, $endDate, $clinicaId);
-            $diaMasActivo = $this->getDiaMasActivo($startDate, $endDate, $clinicaId);
-            $horaPico = $this->getHoraPico($startDate, $endDate, $clinicaId);
+            $tasaConfirmacion = $this->getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime);
+            $citasPrimeraVez = $this->getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime);
+            $promedioCitasDia = $this->getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime);
+            $diaMasActivo = $this->getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime);
+            $horaPico = $this->getHoraPico($startDate, $endDate, $clinicaId, $allTime);
             
             // Tasa de término (pacientes con expediente final)
             $tasaTermino = $this->getTasaTermino($clinicaId);
@@ -129,10 +153,15 @@ class AnalyticsController extends Controller
         }
     }
 
-    private function getTotalCitas($startDate, $endDate, $clinicaId)
+    private function getTotalCitas($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        return Cita::where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])->count();
+        $query = Cita::where('clinica_id', $clinicaId);
+        
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        return $query->count();
     }
 
     private function getTotalPacientes($clinicaId)
@@ -140,12 +169,16 @@ class AnalyticsController extends Controller
         return Paciente::where('clinica_id', $clinicaId)->count();
     }
 
-    private function getCitasByStatus($status, $startDate, $endDate, $clinicaId)
+    private function getCitasByStatus($status, $startDate, $endDate, $clinicaId, $allTime = false)
     {
-        return Cita::where('clinica_id', $clinicaId)
-                   ->where('estado', $status)
-                   ->whereBetween('fecha', [$startDate, $endDate])
-                   ->count();
+        $query = Cita::where('clinica_id', $clinicaId)
+                   ->where('estado', $status);
+                   
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        return $query->count();
     }
 
     private function getCitasPorEstado($startDate, $endDate, $clinicaId)
@@ -163,15 +196,19 @@ class AnalyticsController extends Controller
         return $data;
     }
 
-    private function getCitasPorDia($startDate, $endDate, $clinicaId)
+    private function getCitasPorDia($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        $citas = Cita::select(
+        $query = Cita::select(
                 DB::raw('DATE(fecha) as fecha'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])
-            ->groupBy('fecha')
+            ->where('clinica_id', $clinicaId);
+            
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        $citas = $query->groupBy('fecha')
             ->orderBy('fecha')
             ->get();
 
@@ -192,15 +229,24 @@ class AnalyticsController extends Controller
         $labels = [];
         $data = [];
 
-        // Crear array con todos los días del período
-        $current = Carbon::parse($startDate);
-        $end = Carbon::parse($endDate);
-        
-        while ($current->lte($end)) {
-            $fechaStr = $current->format('Y-m-d');
-            $labels[] = $current->format('d/m');
-            $data[] = isset($citasMap[$fechaStr]) ? $citasMap[$fechaStr] : 0;
-            $current->addDay();
+        if ($allTime) {
+            // Para "todas las citas", mostrar solo las fechas con citas (últimos 30 días de datos)
+            $citasArray = array_slice($citasMap, -30, 30, true);
+            foreach ($citasArray as $fecha => $total) {
+                $labels[] = Carbon::parse($fecha)->format('d/m');
+                $data[] = $total;
+            }
+        } else {
+            // Crear array con todos los días del período
+            $current = Carbon::parse($startDate);
+            $end = Carbon::parse($endDate);
+            
+            while ($current->lte($end)) {
+                $fechaStr = $current->format('Y-m-d');
+                $labels[] = $current->format('d/m');
+                $data[] = isset($citasMap[$fechaStr]) ? $citasMap[$fechaStr] : 0;
+                $current->addDay();
+            }
         }
 
         return [
@@ -209,21 +255,27 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getCitasPorMes($startDate, $endDate, $clinicaId)
+    private function getCitasPorMes($startDate, $endDate, $clinicaId, $allTime = false)
     {
         // Obtener todas las citas del año actual, no solo del período
         $añoActual = Carbon::now()->year;
         $inicioAño = Carbon::create($añoActual, 1, 1)->format('Y-m-d');
         $finAño = Carbon::create($añoActual, 12, 31)->format('Y-m-d');
         
-        $citas = Cita::select(
+        $query = Cita::select(
                 DB::raw('YEAR(fecha) as año'),
                 DB::raw('MONTH(fecha) as mes'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$inicioAño, $finAño])
-            ->groupBy('año', 'mes')
+            ->where('clinica_id', $clinicaId);
+            
+        // Para el filtro por mes, siempre mostramos el año actual completo, pero si no es allTime
+        // podemos filtrar por el rango específico
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$inicioAño, $finAño]);
+        }
+        
+        $citas = $query->groupBy('año', 'mes')
             ->orderBy('año')
             ->orderBy('mes')
             ->get();
@@ -258,16 +310,20 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getCitasPorSemana($startDate, $endDate, $clinicaId)
+    private function getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        $citas = Cita::select(
+        $query = Cita::select(
                 DB::raw('YEAR(fecha) as año'),
                 DB::raw('WEEK(fecha, 1) as semana'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])
-            ->groupBy('año', 'semana')
+            ->where('clinica_id', $clinicaId);
+            
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        $citas = $query->groupBy('año', 'semana')
             ->orderBy('año')
             ->orderBy('semana')
             ->get();
@@ -336,44 +392,62 @@ class AnalyticsController extends Controller
         return $data;
     }
 
-    private function getTasaConfirmacion($startDate, $endDate, $clinicaId)
+    private function getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId);
+        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime);
         
         if ($totalCitas == 0) {
             return 0;
         }
 
-        $citasConfirmadas = $this->getCitasByStatus('confirmada', $startDate, $endDate, $clinicaId);
+        $citasConfirmadas = $this->getCitasByStatus('confirmada', $startDate, $endDate, $clinicaId, $allTime);
         
         return round(($citasConfirmadas / $totalCitas) * 100, 1);
     }
 
-    private function getCitasPrimeraVez($startDate, $endDate, $clinicaId)
+    private function getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        return Cita::where('clinica_id', $clinicaId)
-                   ->where('primera_vez', true)
-                   ->whereBetween('fecha', [$startDate, $endDate])
-                   ->count();
+        $query = Cita::where('clinica_id', $clinicaId)
+                   ->where('primera_vez', true);
+                   
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        return $query->count();
     }
 
-    private function getPromedioCitasDia($startDate, $endDate, $clinicaId)
+    private function getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId);
-        $dias = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
+        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime);
+        
+        if ($allTime) {
+            // Para todas las citas, calcular desde la primera cita hasta hoy
+            $primeraCita = Cita::where('clinica_id', $clinicaId)->orderBy('fecha')->first();
+            if (!$primeraCita) {
+                return 0;
+            }
+            $dias = Carbon::parse($primeraCita->fecha)->diffInDays(Carbon::now()) + 1;
+        } else {
+            $dias = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
+        }
         
         return $dias > 0 ? round($totalCitas / $dias, 1) : 0;
     }
 
-    private function getDiaMasActivo($startDate, $endDate, $clinicaId)
+    private function getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime = false)
     {
-        $diaMasActivo = Cita::select(
+        $query = Cita::select(
                 DB::raw('DAYNAME(fecha) as dia_semana'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])
-            ->groupBy('dia_semana')
+            ->where('clinica_id', $clinicaId);
+            
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        $diaMasActivo = $query->groupBy('dia_semana')
             ->orderBy('total', 'desc')
             ->first();
 
@@ -395,12 +469,16 @@ class AnalyticsController extends Controller
         return 'N/A';
     }
 
-    private function getHoraPico($startDate, $endDate, $clinicaId)
+    private function getHoraPico($startDate, $endDate, $clinicaId, $allTime = false)
     {
         // Obtener todas las citas con hora (sin aplicar el cast de datetime)
-        $citas = Cita::where('clinica_id', $clinicaId)
-            ->whereBetween('fecha', [$startDate, $endDate])
-            ->whereNotNull('hora')
+        $query = Cita::where('clinica_id', $clinicaId);
+        
+        if (!$allTime) {
+            $query->whereBetween('fecha', [$startDate, $endDate]);
+        }
+        
+        $citas = $query->whereNotNull('hora')
             ->get(['hora']);
 
         if ($citas->isEmpty()) {
