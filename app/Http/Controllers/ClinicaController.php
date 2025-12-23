@@ -76,6 +76,18 @@ class ClinicaController extends Controller
 
             // Manejar logo si se subió
             if ($request->hasFile('logo')) {
+                // Asegurar que la carpeta existe
+                $directory = storage_path('app/public/clinicas/logos');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                
+                // Asegurar que la carpeta existe
+                $directory = storage_path('app/public/clinicas/logos');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                
                 $logoPath = $request->file('logo')->store('clinicas/logos', 'public');
                 $clinica->update(['logo' => $logoPath]);
             }
@@ -418,6 +430,12 @@ class ClinicaController extends Controller
         }
 
         try {
+            // Asegurar que la carpeta existe con permisos correctos
+            $directory = storage_path('app/public/clinicas/logos');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            
             // Eliminar logo anterior si existe
             if ($clinica->logo) {
                 Storage::disk('public')->delete($clinica->logo);
