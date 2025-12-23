@@ -19,49 +19,54 @@ Route::get('/', function () {
 
 // Ruta de diagnóstico para verificar storage (eliminar después de usar)
 Route::get('/debug-storage', function () {
-    $publicPath = public_path('storage');
-    $storagePath = storage_path('app/public');
-    $clinicasPath = storage_path('app/public/clinicas/logos');
-    
-    $info = [
-        'public_storage_path' => $publicPath,
-        'public_storage_exists' => file_exists($publicPath),
-        'public_storage_is_link' => is_link($publicPath),
-        'public_storage_target' => is_link($publicPath) ? readlink($publicPath) : null,
+    try {
+        $info = [
+            'status' => 'ok',
+            'public_path' => public_path(),
+            'storage_path' => storage_path(),
+        ];
         
-        'storage_path' => $storagePath,
-        'storage_exists' => file_exists($storagePath),
+        // Verificar symlink
+        $publicStoragePath = public_path('storage');
+        $info['public_storage'] = [
+            'path' => $publicStoragePath,
+            'exists' => file_exists($publicStoragePath),
+            'is_link' => @is_link($publicStoragePath),
+            'target' => @is_link($publicStoragePath) ? @readlink($publicStoragePath) : null,
+        ];
         
-        'clinicas_path' => $clinicasPath,
-        'clinicas_exists' => file_exists($clinicasPath),
-        'clinicas_is_readable' => is_readable($clinicasPath),
-        'clinicas_permissions' => file_exists($clinicasPath) ? substr(sprintf('%o', fileperms($clinicasPath)), -4) : null,
+        // Verificar carpeta de logos
+        $logosPath = storage_path('app/public/clinicas/logos');
+        $info['logos_folder'] = [
+            'path' => $logosPath,
+            'exists' => file_exists($logosPath),
+            'is_dir' => is_dir($logosPath),
+            'is_readable' => @is_readable($logosPath),
+        ];
         
-        'app_url' => config('app.url'),
-        'filesystem_disk' => config('filesystems.default'),
-    ];
-    
-    // Listar archivos en clinicas/logos si existe
-    if (file_exists($clinicasPath)) {
-        $files = scandir($clinicasPath);
-        $info['clinicas_files'] = array_filter($files, function($file) {
-            return $file !== '.' && $file !== '..';
-        });
+        // Listar archivos si la carpeta existe
+        if (file_exists($logosPath) && is_dir($logosPath)) {
+            $files = @scandir($logosPath);
+            if ($files) {
+                $info['logos_files'] = array_values(array_filter($files, function($f) {
+                    return $f !== '.' && $f !== '..';
+                }));
+            }
+        }
+        
+        $info['config'] = [
+            'app_url' => config('app.url'),
+            'filesystem_disk' => config('filesystems.default'),
+        ];
+        
+        return response()->json($info);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], 500);
     }
-    
-    // Verificar un archivo específico
-    $testFile = '2Sef845lyZcNL1Hy1erqXPSbP5dd6edQNHfVn0z5.png';
-    $testPath = storage_path('app/public/clinicas/logos/' . $testFile);
-    $info['test_file'] = [
-        'name' => $testFile,
-        'full_path' => $testPath,
-        'exists' => file_exists($testPath),
-        'is_readable' => file_exists($testPath) ? is_readable($testPath) : false,
-        'size' => file_exists($testPath) ? filesize($testPath) : null,
-        'permissions' => file_exists($testPath) ? substr(sprintf('%o', fileperms($testPath)), -4) : null,
-    ];
-    
-    return response()->json($info);
 });
 
 // Rutas para Expediente Pulmonar
