@@ -32,6 +32,12 @@ class PDFController extends Controller
      */
     private function getDoctorParaFirma(Request $request, $creadorUserId)
     {
+        \Log::info('🔍 getDoctorParaFirma - Parametros recibidos', [
+            'doctor_firma_id_en_request' => $request->doctor_firma_id ?? 'NO EXISTE',
+            'creador_user_id' => $creadorUserId,
+            'all_request' => $request->all()
+        ]);
+
         // 1. Si envían doctor_firma_id específico
         if ($request->has('doctor_firma_id') && $request->doctor_firma_id) {
             $doctorSeleccionado = User::where('id', $request->doctor_firma_id)
@@ -39,13 +45,25 @@ class PDFController extends Controller
                 ->first();
             
             if ($doctorSeleccionado) {
+                \Log::info('✅ Doctor seleccionado por doctor_firma_id', [
+                    'doctor_id' => $doctorSeleccionado->id,
+                    'nombre' => $doctorSeleccionado->nombre
+                ]);
                 return $doctorSeleccionado;
+            } else {
+                \Log::warning('⚠️ doctor_firma_id proporcionado pero doctor no encontrado o sin firma', [
+                    'doctor_firma_id' => $request->doctor_firma_id
+                ]);
             }
         }
 
         // 2. Usuario actual si tiene firma
         $usuarioActual = Auth::user();
         if ($usuarioActual && $usuarioActual->firma_digital) {
+            \Log::info('✅ Usando usuario actual con firma', [
+                'user_id' => $usuarioActual->id,
+                'nombre' => $usuarioActual->nombre
+            ]);
             return $usuarioActual;
         }
 
@@ -56,12 +74,21 @@ class PDFController extends Controller
                 ->first();
             
             if ($doctorConFirma) {
+                \Log::info('✅ Usando doctor de la clínica con firma', [
+                    'doctor_id' => $doctorConFirma->id,
+                    'nombre' => $doctorConFirma->nombre
+                ]);
                 return $doctorConFirma;
             }
         }
 
         // 4. Fallback: usuario que creó el expediente
-        return User::find($creadorUserId);
+        $creador = User::find($creadorUserId);
+        \Log::info('✅ Fallback: usando creador del expediente', [
+            'user_id' => $creador->id ?? null,
+            'nombre' => $creador->nombre ?? null
+        ]);
+        return $creador;
     }
 
     public function esfuerzoPdf(Request $request)
