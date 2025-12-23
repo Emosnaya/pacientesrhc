@@ -28,6 +28,10 @@ class Clinica extends Model
         'fecha_vencimiento' => 'date'
     ];
 
+    protected $appends = [
+        'logo_url'
+    ];
+
     // Relaciones
     public function users(): HasMany
     {
