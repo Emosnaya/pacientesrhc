@@ -54,8 +54,14 @@ class Clinica extends Model
         return $this->fecha_vencimiento && $this->fecha_vencimiento < now();
     }
 
-    public function getLogoUrlAttribute(): string
+    public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo ? asset('storage/' . $this->logo) : asset('img/default-clinic-logo.png');
+        if (!$this->logo) {
+            return null;
+        }
+        
+        // Construir URL completa usando el dominio de la API
+        $baseUrl = config('app.url');
+        return $baseUrl . '/storage/' . $this->logo;
     }
 }
