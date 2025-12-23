@@ -25,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'isAdmin',
+        'isSuperAdmin',
         'imagen',
         'firma_digital',
         'email_verification_token',
@@ -50,6 +51,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'isAdmin' => 'boolean',
+        'isSuperAdmin' => 'boolean',
         'email_verified' => 'boolean',
     ];
 

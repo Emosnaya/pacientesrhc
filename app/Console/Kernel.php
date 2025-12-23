@@ -16,6 +16,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        
+        // Generar reportes semanales de insights automáticamente
+        // Se ejecuta cada lunes a las 8:00 AM
+        $schedule->command('insights:weekly')
+            ->weeklyOn(1, '8:00')
+            ->timezone('America/Mexico_City');
     }
 
     /**

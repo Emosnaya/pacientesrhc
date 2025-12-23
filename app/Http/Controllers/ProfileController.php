@@ -36,6 +36,12 @@ class ProfileController extends Controller
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
+        // Log para debug
+        \Log::info('📥 Datos recibidos en ProfileController::update', [
+            'all_data' => $request->all(),
+            'user_id' => $id
+        ]);
+
         $validator = Validator::make($request->all(), [
             'nombre' => 'nullable|string|max:255',
             'apellidoPat' => 'nullable|string|max:255',
@@ -47,6 +53,7 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::error('❌ Validación fallida', ['errors' => $validator->errors()]);
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
@@ -72,6 +79,8 @@ class ProfileController extends Controller
             $updateData['password'] = Hash::make($request->password);
         }
 
+        \Log::info('📝 Datos a actualizar', ['updateData' => $updateData]);
+
         // Manejar la subida de imagen
         if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
             // Eliminar imagen anterior si existe y no es la por defecto
@@ -88,7 +97,12 @@ class ProfileController extends Controller
 
         // Siempre actualizar, incluso si no hay datos específicos
         // (esto permite actualizar solo la imagen si es necesario)
-        $user->update($updateData);
+        if (!empty($updateData)) {
+            $user->update($updateData);
+            \Log::info('✅ Usuario actualizado', ['user' => $user->fresh()]);
+        } else {
+            \Log::warning('⚠️ No hay datos para actualizar');
+        }
 
         return response()->json([
             'message' => 'Perfil actualizado exitosamente',
@@ -202,7 +216,7 @@ class ProfileController extends Controller
             }
 
             // Volver a la imagen por defecto
-            $user->update(['imagen' => 'perfiles/avatar-default.png']);
+            $user->update(['imagen' => null]);
 
             return response()->json([
                 'message' => 'Imagen de perfil eliminada exitosamente',

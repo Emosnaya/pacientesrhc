@@ -320,4 +320,124 @@ class ClinicaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Actualizar clínica del usuario autenticado
+     */
+    public function updateCurrentClinica(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->clinica_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no tiene clínica asignada'
+            ], 404);
+        }
+
+        $clinica = Clinica::find($user->clinica_id);
+        
+        if (!$clinica) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Clínica no encontrada'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:255',
+            'email' => 'required|email|unique:clinicas,email,' . $clinica->id,
+            'telefono' => 'nullable|string|max:20',
+            'direccion' => 'nullable|string|max:500',
+            'plan' => 'nullable|in:mensual,trimestral,anual',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $data = $request->only(['nombre', 'email', 'telefono', 'direccion']);
+            
+            // Solo superAdmin puede cambiar el plan
+            if ($user->isSuperAdmin && $request->has('plan')) {
+                $data['plan'] = $request->plan;
+            }
+
+            $clinica->update($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clínica actualizada exitosamente',
+                'data' => $clinica->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la clínica: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Subir logo de la clínica
+     */
+    public function uploadLogo(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->clinica_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no tiene clínica asignada'
+            ], 404);
+        }
+
+        $clinica = Clinica::find($user->clinica_id);
+        
+        if (!$clinica) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Clínica no encontrada'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Eliminar logo anterior si existe
+            if ($clinica->logo) {
+                Storage::disk('public')->delete($clinica->logo);
+            }
+
+            // Subir nuevo logo
+            $logoPath = $request->file('logo')->store('clinicas/logos', 'public');
+            $clinica->update(['logo' => $logoPath]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logo actualizado exitosamente',
+                'data' => $clinica->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir el logo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
