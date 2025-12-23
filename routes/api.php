@@ -20,6 +20,8 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\ExpedienteUnificadoController;
 use App\Http\Controllers\ExpedientePulmonarController;
 use App\Http\Controllers\EventoController;
+use App\Http\Controllers\AIController;
+use App\Http\Controllers\DashboardController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -43,12 +45,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/logout', [AuthController::class, 'logout']);
     
     // Rutas de perfil
-    Route::get('/users/{id}', [ProfileController::class, 'show']);
-    Route::put('/users/{id}', [ProfileController::class, 'update']);
-    Route::post('/users/{id}/upload-image', [ProfileController::class, 'uploadImage']);
-    Route::post('/users/{id}/upload-signature', [ProfileController::class, 'uploadSignature']);
-    Route::delete('/users/{id}/delete-image', [ProfileController::class, 'deleteImage']);
-    Route::delete('/users/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
+    Route::get('/profile/{id}', [ProfileController::class, 'show']);
+    Route::put('/profile/{id}', [ProfileController::class, 'update']);
+    Route::post('/profile/{id}/upload-image', [ProfileController::class, 'uploadImage']);
+    Route::post('/profile/{id}/upload-signature', [ProfileController::class, 'uploadSignature']);
+    Route::delete('/profile/{id}/delete-image', [ProfileController::class, 'deleteImage']);
+    Route::delete('/profile/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
 
     // Almacenar ordenes
     Route::apiResource('/pacientes', PacienteController::class);
@@ -92,6 +94,16 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     
     // Ruta unificada para obtener todos los expedientes de un paciente
     Route::get('/expedientes/{pacienteId}', [ExpedienteUnificadoController::class, 'getExpedientesByPaciente']);
+    
+    // Rutas de IA
+    Route::post('/ai/transcribe', [AIController::class, 'transcribe']);
+    Route::post('/ai/autocomplete', [AIController::class, 'autocomplete']);
+    Route::post('/ai/summarize', [AIController::class, 'summarize']);
+    
+    // Rutas de Dashboard Insights con IA
+    Route::get('/dashboard/insights', [DashboardController::class, 'generateInsights']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/dashboard/alerts', [DashboardController::class, 'getAlerts']);
     
     Route::delete('/psicolo/{id}',[InfoController::class,'destroyPsico']);
     Route::delete('/nutriolo/{id}',[InfoController::class,'destroyNutri']);
@@ -154,4 +166,6 @@ Route::post('/clinicas', [\App\Http\Controllers\ClinicaController::class, 'store
 Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function () {
     Route::get('/clinicas/{id}', [\App\Http\Controllers\ClinicaController::class, 'show']);
     Route::get('/clinica/current', [\App\Http\Controllers\ClinicaController::class, 'getCurrentClinica']);
+    Route::put('/clinica/update', [\App\Http\Controllers\ClinicaController::class, 'updateCurrentClinica']);
+    Route::post('/clinica/upload-logo', [\App\Http\Controllers\ClinicaController::class, 'uploadLogo']);
 });
