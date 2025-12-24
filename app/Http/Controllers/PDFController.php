@@ -11,6 +11,9 @@ use App\Models\ReporteFisio;
 use App\Models\ReporteNutri;
 use App\Models\ReportePsico;
 use App\Models\ExpedientePulmonar;
+use App\Models\HistoriaClinicaFisioterapia;
+use App\Models\NotaEvolucionFisioterapia;
+use App\Models\NotaAltaFisioterapia;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -182,6 +185,63 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
         return $pdf->stream('Expediente_Pulmonar.pdf'); 
+    }
+
+    public function historiaFisioterapiaPdf(Request $request)
+    {
+        $data = HistoriaClinicaFisioterapia::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64'));
+        return $pdf->stream('Historia_Clinica_Fisioterapia.pdf');
+    }
+
+    public function notaEvolucionFisioterapiaPdf(Request $request)
+    {
+        $data = NotaEvolucionFisioterapia::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64'));
+        return $pdf->stream('Nota_Evolucion_Fisioterapia.pdf');
+    }
+
+    public function notaAltaFisioterapiaPdf(Request $request)
+    {
+        $data = NotaAltaFisioterapia::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64'));
+        return $pdf->stream('Nota_Alta_Fisioterapia.pdf');
     }
 
     /**

@@ -22,6 +22,7 @@ use App\Http\Controllers\ExpedientePulmonarController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Api\FisioterapiaController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -77,6 +78,9 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::get('/psico/imprimir/{id}',[PDFController::class,'psicoPdf']);
     Route::get('/nutri/imprimir/{id}',[PDFController::class,'nutriPdf']);
+    Route::get('/fisioterapia/historia/imprimir/{id}',[PDFController::class,'historiaFisioterapiaPdf']);
+    Route::get('/fisioterapia/evolucion/imprimir/{id}',[PDFController::class,'notaEvolucionFisioterapiaPdf']);
+    Route::get('/fisioterapia/alta/imprimir/{id}',[PDFController::class,'notaAltaFisioterapiaPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     
     // Obtener lista de doctores con firma para seleccionar
@@ -132,6 +136,36 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::post('/', [ExpedientePulmonarController::class, 'store']); // Crear expediente
         Route::put('/{id}', [ExpedientePulmonarController::class, 'update']); // Actualizar expediente
         Route::delete('/{id}', [ExpedientePulmonarController::class, 'destroy']); // Eliminar expediente
+    });
+
+    // Rutas para expedientes de Fisioterapia
+    Route::prefix('fisioterapia')->group(function () {
+        // Historia Clínica de Fisioterapia
+        Route::prefix('historia')->group(function () {
+            Route::get('/paciente/{pacienteId}', [FisioterapiaController::class, 'indexHistoria']);
+            Route::post('/', [FisioterapiaController::class, 'storeHistoria']);
+            Route::get('/{id}', [FisioterapiaController::class, 'showHistoria']);
+            Route::put('/{id}', [FisioterapiaController::class, 'updateHistoria']);
+            Route::delete('/{id}', [FisioterapiaController::class, 'destroyHistoria']);
+        });
+
+        // Nota de Evolución de Fisioterapia
+        Route::prefix('evolucion')->group(function () {
+            Route::get('/paciente/{pacienteId}', [FisioterapiaController::class, 'indexEvolucion']);
+            Route::post('/', [FisioterapiaController::class, 'storeEvolucion']);
+            Route::get('/{id}', [FisioterapiaController::class, 'showEvolucion']);
+            Route::put('/{id}', [FisioterapiaController::class, 'updateEvolucion']);
+            Route::delete('/{id}', [FisioterapiaController::class, 'destroyEvolucion']);
+        });
+
+        // Nota de Alta de Fisioterapia
+        Route::prefix('alta')->group(function () {
+            Route::get('/paciente/{pacienteId}', [FisioterapiaController::class, 'indexAlta']);
+            Route::post('/', [FisioterapiaController::class, 'storeAlta']);
+            Route::get('/{id}', [FisioterapiaController::class, 'showAlta']);
+            Route::put('/{id}', [FisioterapiaController::class, 'updateAlta']);
+            Route::delete('/{id}', [FisioterapiaController::class, 'destroyAlta']);
+        });
     });
 });
 

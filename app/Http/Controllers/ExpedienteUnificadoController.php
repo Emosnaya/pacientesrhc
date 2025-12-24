@@ -11,6 +11,9 @@ use App\Models\ReporteNutri;
 use App\Models\ReportePsico;
 use App\Models\ReporteFisio;
 use App\Models\ExpedientePulmonar;
+use App\Models\HistoriaClinicaFisioterapia;
+use App\Models\NotaEvolucionFisioterapia;
+use App\Models\NotaAltaFisioterapia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -143,6 +146,48 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 11. Historia Clínica de Fisioterapia
+        $historiasFisioterapia = HistoriaClinicaFisioterapia::where('paciente_id', $pacienteId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 11,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Clínica Fisioterapia'
+                ];
+            });
+
+        // 12. Notas de Evolución de Fisioterapia
+        $evolucionesFisioterapia = NotaEvolucionFisioterapia::where('paciente_id', $pacienteId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 12,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Nota de Evolución Fisioterapia'
+                ];
+            });
+
+        // 13. Notas de Alta de Fisioterapia
+        $altasFisioterapia = NotaAltaFisioterapia::where('paciente_id', $pacienteId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 13,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Nota de Alta Fisioterapia'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -152,7 +197,10 @@ class ExpedienteUnificadoController extends Controller
             ->merge($nutricionales)
             ->merge($psicologicos)
             ->merge($fisiologicos)
-            ->merge($pulmonares);
+            ->merge($pulmonares)
+            ->merge($historiasFisioterapia)
+            ->merge($evolucionesFisioterapia)
+            ->merge($altasFisioterapia);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();
