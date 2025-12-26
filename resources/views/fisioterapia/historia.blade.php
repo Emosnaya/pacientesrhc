@@ -68,7 +68,7 @@
             z-index: 0;
         }
         .m-t-0 {
-            margin-top: 0.3rem;
+            margin-top: -0.3rem;
         }
         .bck-gray {
             background-color: #DDDEE1;
