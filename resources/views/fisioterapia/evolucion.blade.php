@@ -136,75 +136,92 @@
     </header>
 
     <main class="mt-0">
+        @if($data->diagnostico_fisioterapeutico)
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Evaluación SOAP</h2>
+            <h2 class="h8 titulo">Diagnóstico Fisioterapéutico</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Subjetivo (S):</td>
-                    <td class="f-normal text-lft">{{ $data->subjetivo ?? 'N/A' }}</td>
-                </tr>
-                <tr>
-                    <td class="f-bold text-lft">Objetivo (O):</td>
-                    <td class="f-normal text-lft">{{ $data->objetivo ?? 'N/A' }}</td>
+                    <td class="f-normal text-lft">{{ $data->diagnostico_fisioterapeutico }}</td>
                 </tr>
             </tbody>
         </table>
-
-        @if($data->eva_inicial || $data->eva_final)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Escala EVA del Dolor (0-10)</h2>
-            <div class="linea"></div>
-        </div>
-        <div class="eva-box m-t-0">
-            @if($data->eva_inicial)
-            <span class="f-bold">EVA Inicial: <span class="eva-value">{{ $data->eva_inicial }}</span></span>
-            @endif
-            @if($data->eva_inicial && $data->eva_final)
-            <span class="f-bold ml-3">→</span>
-            @endif
-            @if($data->eva_final)
-            <span class="f-bold ml-3">EVA Final: <span class="eva-value">{{ $data->eva_final }}</span></span>
-            @endif
-            @if($data->eva_inicial && $data->eva_final)
-            <span class="f-bold ml-3">Variación: <span class="eva-value">{{ $data->eva_final - $data->eva_inicial > 0 ? '+' : '' }}{{ round($data->eva_final - $data->eva_inicial, 1) }}</span></span>
-            @endif
-        </div>
         @endif
 
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Tratamiento</h2>
+            <h2 class="h8 titulo">Evolución Clínica</h2>
+            <div class="linea"></div>
+        </div>
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+            <tbody>
+                @if($data->observaciones_subjetivas)
+                <tr>
+                    <td class="f-bold text-lft" width="30%">Observaciones Subjetivas:</td>
+                    <td class="f-normal text-lft">{{ $data->observaciones_subjetivas }}</td>
+                </tr>
+                @endif
+                @if($data->dolor_eva)
+                <tr>
+                    <td class="f-bold text-lft">Dolor EVA (0-10):</td>
+                    <td class="f-normal text-lft"><span class="eva-value">{{ $data->dolor_eva }}</span></td>
+                </tr>
+                @endif
+                @if($data->funcionalidad)
+                <tr>
+                    <td class="f-bold text-lft">Funcionalidad:</td>
+                    <td class="f-normal text-lft">{{ $data->funcionalidad }}</td>
+                </tr>
+                @endif
+                @if($data->observaciones_objetivas)
+                <tr>
+                    <td class="f-bold text-lft">Observaciones Objetivas:</td>
+                    <td class="f-normal text-lft">{{ $data->observaciones_objetivas }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+
+        <div class="contenedor mt-1">
+            <h2 class="h8 titulo">Tratamiento Realizado</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped">
             <tbody>
+                @if($data->tecnicas_modalidades_aplicadas)
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Tratamiento realizado:</td>
-                    <td class="f-normal text-lft">{{ $data->tratamiento_realizado ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft" width="30%">Técnicas y Modalidades:</td>
+                    <td class="f-normal text-lft">{{ $data->tecnicas_modalidades_aplicadas }}</td>
                 </tr>
+                @endif
+                @if($data->ejercicio_terapeutico)
                 <tr>
-                    <td class="f-bold text-lft">Respuesta al tratamiento:</td>
-                    <td class="f-normal text-lft">{{ $data->respuesta_tratamiento ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft">Ejercicio Terapéutico:</td>
+                    <td class="f-normal text-lft">{{ $data->ejercicio_terapeutico }}</td>
                 </tr>
+                @endif
             </tbody>
         </table>
 
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Plan y Observaciones</h2>
+            <h2 class="h8 titulo">Respuesta y Plan</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
+                @if($data->respuesta_tratamiento)
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Observaciones:</td>
-                    <td class="f-normal text-lft">{{ $data->observaciones ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft" width="30%">Respuesta al Tratamiento:</td>
+                    <td class="f-normal text-lft">{{ $data->respuesta_tratamiento }}</td>
                 </tr>
+                @endif
+                @if($data->plan)
                 <tr>
-                    <td class="f-bold text-lft">Plan para siguiente sesión:</td>
-                    <td class="f-normal text-lft">{{ $data->plan_siguiente_sesion ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft" width="30%">Plan:</td>
+                    <td class="f-normal text-lft">{{ $data->plan }}</td>
                 </tr>
+                @endif
             </tbody>
         </table>
 

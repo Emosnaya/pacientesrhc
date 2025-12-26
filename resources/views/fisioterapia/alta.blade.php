@@ -68,7 +68,7 @@
             z-index: 0;
         }
         .m-t-0 {
-            margin-top: 0.3rem;
+            margin-top: -0.3rem;
         }
         .bck-gray {
             background-color: #DDDEE1;
@@ -136,98 +136,146 @@
         </div>
     </header>
 
-    @if($data->motivo_alta)
-    <div class="motivo-alta">
-        MOTIVO DE ALTA: {{ strtoupper($data->motivo_alta) }}
-    </div>
-    @endif
-
     <main class="mt-0">
+        @if($data->diagnostico_medico || $data->diagnostico_fisioterapeutico_inicial)
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Periodo del Tratamiento</h2>
+            <h2 class="h8 titulo">Diagnósticos</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
+                @if($data->diagnostico_medico)
+                <tr>
+                    <td class="f-bold text-lft" width="30%">Diagnóstico Médico:</td>
+                    <td class="f-normal text-lft">{{ $data->diagnostico_medico }}</td>
+                </tr>
+                @endif
+                @if($data->diagnostico_fisioterapeutico_inicial)
+                <tr>
+                    <td class="f-bold text-lft">Diagnóstico Fisioterapéutico Inicial:</td>
+                    <td class="f-normal text-lft">{{ $data->diagnostico_fisioterapeutico_inicial }}</td>
+                </tr>
+                @endif
+            </tbody>
+        </table>
+        @endif
+
+        <div class="contenedor mt-1">
+            <h2 class="h8 titulo">Periodo de Atención</h2>
+            <div class="linea"></div>
+        </div>
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+            <tbody>
+                @if($data->fecha_inicio_atencion)
                 <tr>
                     <td class="f-bold text-lft" width="30%">Fecha de inicio:</td>
-                    <td class="f-normal text-lft">{{ $data->fecha_inicio_tratamiento ? date('d/m/Y', strtotime($data->fecha_inicio_tratamiento)) : 'N/A' }}</td>
+                    <td class="f-normal text-lft">{{ date('d/m/Y', strtotime($data->fecha_inicio_atencion)) }}</td>
                 </tr>
+                @endif
+                @if($data->fecha_termino)
                 <tr>
-                    <td class="f-bold text-lft">Fecha de fin:</td>
-                    <td class="f-normal text-lft">{{ $data->fecha_fin_tratamiento ? date('d/m/Y', strtotime($data->fecha_fin_tratamiento)) : 'N/A' }}</td>
+                    <td class="f-bold text-lft">Fecha de término:</td>
+                    <td class="f-normal text-lft">{{ date('d/m/Y', strtotime($data->fecha_termino)) }}</td>
                 </tr>
+                @endif
+                @if($data->numero_sesiones)
                 <tr>
-                    <td class="f-bold text-lft">Total de sesiones:</td>
-                    <td class="f-normal text-lft">{{ $data->numero_sesiones_totales ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft">Número de sesiones:</td>
+                    <td class="f-normal text-lft">{{ $data->numero_sesiones }}</td>
                 </tr>
+                @endif
             </tbody>
         </table>
 
+        @if($data->tratamiento_otorgado)
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Resumen Clínico</h2>
+            <h2 class="h8 titulo">Tratamiento Otorgado</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped">
             <tbody>
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Resumen clínico:</td>
-                    <td class="f-normal text-lft">{{ $data->resumen_clinico ?? 'N/A' }}</td>
-                </tr>
-                <tr>
-                    <td class="f-bold text-lft">Evolución del tratamiento:</td>
-                    <td class="f-normal text-lft">{{ $data->evolucion_tratamiento ?? 'N/A' }}</td>
+                    <td class="f-normal text-lft">{{ $data->tratamiento_otorgado }}</td>
                 </tr>
             </tbody>
         </table>
+        @endif
 
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Estado Funcional</h2>
+            <h2 class="h8 titulo">Evolución y Resultados</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
             <tbody>
+                @if($data->evolucion_resultados)
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Estado funcional inicial:</td>
-                    <td class="f-normal text-lft">{{ $data->estado_funcional_inicial ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft" width="30%">Evolución:</td>
+                    <td class="f-normal text-lft">{{ $data->evolucion_resultados }}</td>
                 </tr>
+                @endif
+                @if($data->dolor_alta_eva)
                 <tr>
-                    <td class="f-bold text-lft">Estado funcional final:</td>
-                    <td class="f-normal text-lft">{{ $data->estado_funcional_final ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft">Dolor al alta EVA (0-10):</td>
+                    <td class="f-normal text-lft"><span class="eva-value">{{ $data->dolor_alta_eva }}</span></td>
                 </tr>
+                @endif
+                @if($data->mejoria_funcional)
+                <tr>
+                    <td class="f-bold text-lft">Mejoría funcional:</td>
+                    <td class="f-normal text-lft">{{ $data->mejoria_funcional }}</td>
+                </tr>
+                @endif
             </tbody>
         </table>
 
+        @if($data->objetivos_alcanzados)
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">Objetivos Alcanzados</h2>
             <div class="linea"></div>
         </div>
-        <p class="f-bold m-t-0 f-10 mb-1">{{ $data->objetivos_alcanzados ?? 'N/A' }}</p>
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+            <tbody>
+                <tr>
+                    <td class="f-normal text-lft">{{ $data->objetivos_alcanzados }}</td>
+                </tr>
+            </tbody>
+        </table>
+        @endif
+
+        @if($data->estado_funcional_alta)
+        <div class="contenedor mt-1">
+            <h2 class="h8 titulo">Estado Funcional al Alta</h2>
+            <div class="linea"></div>
+        </div>
+        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+            <tbody>
+                <tr>
+                    <td class="f-normal text-lft">{{ $data->estado_funcional_alta }}</td>
+                </tr>
+            </tbody>
+        </table>
+        @endif
 
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Recomendaciones</h2>
+            <h2 class="h8 titulo">Recomendaciones y Pronóstico</h2>
             <div class="linea"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped">
             <tbody>
+                @if($data->recomendaciones_seguimiento)
                 <tr>
-                    <td class="f-bold text-lft" width="30%">Recomendaciones generales:</td>
-                    <td class="f-normal text-lft">{{ $data->recomendaciones ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft" width="30%">Recomendaciones:</td>
+                    <td class="f-normal text-lft">{{ $data->recomendaciones_seguimiento }}</td>
                 </tr>
+                @endif
+                @if($data->pronostico_funcional)
                 <tr>
-                    <td class="f-bold text-lft">Plan de ejercicios en domicilio:</td>
-                    <td class="f-normal text-lft">{{ $data->plan_ejercicios_domicilio ?? 'N/A' }}</td>
+                    <td class="f-bold text-lft">Pronóstico funcional:</td>
+                    <td class="f-normal text-lft">{{ $data->pronostico_funcional }}</td>
                 </tr>
+                @endif
             </tbody>
         </table>
-
-        @if($data->observaciones_finales)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Observaciones Finales</h2>
-            <div class="linea"></div>
-        </div>
-        <p class="f-bold m-t-0 f-10 mb-1">{{ $data->observaciones_finales }}</p>
-        @endif
 
         <div class="signature">
             @if($firmaBase64)
