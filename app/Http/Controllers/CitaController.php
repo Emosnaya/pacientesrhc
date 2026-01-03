@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
+use App\Notifications\CitaInvitationMail;
 use Carbon\Carbon;
 
 class CitaController extends Controller
@@ -78,6 +79,8 @@ class CitaController extends Controller
             if ($request->has('paciente_id') && $request->paciente_id) {
                 $validator = Validator::make($request->all(), [
                     'paciente_id' => 'required|exists:pacientes,id',
+                    'user_id' => 'nullable|exists:users,id',
+                    'custom_email' => 'nullable|email|max:255',
                     'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
                     'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
@@ -117,6 +120,8 @@ class CitaController extends Controller
                     'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
                     'nuevo_paciente.tipo_paciente' => 'required|in:cardiaca,pulmonar,ambos,fisioterapia',
                     'nuevo_paciente.user_id' => 'nullable|exists:users,id',
+                    'user_id' => 'nullable|exists:users,id',
+                    'custom_email' => 'nullable|email|max:255',
                     'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
                     'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
@@ -195,22 +200,41 @@ class CitaController extends Controller
                 ], 422);
             }
 
+            // Determinar user_id: 
+            // - Si viene en request y es null explícitamente, usar null (no enviar correos)
+            // - Si viene en request con valor, usar ese valor
+            // - Si no viene en request (string vacío o no presente), usar doctor del paciente
+            $userId = null;
+            if ($request->has('user_id')) {
+                $userId = $request->user_id; // puede ser null, int o string vacío
+                if ($userId === '' || $userId === 'null') {
+                    $userId = null; // forzar null si viene vacío o "null"
+                }
+            } else {
+                $userId = $paciente->user_id; // usar doctor del paciente por defecto
+            }
+
             // Crear la cita (se permiten múltiples citas al mismo tiempo)
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
+                'user_id' => $userId,
                 'clinica_id' => $user->clinica_id,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
                 'estado' => $request->estado ?? 'pendiente',
                 'primera_vez' => $request->primera_vez ?? true,
-                'notas' => $request->notas
+                'notas' => $request->notas,
+                'custom_email' => $request->custom_email ?? null
             ]);
 
             $cita->load(['paciente', 'admin']);
 
             // Enviar correos de notificación
             $this->sendCitaNotificationEmails($cita, $user);
+
+            // Enviar invitación de calendario al doctor del paciente
+            $this->sendCalendarInvitation($cita, 'create');
 
             $response = [
                 'success' => true,
@@ -278,6 +302,8 @@ class CitaController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
+                'user_id' => 'nullable|exists:users,id',
+                'custom_email' => 'nullable|email|max:255',
                 'fecha' => 'sometimes|date',
                 'hora' => 'sometimes|date_format:H:i',
                 'estado' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
@@ -304,8 +330,13 @@ class CitaController extends Controller
                 ], 403);
             }
 
-            $cita->update($request->only(['fecha', 'hora', 'estado', 'primera_vez', 'notas']));
+            $cita->update($request->only(['user_id', 'custom_email', 'fecha', 'hora', 'estado', 'primera_vez', 'notas']));
             $cita->load(['paciente', 'admin']);
+
+            // Enviar actualización de calendario si cambió fecha u hora
+            if ($request->has('fecha') || $request->has('hora')) {
+                $this->sendCalendarInvitation($cita, 'update');
+            }
 
             return response()->json([
                 'success' => true,
@@ -348,6 +379,9 @@ class CitaController extends Controller
                     'message' => 'No tienes acceso a esta cita'
                 ], 403);
             }
+
+            // Enviar cancelación de calendario antes de eliminar
+            $this->sendCalendarInvitation($cita, 'cancel');
 
             $cita->delete();
 
@@ -563,18 +597,97 @@ class CitaController extends Controller
         try {
             // Enviar correo solo al paciente si tiene email
             if ($cita->paciente->email) {
-                Mail::send('emails.cita-patient-notification', [
-                    'cita' => $cita,
-                    'paciente' => $cita->paciente
-                ], function ($message) use ($cita) {
-                    $message->to($cita->paciente->email)
-                            ->subject('Confirmación de Cita - ' . $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat . ' - CERCAP');
-                });
+                // Usar Mailable personalizado para enviar con ICS incluido
+                \Mail::to($cita->paciente->email)
+                     ->send(new \App\Mail\CitaNotificationMail($cita));
+                
+                \Log::info('Cita notification email sent to patient: ' . $cita->paciente->email);
             }
 
         } catch (\Exception $e) {
             // Log error but don't fail the cita creation
             \Log::error('Error sending cita notification emails: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Enviar invitación de calendario al doctor y al paciente
+     * 
+     * @param Cita $cita
+     * @param string $action 'create', 'update', or 'cancel'
+     */
+    private function sendCalendarInvitation($cita, $action = 'create')
+    {
+        try {
+            // Cargar relaciones necesarias
+            $cita->load(['user', 'paciente']);
+            
+            $emailsSent = [];
+            $emailsFailed = [];
+            
+            // SIEMPRE enviar al paciente si tiene email válido (por defecto)
+            if ($cita->paciente && $cita->paciente->email) {
+                $patientEmail = trim($cita->paciente->email);
+                
+                // Validar formato de email
+                if (filter_var($patientEmail, FILTER_VALIDATE_EMAIL)) {
+                    try {
+                        $cita->paciente->notify(new CitaInvitationMail($cita, $action));
+                        $emailsSent[] = "paciente: {$patientEmail}";
+                        \Log::info("Calendar invitation sent to patient: {$patientEmail} for cita {$cita->id} (action: {$action})");
+                    } catch (\Exception $e) {
+                        $emailsFailed[] = "paciente: {$patientEmail} - {$e->getMessage()}";
+                        \Log::error("Failed to send to patient {$patientEmail}: " . $e->getMessage());
+                    }
+                } else {
+                    \Log::warning("Invalid patient email format for cita {$cita->id}: {$patientEmail}");
+                }
+            } else {
+                \Log::info("No patient email for cita {$cita->id}");
+            }
+            
+            // Enviar al doctor O correo personalizado SOLO si está asignado explícitamente
+            if ($cita->custom_email) {
+                // Si hay un correo personalizado, enviar a ese correo
+                $customEmail = trim($cita->custom_email);
+                
+                if (filter_var($customEmail, FILTER_VALIDATE_EMAIL)) {
+                    try {
+                        \Notification::route('mail', $customEmail)
+                            ->notify(new CitaInvitationMail($cita, $action));
+                        $emailsSent[] = "correo personalizado: {$customEmail}";
+                        \Log::info("Calendar invitation sent to custom email: {$customEmail} for cita {$cita->id} (action: {$action})");
+                    } catch (\Exception $e) {
+                        $emailsFailed[] = "correo personalizado: {$customEmail} - {$e->getMessage()}";
+                        \Log::error("Failed to send to custom email {$customEmail}: " . $e->getMessage());
+                    }
+                } else {
+                    \Log::warning("Invalid custom email format for cita {$cita->id}: {$customEmail}");
+                }
+            } elseif ($cita->user_id && $cita->user && $cita->user->email) {
+                // Si no hay correo personalizado, enviar al doctor asignado
+                try {
+                    $cita->user->notify(new CitaInvitationMail($cita, $action));
+                    $emailsSent[] = "doctor: {$cita->user->email}";
+                    \Log::info("Calendar invitation sent to doctor: {$cita->user->email} for cita {$cita->id} (action: {$action})");
+                } catch (\Exception $e) {
+                    $emailsFailed[] = "doctor: {$cita->user->email} - {$e->getMessage()}";
+                    \Log::error("Failed to send to doctor {$cita->user->email}: " . $e->getMessage());
+                }
+            } else {
+                \Log::info("No doctor or custom email assigned for cita {$cita->id}, skipping notification");
+            }
+            
+            // Resumen de envíos
+            if (count($emailsSent) > 0) {
+                \Log::info("Cita {$cita->id} notifications sent to: " . implode(', ', $emailsSent));
+            }
+            if (count($emailsFailed) > 0) {
+                \Log::warning("Cita {$cita->id} notifications failed: " . implode(', ', $emailsFailed));
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the cita operation
+            \Log::error('Error sending calendar invitation: ' . $e->getMessage());
         }
     }
 }

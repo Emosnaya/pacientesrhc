@@ -35,6 +35,7 @@ class Paciente extends Model
         'medicamentos',
         'envio',
         'tipo_paciente',
+        'color',
         'user_id',
         'clinica_id'
     ];

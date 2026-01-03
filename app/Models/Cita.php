@@ -18,12 +18,14 @@ class Cita extends Model
     protected $fillable = [
         'paciente_id',
         'admin_id',
+        'user_id',
         'clinica_id',
         'fecha',
         'hora',
         'estado',
         'primera_vez',
-        'notas'
+        'notas',
+        'custom_email'
     ];
 
     /**
@@ -51,6 +53,14 @@ class Cita extends Model
     public function admin()
     {
         return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    /**
+     * Relación con el doctor que atiende la cita
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**

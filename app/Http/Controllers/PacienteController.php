@@ -74,6 +74,7 @@ class PacienteController extends Controller
         $paciente->imc = $imc;
         $paciente->email = $request->email;
         $paciente->tipo_paciente = $request->tipo_paciente ?? 'cardiaca';
+        $paciente->color = $request->color ?? null;
 
         $user = Auth::user();
         
@@ -170,7 +171,8 @@ class PacienteController extends Controller
             'imc' => $imc,
             'email' => $request->email,
             'genero' => ($request->genero == 1 || $request->genero === '1') ? 1 : 0,
-            'tipo_paciente' => $request->tipo_paciente ?? $paciente->tipo_paciente
+            'tipo_paciente' => $request->tipo_paciente ?? $paciente->tipo_paciente,
+            'color' => $request->color ?? $paciente->color
         ]);
 
         return response()->json($paciente, 200);
