@@ -25,7 +25,8 @@ class Cita extends Model
         'estado',
         'primera_vez',
         'notas',
-        'custom_email'
+        'custom_email',
+        'motivo_cancelacion'
     ];
 
     /**

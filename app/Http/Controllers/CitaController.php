@@ -358,17 +358,17 @@ class CitaController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
-            // Solo los administradores pueden eliminar citas
+            // Solo los administradores pueden cancelar citas
             if (!$user->isAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo los administradores pueden eliminar citas'
+                    'message' => 'Solo los administradores pueden cancelar citas'
                 ], 403);
             }
 
@@ -380,20 +380,24 @@ class CitaController extends Controller
                 ], 403);
             }
 
-            // Enviar cancelación de calendario antes de eliminar
-            $this->sendCalendarInvitation($cita, 'cancel');
+            // Cambiar estado a cancelada en lugar de eliminar
+            $cita->estado = 'cancelada';
+            $cita->motivo_cancelacion = $request->motivo_cancelacion ?? 'Sin motivo especificado';
+            $cita->save();
 
-            $cita->delete();
+            // Enviar notificación de cancelación
+            $this->sendCalendarInvitation($cita, 'cancel');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Cita eliminada exitosamente'
+                'message' => 'Cita cancelada exitosamente',
+                'data' => $cita
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar la cita: ' . $e->getMessage()
+                'message' => 'Error al cancelar la cita: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -462,6 +466,15 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
+            // Log para depuración
+            \Log::info('Cambiando estado de cita', [
+                'cita_id' => $id,
+                'fecha_antes' => $cita->fecha,
+                'hora_antes' => $cita->hora,
+                'estado_antes' => $cita->estado,
+                'nuevo_estado' => $request->estado
+            ]);
+
             // Verificar que la cita pertenece a la misma clínica del usuario
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
@@ -472,6 +485,14 @@ class CitaController extends Controller
 
             $cita->update(['estado' => $request->estado]);
             $cita->load(['paciente', 'admin']);
+
+            // Log después de actualizar
+            \Log::info('Estado de cita actualizado', [
+                'cita_id' => $id,
+                'fecha_despues' => $cita->fecha,
+                'hora_despues' => $cita->hora,
+                'estado_despues' => $cita->estado
+            ]);
 
             return response()->json([
                 'success' => true,
