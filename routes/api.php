@@ -187,6 +187,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'multi.tenant'])->group(func
 // Ruta para analíticas (solo administradores)
 Route::get('/analytics', [AnalyticsController::class, 'index'])->middleware('auth:sanctum');
 
+// Ruta para obtener lista de usuarios/doctores (todos los usuarios autenticados)
+Route::get('/users', [UserManagementController::class, 'listDoctors'])->middleware(['auth:sanctum', 'multi.tenant']);
+
 Route::post('/registro', [AuthController::class, 'signup']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
