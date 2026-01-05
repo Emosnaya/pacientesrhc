@@ -214,6 +214,21 @@ class CitaController extends Controller
                 $userId = $paciente->user_id; // usar doctor del paciente por defecto
             }
 
+            // Verificar si ya existe una cita con el mismo paciente, fecha y hora
+            $citaExistente = Cita::where('paciente_id', $paciente->id)
+                ->where('fecha', $request->fecha)
+                ->where('hora', $request->hora)
+                ->where('clinica_id', $user->clinica_id)
+                ->whereIn('estado', ['pendiente', 'confirmada']) // Solo verificar citas activas
+                ->first();
+
+            if ($citaExistente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe una cita para este paciente en la misma fecha y hora'
+                ], 422);
+            }
+
             // Crear la cita (se permiten múltiples citas al mismo tiempo)
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
@@ -364,14 +379,6 @@ class CitaController extends Controller
             $cita = Cita::findOrFail($id);
             $user = Auth::user();
 
-            // Solo los administradores pueden cancelar citas
-            if (!$user->isAdmin()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo los administradores pueden cancelar citas'
-                ], 403);
-            }
-
             // Verificar que la cita pertenece a la misma clínica del usuario
             if ($cita->clinica_id !== $user->clinica_id) {
                 return response()->json([
@@ -398,6 +405,51 @@ class CitaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cancelar la cita: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar permanentemente una cita de la base de datos
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function forceDelete($id)
+    {
+        try {
+            $cita = Cita::findOrFail($id);
+            $user = Auth::user();
+
+            // Verificar que la cita pertenece a la misma clínica del usuario
+            if ($cita->clinica_id !== $user->clinica_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes acceso a esta cita'
+                ], 403);
+            }
+
+            // Guardar información antes de eliminar
+            $citaInfo = [
+                'id' => $cita->id,
+                'paciente' => $cita->paciente->nombre ?? 'N/A',
+                'fecha' => $cita->fecha,
+                'hora' => $cita->hora
+            ];
+
+            // Eliminar permanentemente
+            $cita->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cita eliminada permanentemente',
+                'data' => $citaInfo
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar la cita: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -547,9 +599,27 @@ class CitaController extends Controller
             }
 
             $citasCreadas = [];
+            $citasSkipped = [];
             $primeraVez = true; // Solo la primera cita es "primera vez"
 
             foreach ($request->citas as $citaData) {
+                // Verificar si ya existe una cita con el mismo paciente, fecha y hora
+                $citaExistente = Cita::where('paciente_id', $paciente->id)
+                    ->where('fecha', $citaData['fecha'])
+                    ->where('hora', $citaData['hora'])
+                    ->where('clinica_id', $user->clinica_id)
+                    ->whereIn('estado', ['pendiente', 'confirmada'])
+                    ->first();
+
+                if ($citaExistente) {
+                    // Saltar esta cita porque ya existe
+                    $citasSkipped[] = [
+                        'fecha' => $citaData['fecha'],
+                        'hora' => $citaData['hora']
+                    ];
+                    continue;
+                }
+
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,
@@ -571,11 +641,17 @@ class CitaController extends Controller
                 $this->sendMultipleCitasNotificationEmail($citasCreadas, $paciente, $user);
             }
 
+            $message = count($citasCreadas) . ' cita(s) creada(s) exitosamente';
+            if (!empty($citasSkipped)) {
+                $message .= '. ' . count($citasSkipped) . ' cita(s) omitida(s) por duplicado';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => count($citasCreadas) . ' cita(s) creada(s) exitosamente',
+                'message' => $message,
                 'data' => $citasCreadas,
-                'total' => count($citasCreadas)
+                'total' => count($citasCreadas),
+                'skipped' => count($citasSkipped)
             ], 201);
 
         } catch (\Exception $e) {
