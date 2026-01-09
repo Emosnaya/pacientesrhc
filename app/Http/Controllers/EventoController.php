@@ -91,7 +91,13 @@ class EventoController extends Controller
         try {
             $user = Auth::user();
 
-            $validator = Validator::make($request->all(), [
+            // Convertir hora vacía a null para evitar error de validación
+            $data = $request->all();
+            if (isset($data['hora']) && $data['hora'] === '') {
+                $data['hora'] = null;
+            }
+
+            $validator = Validator::make($data, [
                 'tipo' => 'required|in:recordatorio,tarea,evento',
                 'titulo' => 'required|string|max:255',
                 'descripcion' => 'nullable|string|max:1000',
@@ -112,13 +118,13 @@ class EventoController extends Controller
             $evento = Evento::create([
                 'user_id' => $user->id,
                 'clinica_id' => $user->clinica_id,
-                'tipo' => $request->tipo,
-                'titulo' => $request->titulo,
-                'descripcion' => $request->descripcion,
-                'fecha' => $request->fecha,
-                'hora' => $request->hora,
-                'color' => $request->color ?? $this->getDefaultColor($request->tipo),
-                'completado' => $request->completado ?? false
+                'tipo' => $data['tipo'],
+                'titulo' => $data['titulo'],
+                'descripcion' => $data['descripcion'] ?? null,
+                'fecha' => $data['fecha'],
+                'hora' => $data['hora'],
+                'color' => $data['color'] ?? $this->getDefaultColor($data['tipo']),
+                'completado' => $data['completado'] ?? false
             ]);
 
             return response()->json([
@@ -164,7 +170,13 @@ class EventoController extends Controller
             $user = Auth::user();
             $evento = Evento::forClinica($user->clinica_id)->findOrFail($id);
 
-            $validator = Validator::make($request->all(), [
+            // Convertir hora vacía a null para evitar error de validación
+            $data = $request->all();
+            if (isset($data['hora']) && $data['hora'] === '') {
+                $data['hora'] = null;
+            }
+
+            $validator = Validator::make($data, [
                 'tipo' => 'sometimes|in:recordatorio,tarea,evento',
                 'titulo' => 'sometimes|string|max:255',
                 'descripcion' => 'nullable|string|max:1000',
@@ -182,9 +194,15 @@ class EventoController extends Controller
                 ], 422);
             }
 
-            $evento->update($request->only([
-                'tipo', 'titulo', 'descripcion', 'fecha', 'hora', 'color', 'completado'
-            ]));
+            // Actualizar solo los campos presentes
+            $updateData = [];
+            foreach (['tipo', 'titulo', 'descripcion', 'fecha', 'hora', 'color', 'completado'] as $field) {
+                if (array_key_exists($field, $data)) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+            
+            $evento->update($updateData);
 
             return response()->json([
                 'success' => true,
