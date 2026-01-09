@@ -104,6 +104,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/ai/transcribe', [AIController::class, 'transcribe']);
     Route::post('/ai/autocomplete', [AIController::class, 'autocomplete']);
     Route::post('/ai/summarize', [AIController::class, 'summarize']);
+    Route::post('/ai/chat', [AIController::class, 'chat']); // Asistente médico virtual
+    Route::post('/ai/action', [AIController::class, 'executeAction']); // Ejecutar acciones del asistente
     
     // Rutas de Dashboard Insights con IA
     Route::get('/dashboard/insights', [DashboardController::class, 'generateInsights']);
