@@ -23,10 +23,17 @@ class Evento extends Model
     ];
 
     protected $casts = [
-        'fecha' => 'date',
+        'fecha' => 'date:Y-m-d',
         'hora' => 'string',
         'completado' => 'boolean',
     ];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = ['fecha'];
 
     /**
      * Relación con el usuario

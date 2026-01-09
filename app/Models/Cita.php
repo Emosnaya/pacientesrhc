@@ -35,10 +35,17 @@ class Cita extends Model
      * @var array
      */
     protected $casts = [
-        'fecha' => 'date',
+        'fecha' => 'date:Y-m-d',
         'hora' => 'datetime:H:i',
         'primera_vez' => 'boolean',
     ];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = ['fecha'];
 
     /**
      * Relación con el paciente
