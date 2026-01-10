@@ -23,6 +23,8 @@ use App\Http\Controllers\EventoController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Api\FisioterapiaController;
+use App\Http\Controllers\CualidadFisicaController;
+use App\Http\Controllers\ReporteFinalPulmonarController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -169,6 +171,29 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
             Route::put('/{id}', [FisioterapiaController::class, 'updateAlta']);
             Route::delete('/{id}', [FisioterapiaController::class, 'destroyAlta']);
         });
+    });
+
+    // Rutas para Cualidades Físicas No Aeróbicas
+    Route::prefix('cualidades-fisicas')->group(function () {
+        Route::get('/', [CualidadFisicaController::class, 'index']);
+        Route::post('/', [CualidadFisicaController::class, 'store']);
+        Route::get('/latest', [CualidadFisicaController::class, 'latest']);
+        Route::get('/{id}', [CualidadFisicaController::class, 'show']);
+        Route::put('/{id}', [CualidadFisicaController::class, 'update']);
+        Route::delete('/{id}', [CualidadFisicaController::class, 'destroy']);
+        Route::get('/{id}/print', [CualidadFisicaController::class, 'print']);
+        Route::get('/{id}/download', [CualidadFisicaController::class, 'download']);
+    });
+
+    // Rutas para Reporte Final Pulmonar
+    Route::prefix('reporte-final-pulmonar')->group(function () {
+        Route::get('/', [ReporteFinalPulmonarController::class, 'index']);
+        Route::post('/', [ReporteFinalPulmonarController::class, 'store']);
+        Route::get('/{id}', [ReporteFinalPulmonarController::class, 'show']);
+        Route::put('/{id}', [ReporteFinalPulmonarController::class, 'update']);
+        Route::delete('/{id}', [ReporteFinalPulmonarController::class, 'destroy']);
+        Route::get('/{id}/print', [ReporteFinalPulmonarController::class, 'print']);
+        Route::get('/{id}/download', [ReporteFinalPulmonarController::class, 'download']);
     });
 });
 

@@ -14,6 +14,8 @@ use App\Models\ExpedientePulmonar;
 use App\Models\HistoriaClinicaFisioterapia;
 use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
+use App\Models\CualidadFisica;
+use App\Models\ReporteFinalPulmonar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -188,6 +190,39 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 14. Cualidades Físicas No Aeróbicas
+        $cualidadesFisicas = CualidadFisica::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $user->clinica_id)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 14,
+                    'fecha' => $item->fecha_prueba_inicial,
+                    'fecha_prueba_inicial' => $item->fecha_prueba_inicial,
+                    'fecha_prueba_final' => $item->fecha_prueba_final,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Cualidades Físicas No Aeróbicas',
+                    'is_cualidad_fisica' => true
+                ];
+            });
+
+        // 15. Reporte Final Pulmonar
+        $reportesFinalesPulmonares = ReporteFinalPulmonar::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $user->clinica_id)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 15,
+                    'fecha' => $item->fecha_termino ?? $item->created_at,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Reporte Final Pulmonar'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -200,7 +235,9 @@ class ExpedienteUnificadoController extends Controller
             ->merge($pulmonares)
             ->merge($historiasFisioterapia)
             ->merge($evolucionesFisioterapia)
-            ->merge($altasFisioterapia);
+            ->merge($altasFisioterapia)
+            ->merge($cualidadesFisicas)
+            ->merge($reportesFinalesPulmonares);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

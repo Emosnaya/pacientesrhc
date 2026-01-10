@@ -11,6 +11,8 @@ use App\Models\ReporteFisio;
 use App\Models\ReporteNutri;
 use App\Models\ReportePsico;
 use App\Models\ExpedientePulmonar;
+use App\Models\CualidadFisica;
+use App\Models\ReporteFinalPulmonar;
 use App\Models\HistoriaClinicaFisioterapia;
 use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
@@ -251,7 +253,7 @@ class PDFController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'expediente_id' => 'required|integer',
-            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar',
+            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar,cualidad_fisica,reporte_final_pulmonar',
             'email' => 'required|email',
             'subject' => 'nullable|string|max:255',
             'message' => 'nullable|string|max:1000'
@@ -323,6 +325,18 @@ class PDFController extends Controller
                     $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Expediente_Pulmonar.pdf';
                     break;
+                case 'cualidad_fisica':
+                    $data = CualidadFisica::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    $pdfFileName = 'Cualidades_Fisicas.pdf';
+                    break;
+                case 'reporte_final_pulmonar':
+                    $data = ReporteFinalPulmonar::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    $pdfFileName = 'Reporte_Final_Pulmonar.pdf';
+                    break;
             }
 
             if (!$data || !$paciente || !$user) {
@@ -338,7 +352,9 @@ class PDFController extends Controller
                 'reporte_psico' => 'Reporte Psicológico',
                 'reporte_nutri' => 'Reporte Nutricional',
                 'reporte_fisio' => 'Reporte de Fisioterapia',
-                'expediente_pulmonar' => 'Expediente Pulmonar'
+                'expediente_pulmonar' => 'Expediente Pulmonar',
+                'cualidad_fisica' => 'Cualidades Físicas No Aeróbicas',
+                'reporte_final_pulmonar' => 'Reporte Final Pulmonar'
             ];
 
             $tipoExpedienteNombre = $tipoExpedienteNombres[$expedienteType] ?? 'Expediente Médico';
@@ -416,6 +432,28 @@ class PDFController extends Controller
                         $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
                     }
                     $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    break;
+                case 'cualidad_fisica':
+                    // Preparar firma digital si existe
+                    $firmaBase64 = null;
+                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+                        $imagePath = public_path('storage/' . $user->firma_digital);
+                        $imageData = file_get_contents($imagePath);
+                        $imageType = mime_content_type($imagePath);
+                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+                    }
+                    $pdf = Pdf::loadView('cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    break;
+                case 'reporte_final_pulmonar':
+                    // Preparar firma digital si existe
+                    $firmaBase64 = null;
+                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+                        $imagePath = public_path('storage/' . $user->firma_digital);
+                        $imageData = file_get_contents($imagePath);
+                        $imageType = mime_content_type($imagePath);
+                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+                    }
+                    $pdf = Pdf::loadView('reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
             }
 
