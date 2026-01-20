@@ -214,6 +214,11 @@
                     <td class="text-center">{{ $data->pe_final_spo2 ? $data->pe_final_spo2 . '%' : '-' }}</td>
                 </tr>
                 <tr>
+                    <td class="f-bold">Litros de O2 ocupados</td>
+                    <td class="text-center">{{ $data->pe_inicial_litros_oxigeno ? $data->pe_inicial_litros_oxigeno . ' L' : '-' }}</td>
+                    <td class="text-center">{{ $data->pe_final_litros_oxigeno ? $data->pe_final_litros_oxigeno . ' L' : '-' }}</td>
+                </tr>
+                <tr>
                     <td class="f-bold">Carga máxima (MET)</td>
                     <td class="text-center">{{ $data->pe_inicial_carga_maxima ?? '-' }}</td>
                     <td class="text-center">{{ $data->pe_final_carga_maxima ?? '-' }}</td>
@@ -234,19 +239,14 @@
                     <td class="text-center">{{ $data->pe_final_fc_pico ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td class="f-bold">Pulso de oxígeno (%)</td>
-                    <td class="text-center">{{ $data->pe_inicial_pulso_oxigeno ? $data->pe_inicial_pulso_oxigeno . '%' : '-' }}</td>
-                    <td class="text-center">{{ $data->pe_final_pulso_oxigeno ? $data->pe_final_pulso_oxigeno . '%' : '-' }}</td>
+                    <td class="f-bold">BORG modificado disnea pico</td>
+                    <td class="text-center">{{ $data->pe_inicial_borg_disnea ?? '-' }}</td>
+                    <td class="text-center">{{ $data->pe_final_borg_disnea ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td class="f-bold">BORG modificado pico</td>
-                    <td class="text-center">{{ $data->pe_inicial_borg_modificado ?? '-' }}</td>
-                    <td class="text-center">{{ $data->pe_final_borg_modificado ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="f-bold">VE máxima ejercicio (%)</td>
-                    <td class="text-center">{{ $data->pe_inicial_ve_maxima ? $data->pe_inicial_ve_maxima . '%' : '-' }}</td>
-                    <td class="text-center">{{ $data->pe_final_ve_maxima ? $data->pe_final_ve_maxima . '%' : '-' }}</td>
+                    <td class="f-bold">BORG modificado fatiga pico</td>
+                    <td class="text-center">{{ $data->pe_inicial_borg_fatiga ?? '-' }}</td>
+                    <td class="text-center">{{ $data->pe_final_borg_fatiga ?? '-' }}</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Dinamometría (kg)</td>
@@ -254,9 +254,9 @@
                     <td class="text-center">{{ $data->pe_final_dinamometria ? $data->pe_final_dinamometria . ' kg' : '-' }}</td>
                 </tr>
                 <tr>
-                    <td class="f-bold">Sit Up (repeticiones)</td>
-                    <td class="text-center">{{ $data->pe_inicial_sit_up ?? '-' }}</td>
-                    <td class="text-center">{{ $data->pe_final_sit_up ?? '-' }}</td>
+                    <td class="f-bold">Sit to Stand 30 seg (rep)</td>
+                    <td class="text-center">{{ $data->pe_inicial_sit_to_stand_30seg ?? '-' }}</td>
+                    <td class="text-center">{{ $data->pe_final_sit_to_stand_30seg ?? '-' }}</td>
                 </tr>
             </tbody>
         </table>
