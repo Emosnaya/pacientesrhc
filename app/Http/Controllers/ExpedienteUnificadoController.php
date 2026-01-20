@@ -16,6 +16,7 @@ use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
 use App\Models\CualidadFisica;
 use App\Models\ReporteFinalPulmonar;
+use App\Models\PruebaEsfuerzoPulmonar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -223,6 +224,21 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 16. Prueba de Esfuerzo Pulmonar
+        $pruebasEsfuerzoPulmonar = PruebaEsfuerzoPulmonar::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $user->clinica_id)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 16,
+                    'fecha' => $item->fecha_realizacion,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Prueba de Esfuerzo Pulmonar'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -237,7 +253,8 @@ class ExpedienteUnificadoController extends Controller
             ->merge($evolucionesFisioterapia)
             ->merge($altasFisioterapia)
             ->merge($cualidadesFisicas)
-            ->merge($reportesFinalesPulmonares);
+            ->merge($reportesFinalesPulmonares)
+            ->merge($pruebasEsfuerzoPulmonar);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

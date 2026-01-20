@@ -33,6 +33,83 @@ class ReporteFinalPulmonarController extends Controller
     }
 
     /**
+     * Generate automatic report from two pulmonary stress tests
+     */
+    public function generateFromComparison(Request $request)
+    {
+        $user = Auth::user();
+        
+        $validated = $request->validate([
+            'prueba_inicial_id' => 'required|exists:prueba_esfuerzo_pulmonars,id',
+            'prueba_final_id' => 'required|exists:prueba_esfuerzo_pulmonars,id',
+        ]);
+
+        $pruebaInicial = \App\Models\PruebaEsfuerzoPulmonar::with('paciente')->findOrFail($validated['prueba_inicial_id']);
+        $pruebaFinal = \App\Models\PruebaEsfuerzoPulmonar::with('paciente')->findOrFail($validated['prueba_final_id']);
+        
+        $paciente = $pruebaInicial->paciente;
+        
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+        }
+
+        // Verificar que ambas pruebas son del mismo paciente
+        if ($pruebaInicial->paciente_id !== $pruebaFinal->paciente_id) {
+            return response()->json(['error' => 'Las pruebas deben ser del mismo paciente'], 400);
+        }
+
+        // Crear reporte final automáticamente con datos de ambas pruebas
+        $reporte = new ReporteFinalPulmonar();
+        $reporte->paciente_id = $paciente->id;
+        $reporte->user_id = $user->id;
+        $reporte->clinica_id = $user->clinica_id;
+        $reporte->tipo_exp = 15;
+        
+        // Fechas
+        $reporte->fecha_inicio = $pruebaInicial->fecha_realizacion;
+        $reporte->fecha_termino = $pruebaFinal->fecha_realizacion;
+        
+        // Datos de prueba inicial
+        $reporte->pe_inicial_fc_basal = $pruebaInicial->basal_fc;
+        $reporte->pe_inicial_spo2 = $pruebaInicial->basal_saturacion;
+        $reporte->pe_inicial_litros_oxigeno = $pruebaInicial->oxigeno_litros;
+        $reporte->pe_inicial_carga_maxima = $pruebaInicial->max_mets;
+        $reporte->pe_inicial_vo2_pico_ml = $pruebaInicial->vo2_equivalente;
+        $reporte->pe_inicial_fc_pico = $pruebaInicial->max_fc_pico;
+        $reporte->pe_inicial_porcentaje_fcmax = $pruebaInicial->porcentaje_fcmax;
+        $reporte->pe_inicial_borg_disnea = $pruebaInicial->borg_max_disnea;
+        $reporte->pe_inicial_borg_fatiga = $pruebaInicial->borg_max_fatiga;
+        $reporte->pe_inicial_spo2_minima = $pruebaInicial->saturacion_minima;
+        $reporte->pe_inicial_dinamometria = null; // No está en prueba_esfuerzo_pulmonars
+        $reporte->pe_inicial_sit_to_stand_30seg = null; // No está en prueba_esfuerzo_pulmonars
+        
+        // Datos de prueba final
+        $reporte->pe_final_fc_basal = $pruebaFinal->basal_fc;
+        $reporte->pe_final_spo2 = $pruebaFinal->basal_saturacion;
+        $reporte->pe_final_litros_oxigeno = $pruebaFinal->oxigeno_litros;
+        $reporte->pe_final_carga_maxima = $pruebaFinal->max_mets;
+        $reporte->pe_final_vo2_pico_ml = $pruebaFinal->vo2_equivalente;
+        $reporte->pe_final_fc_pico = $pruebaFinal->max_fc_pico;
+        $reporte->pe_final_porcentaje_fcmax = $pruebaFinal->porcentaje_fcmax;
+        $reporte->pe_final_borg_disnea = $pruebaFinal->borg_max_disnea;
+        $reporte->pe_final_borg_fatiga = $pruebaFinal->borg_max_fatiga;
+        $reporte->pe_final_spo2_minima = $pruebaFinal->saturacion_minima;
+        $reporte->pe_final_dinamometria = null; // No está en prueba_esfuerzo_pulmonars
+        $reporte->pe_final_sit_to_stand_30seg = null;
+        
+        // Diagnóstico del paciente
+        $reporte->diagnostico = $paciente->diagnostico;
+        
+        $reporte->save();
+
+        return response()->json([
+            'message' => 'Reporte Final Pulmonar generado exitosamente',
+            'reporte' => $reporte->load(['user', 'paciente'])
+        ], 201);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -48,27 +125,31 @@ class ReporteFinalPulmonarController extends Controller
             'pe_inicial_rubro' => 'nullable|string',
             'pe_inicial_fc_basal' => 'nullable|integer',
             'pe_inicial_spo2' => 'nullable|integer',
+            'pe_inicial_litros_oxigeno' => 'nullable|numeric',
             'pe_inicial_carga_maxima' => 'nullable|numeric',
             'pe_inicial_vo2_pico' => 'nullable|integer',
             'pe_inicial_vo2_pico_ml' => 'nullable|numeric',
             'pe_inicial_fc_pico' => 'nullable|integer',
-            'pe_inicial_pulso_oxigeno' => 'nullable|integer',
-            'pe_inicial_borg_modificado' => 'nullable|numeric',
-            'pe_inicial_ve_maxima' => 'nullable|integer',
+            'pe_inicial_porcentaje_fcmax' => 'nullable|numeric',
+            'pe_inicial_spo2_minima' => 'nullable|integer',
+            'pe_inicial_borg_disnea' => 'nullable|numeric',
+            'pe_inicial_borg_fatiga' => 'nullable|numeric',
             'pe_inicial_dinamometria' => 'nullable|numeric',
-            'pe_inicial_sit_up' => 'nullable|integer',
+            'pe_inicial_sit_to_stand_30seg' => 'nullable|integer',
             'pe_final_rubro' => 'nullable|string',
             'pe_final_fc_basal' => 'nullable|integer',
             'pe_final_spo2' => 'nullable|integer',
+            'pe_final_litros_oxigeno' => 'nullable|numeric',
             'pe_final_carga_maxima' => 'nullable|numeric',
             'pe_final_vo2_pico' => 'nullable|integer',
             'pe_final_vo2_pico_ml' => 'nullable|numeric',
             'pe_final_fc_pico' => 'nullable|integer',
-            'pe_final_pulso_oxigeno' => 'nullable|integer',
-            'pe_final_borg_modificado' => 'nullable|numeric',
-            'pe_final_ve_maxima' => 'nullable|integer',
+            'pe_final_porcentaje_fcmax' => 'nullable|numeric',
+            'pe_final_spo2_minima' => 'nullable|integer',
+            'pe_final_borg_disnea' => 'nullable|numeric',
+            'pe_final_borg_fatiga' => 'nullable|numeric',
             'pe_final_dinamometria' => 'nullable|numeric',
-            'pe_final_sit_up' => 'nullable|integer',
+            'pe_final_sit_to_stand_30seg' => 'nullable|integer',
             'resultados_clinicos' => 'nullable|string',
             'plan' => 'nullable|string'
         ]);
@@ -116,27 +197,31 @@ class ReporteFinalPulmonarController extends Controller
             'pe_inicial_rubro' => 'nullable|string',
             'pe_inicial_fc_basal' => 'nullable|integer',
             'pe_inicial_spo2' => 'nullable|integer',
+            'pe_inicial_litros_oxigeno' => 'nullable|numeric',
             'pe_inicial_carga_maxima' => 'nullable|numeric',
             'pe_inicial_vo2_pico' => 'nullable|integer',
             'pe_inicial_vo2_pico_ml' => 'nullable|numeric',
             'pe_inicial_fc_pico' => 'nullable|integer',
-            'pe_inicial_pulso_oxigeno' => 'nullable|integer',
-            'pe_inicial_borg_modificado' => 'nullable|numeric',
-            'pe_inicial_ve_maxima' => 'nullable|integer',
+            'pe_inicial_porcentaje_fcmax' => 'nullable|numeric',
+            'pe_inicial_spo2_minima' => 'nullable|integer',
+            'pe_inicial_borg_disnea' => 'nullable|numeric',
+            'pe_inicial_borg_fatiga' => 'nullable|numeric',
             'pe_inicial_dinamometria' => 'nullable|numeric',
-            'pe_inicial_sit_up' => 'nullable|integer',
+            'pe_inicial_sit_to_stand_30seg' => 'nullable|integer',
             'pe_final_rubro' => 'nullable|string',
             'pe_final_fc_basal' => 'nullable|integer',
             'pe_final_spo2' => 'nullable|integer',
+            'pe_final_litros_oxigeno' => 'nullable|numeric',
             'pe_final_carga_maxima' => 'nullable|numeric',
             'pe_final_vo2_pico' => 'nullable|integer',
             'pe_final_vo2_pico_ml' => 'nullable|numeric',
             'pe_final_fc_pico' => 'nullable|integer',
-            'pe_final_pulso_oxigeno' => 'nullable|integer',
-            'pe_final_borg_modificado' => 'nullable|numeric',
-            'pe_final_ve_maxima' => 'nullable|integer',
+            'pe_final_porcentaje_fcmax' => 'nullable|numeric',
+            'pe_final_spo2_minima' => 'nullable|integer',
+            'pe_final_borg_disnea' => 'nullable|numeric',
+            'pe_final_borg_fatiga' => 'nullable|numeric',
             'pe_final_dinamometria' => 'nullable|numeric',
-            'pe_final_sit_up' => 'nullable|integer',
+            'pe_final_sit_to_stand_30seg' => 'nullable|integer',
             'resultados_clinicos' => 'nullable|string',
             'plan' => 'nullable|string'
         ]);

@@ -25,6 +25,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Api\FisioterapiaController;
 use App\Http\Controllers\CualidadFisicaController;
 use App\Http\Controllers\ReporteFinalPulmonarController;
+use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -189,11 +190,24 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::prefix('reporte-final-pulmonar')->group(function () {
         Route::get('/', [ReporteFinalPulmonarController::class, 'index']);
         Route::post('/', [ReporteFinalPulmonarController::class, 'store']);
+        Route::post('/generar-automatico', [ReporteFinalPulmonarController::class, 'generateFromComparison']); // Generar desde comparación
         Route::get('/{id}', [ReporteFinalPulmonarController::class, 'show']);
         Route::put('/{id}', [ReporteFinalPulmonarController::class, 'update']);
         Route::delete('/{id}', [ReporteFinalPulmonarController::class, 'destroy']);
         Route::get('/{id}/print', [ReporteFinalPulmonarController::class, 'print']);
         Route::get('/{id}/download', [ReporteFinalPulmonarController::class, 'download']);
+    });
+
+    // Rutas para Prueba de Esfuerzo Pulmonar
+    Route::prefix('prueba-esfuerzo-pulmonar')->group(function () {
+        Route::get('/', [PruebaEsfuerzoPulmonarController::class, 'index']);
+        Route::get('/paciente/{pacienteId}', [PruebaEsfuerzoPulmonarController::class, 'getByPaciente']); // Lista de pruebas por paciente
+        Route::post('/', [PruebaEsfuerzoPulmonarController::class, 'store']);
+        Route::get('/{pruebaEsfuerzoPulmonar}', [PruebaEsfuerzoPulmonarController::class, 'show']);
+        Route::put('/{pruebaEsfuerzoPulmonar}', [PruebaEsfuerzoPulmonarController::class, 'update']);
+        Route::delete('/{pruebaEsfuerzoPulmonar}', [PruebaEsfuerzoPulmonarController::class, 'destroy']);
+        Route::get('/{id}/print', [PruebaEsfuerzoPulmonarController::class, 'generatePDF']);
+        Route::get('/{id}/download', [PruebaEsfuerzoPulmonarController::class, 'downloadPDF']);
     });
 });
 
