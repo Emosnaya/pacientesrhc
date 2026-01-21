@@ -19,12 +19,14 @@ class Clinica extends Model
         'plan',
         'pagado',
         'fecha_vencimiento',
-        'activa'
+        'activa',
+        'permite_multiples_sucursales'
     ];
 
     protected $casts = [
         'pagado' => 'boolean',
         'activa' => 'boolean',
+        'permite_multiples_sucursales' => 'boolean',
         'fecha_vencimiento' => 'date'
     ];
 
@@ -43,6 +45,19 @@ class Clinica extends Model
         return $this->hasMany(Paciente::class);
     }
 
+    public function sucursales(): HasMany
+    {
+        return $this->hasMany(Sucursal::class);
+    }
+    
+    /**
+     * Obtiene la sucursal principal de la clínica
+     */
+    public function sucursalPrincipal()
+    {
+        return $this->hasOne(Sucursal::class)->where('es_principal', true);
+    }
+
     // Métodos auxiliares
     public function isActive(): bool
     {
@@ -52,6 +67,27 @@ class Clinica extends Model
     public function isExpired(): bool
     {
         return $this->fecha_vencimiento && $this->fecha_vencimiento < now();
+    }
+    
+    /**
+     * Verifica si la clínica puede tener múltiples sucursales
+     */
+    public function puedeCrearMasSucursales(): bool
+    {
+        // Si no permite múltiples sucursales y ya tiene una, no puede crear más
+        if (!$this->permite_multiples_sucursales) {
+            return $this->sucursales()->count() === 0;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Verifica si debe mostrar el selector de sucursales
+     */
+    public function mostrarSelectorSucursales(): bool
+    {
+        return $this->permite_multiples_sucursales && $this->sucursales()->count() > 1;
     }
 
     public function getLogoUrlAttribute(): ?string

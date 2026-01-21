@@ -37,7 +37,8 @@ class Paciente extends Model
         'tipo_paciente',
         'color',
         'user_id',
-        'clinica_id'
+        'clinica_id',
+        'sucursal_id'
     ];
 
     /**
@@ -54,6 +55,14 @@ class Paciente extends Model
     public function clinica()
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    /**
+     * Relación con la sucursal
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 
     /**

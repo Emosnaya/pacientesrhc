@@ -403,7 +403,7 @@
         </div>
     </main>
 
-    <footer style="margin-top: 0.5rem; padding-top: 0.3rem; border-top: 1px solid #000;">
+    <footer style="margin-top: 3rem; padding-top: 0.3rem; border-top: 1px solid #000;">
         <div style="display: table; width: 100%;">
             <div style="display: table-cell; width: 50%; vertical-align: top;">
                 <p class="f-9 mb-1"><strong>Torre Médica II</strong></p>
@@ -413,9 +413,9 @@
             </div>
             <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
                 <p class="f-9 mb-1"><strong>Informes y citas:</strong></p>
-                <p class="f-9 mb-1">☎ 55 2625 5547 / 55 2625 5548</p>
-                <p class="f-9 mb-1">☎ 56 3034 8666</p>
-                <p class="f-9 mb-1">✉ cercap.cardiopulmonar@gmail.com</p>
+                <p class="f-9 mb-1"> 55 2625 5547 / 55 2625 5548</p>
+                <p class="f-9 mb-1"> 56 3034 8666</p>
+                <p class="f-9 mb-1"> cercap.cardiopulmonar@gmail.com</p>
                 <p class="f-9 mb-1"><strong>www.cercap.mx</strong></p>
             </div>
         </div>

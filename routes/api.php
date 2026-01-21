@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\FisioterapiaController;
 use App\Http\Controllers\CualidadFisicaController;
 use App\Http\Controllers\ReporteFinalPulmonarController;
 use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
+use App\Http\Controllers\SucursalController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -102,6 +103,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     
     // Ruta unificada para obtener todos los expedientes de un paciente
     Route::get('/expedientes/{pacienteId}', [ExpedienteUnificadoController::class, 'getExpedientesByPaciente']);
+    
+    // Rutas de Sucursales
+    Route::apiResource('/sucursales', SucursalController::class);
+    Route::get('/sucursales/clinica/{clinicaId}', [SucursalController::class, 'getByClinica']);
+    Route::post('/sucursales/cambiar', [SucursalController::class, 'cambiarSucursal']);
+    Route::get('/sucursales/{id}/estadisticas', [SucursalController::class, 'estadisticas']);
     
     // Rutas de IA
     Route::post('/ai/transcribe', [AIController::class, 'transcribe']);

@@ -30,7 +30,8 @@ class User extends Authenticatable
         'firma_digital',
         'email_verification_token',
         'email_verified',
-        'clinica_id'
+        'clinica_id',
+        'sucursal_id'
     ];
 
     /**
@@ -61,6 +62,14 @@ class User extends Authenticatable
     public function clinica()
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    /**
+     * Relación con la sucursal
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 
     /**
