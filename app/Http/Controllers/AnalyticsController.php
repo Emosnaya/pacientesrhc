@@ -113,6 +113,12 @@ class AnalyticsController extends Controller
             
             // Distribución de medicamentos
             $medicamentos = $this->getMedicamentos($clinicaId);
+            
+            // Pacientes por año
+            $pacientesPorAnio = $this->getPacientesPorAnio($clinicaId);
+            
+            // Pacientes con expediente clínico por año
+            $pacientesConExpedientePorAnio = $this->getPacientesConExpedientePorAnio($clinicaId);
 
             $analytics = [
                 'total_citas' => $totalCitas,
@@ -138,6 +144,8 @@ class AnalyticsController extends Controller
                 'promedio_incremento_mets' => $promedioIncrementoMets,
                 'duracion_programa' => $duracionPrograma,
                 'medicamentos' => $medicamentos,
+                'pacientes_por_anio' => $pacientesPorAnio,
+                'pacientes_con_expediente_por_anio' => $pacientesConExpedientePorAnio,
             ];
 
             return response()->json([
@@ -707,6 +715,71 @@ class AnalyticsController extends Controller
         return [
             'labels' => $labels,
             'data' => $data
+        ];
+    }
+    
+    /**
+     * Obtener total de pacientes por año
+     * Usa la fecha de creación del paciente para determinar el año
+     */
+    private function getPacientesPorAnio($clinicaId)
+    {
+        $pacientes = Paciente::select(
+                DB::raw('YEAR(created_at) as anio'),
+                DB::raw('COUNT(*) as total')
+            )
+            ->where('clinica_id', $clinicaId)
+            ->groupBy('anio')
+            ->orderBy('anio', 'ASC')
+            ->get();
+
+        $labels = [];
+        $data = [];
+
+        foreach ($pacientes as $paciente) {
+            $labels[] = (string) $paciente->anio;
+            $data[] = (int) $paciente->total;
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'total' => array_sum($data)
+        ];
+    }
+    
+    /**
+     * Obtener pacientes con expediente clínico por año
+     * Usa la fecha del expediente clínico (campo fecha) para determinar el año
+     */
+    private function getPacientesConExpedientePorAnio($clinicaId)
+    {
+        // Obtener pacientes con al menos un expediente clínico (tabla clinicos)
+        // Agrupados por año de la fecha del expediente
+        $expedientes = DB::table('clinicos')
+            ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
+            ->select(
+                DB::raw('YEAR(clinicos.fecha) as anio'),
+                DB::raw('COUNT(DISTINCT clinicos.paciente_id) as total')
+            )
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->whereNotNull('clinicos.fecha')
+            ->groupBy('anio')
+            ->orderBy('anio', 'ASC')
+            ->get();
+
+        $labels = [];
+        $data = [];
+
+        foreach ($expedientes as $expediente) {
+            $labels[] = (string) $expediente->anio;
+            $data[] = (int) $expediente->total;
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'total' => array_sum($data)
         ];
     }
 }

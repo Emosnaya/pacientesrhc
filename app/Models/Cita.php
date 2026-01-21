@@ -20,6 +20,7 @@ class Cita extends Model
         'admin_id',
         'user_id',
         'clinica_id',
+        'sucursal_id',
         'fecha',
         'hora',
         'estado',
@@ -77,6 +78,14 @@ class Cita extends Model
     public function clinica()
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    /**
+     * Relación con la sucursal
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 
     /**
