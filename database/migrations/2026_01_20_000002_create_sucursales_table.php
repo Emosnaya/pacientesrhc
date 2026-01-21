@@ -35,93 +35,93 @@ return new class extends Migration
         
         // Agregar sucursal_id a tabla users
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a tabla pacientes
         Schema::table('pacientes', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a tabla citas
         Schema::table('citas', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a expedientes cardiología
         Schema::table('clinicos', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('esfuerzos', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('estratificacions', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('reporte_finals', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a expedientes pulmonares
         Schema::table('expediente_pulmonars', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('prueba_esfuerzo_pulmonars', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('reporte_final_pulmonars', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a expedientes fisioterapia
         Schema::table('historia_clinica_fisioterapias', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('nota_evolucion_fisioterapias', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('nota_alta_fisioterapias', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         // Agregar sucursal_id a otros expedientes
         Schema::table('reporte_fisios', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('reporte_psicolos', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('reporte_nutris', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
         Schema::table('cualidad_fisicas', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
     }
