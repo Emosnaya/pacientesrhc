@@ -33,25 +33,22 @@ return new class extends Migration
             $table->index(['clinica_id', 'es_principal']);
         });
         
-        // Agregar sucursal_id a tabla users
+        // Agregar sucursal_id a tablas que YA tienen clinica_id
         Schema::table('users', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
-        // Agregar sucursal_id a tabla pacientes
         Schema::table('pacientes', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
-        // Agregar sucursal_id a tabla citas
         Schema::table('citas', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
-        // Agregar sucursal_id a expedientes cardiología
         Schema::table('clinicos', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
@@ -72,7 +69,6 @@ return new class extends Migration
             $table->index('sucursal_id');
         });
         
-        // Agregar sucursal_id a expedientes pulmonares
         Schema::table('expediente_pulmonars', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
@@ -88,29 +84,17 @@ return new class extends Migration
             $table->index('sucursal_id');
         });
         
-        // Agregar sucursal_id a expedientes fisioterapia
-        Schema::table('historia_clinica_fisioterapias', function (Blueprint $table) {
+        Schema::table('eventos', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
-        Schema::table('nota_evolucion_fisioterapias', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
-            $table->index('sucursal_id');
-        });
-        
-        Schema::table('nota_alta_fisioterapias', function (Blueprint $table) {
-            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
-            $table->index('sucursal_id');
-        });
-        
-        // Agregar sucursal_id a otros expedientes
         Schema::table('reporte_fisios', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
         
-        Schema::table('reporte_psicolos', function (Blueprint $table) {
+        Schema::table('reporte_psicos', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('sucursal_id');
         });
@@ -120,8 +104,37 @@ return new class extends Migration
             $table->index('sucursal_id');
         });
         
-        Schema::table('cualidad_fisicas', function (Blueprint $table) {
+        Schema::table('cualidades_fisicas', function (Blueprint $table) {
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
+            $table->index('sucursal_id');
+        });
+        
+        // Agregar clinica_id y sucursal_id a tablas de fisioterapia que NO tienen clinica_id
+        Schema::table('historia_clinica_fisioterapia', function (Blueprint $table) {
+            $table->foreignId('clinica_id')->nullable()->after('id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
+            $table->index('clinica_id');
+            $table->index('sucursal_id');
+        });
+        
+        Schema::table('nota_evolucion_fisioterapia', function (Blueprint $table) {
+            $table->foreignId('clinica_id')->nullable()->after('id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
+            $table->index('clinica_id');
+            $table->index('sucursal_id');
+        });
+        
+        Schema::table('nota_alta_fisioterapia', function (Blueprint $table) {
+            $table->foreignId('clinica_id')->nullable()->after('id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
+            $table->index('clinica_id');
+            $table->index('sucursal_id');
+        });
+        
+        Schema::table('ia_usage', function (Blueprint $table) {
+            $table->foreignId('clinica_id')->nullable()->after('id')->constrained()->onDelete('set null');
+            $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
+            $table->index('clinica_id');
             $table->index('sucursal_id');
         });
     }
@@ -131,8 +144,32 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Eliminar foreign keys primero - Expedientes
-        Schema::table('cualidad_fisicas', function (Blueprint $table) {
+        // Eliminar foreign keys y columnas - orden inverso
+        Schema::table('ia_usage', function (Blueprint $table) {
+            $table->dropForeign(['sucursal_id']);
+            $table->dropForeign(['clinica_id']);
+            $table->dropColumn(['sucursal_id', 'clinica_id']);
+        });
+        
+        Schema::table('nota_alta_fisioterapia', function (Blueprint $table) {
+            $table->dropForeign(['sucursal_id']);
+            $table->dropForeign(['clinica_id']);
+            $table->dropColumn(['sucursal_id', 'clinica_id']);
+        });
+        
+        Schema::table('nota_evolucion_fisioterapia', function (Blueprint $table) {
+            $table->dropForeign(['sucursal_id']);
+            $table->dropForeign(['clinica_id']);
+            $table->dropColumn(['sucursal_id', 'clinica_id']);
+        });
+        
+        Schema::table('historia_clinica_fisioterapia', function (Blueprint $table) {
+            $table->dropForeign(['sucursal_id']);
+            $table->dropForeign(['clinica_id']);
+            $table->dropColumn(['sucursal_id', 'clinica_id']);
+        });
+        
+        Schema::table('cualidades_fisicas', function (Blueprint $table) {
             $table->dropForeign(['sucursal_id']);
             $table->dropColumn('sucursal_id');
         });
@@ -142,7 +179,7 @@ return new class extends Migration
             $table->dropColumn('sucursal_id');
         });
         
-        Schema::table('reporte_psicolos', function (Blueprint $table) {
+        Schema::table('reporte_psicos', function (Blueprint $table) {
             $table->dropForeign(['sucursal_id']);
             $table->dropColumn('sucursal_id');
         });
@@ -152,17 +189,7 @@ return new class extends Migration
             $table->dropColumn('sucursal_id');
         });
         
-        Schema::table('nota_alta_fisioterapias', function (Blueprint $table) {
-            $table->dropForeign(['sucursal_id']);
-            $table->dropColumn('sucursal_id');
-        });
-        
-        Schema::table('nota_evolucion_fisioterapias', function (Blueprint $table) {
-            $table->dropForeign(['sucursal_id']);
-            $table->dropColumn('sucursal_id');
-        });
-        
-        Schema::table('historia_clinica_fisioterapias', function (Blueprint $table) {
+        Schema::table('eventos', function (Blueprint $table) {
             $table->dropForeign(['sucursal_id']);
             $table->dropColumn('sucursal_id');
         });
