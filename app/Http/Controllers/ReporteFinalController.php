@@ -87,6 +87,7 @@ class ReporteFinalController extends Controller
         $reporteFinal->user_id = $paciente->user_id;
         $reporteFinal->paciente_id = $esfuerzo->paciente_id;
         $reporteFinal->clinica_id = $user->clinica_id;
+        $reporteFinal->sucursal_id = $paciente->sucursal_id;
         
         $reporteFinal->save();
 

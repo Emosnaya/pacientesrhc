@@ -22,6 +22,9 @@ class AnalyticsController extends Controller
             $user = Auth::user();
             $period = $request->get('period', 30); // Por defecto 30 días
             
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+            
             // Si el período es "all", no aplicar filtro de fechas
             $allTime = $period === 'all' || $period === 'todas';
             
@@ -37,33 +40,34 @@ class AnalyticsController extends Controller
             // Filtrar todas las consultas por clínica del usuario
             $clinicaId = $user->clinica_id;
 
-            // Métricas básicas - filtradas por clínica
+            // Métricas básicas - filtradas por clínica y sucursal
             if ($allTime) {
-                $totalCitas = Cita::where('clinica_id', $clinicaId)->count();
+                $query = Cita::where('clinica_id', $clinicaId);
+                if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+                $totalCitas = $query->count();
             } else {
-                $totalCitas = Cita::where('clinica_id', $clinicaId)
-                    ->whereBetween('fecha', [$startDate, $endDate])->count();
+                $query = Cita::where('clinica_id', $clinicaId);
+                if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+                $totalCitas = $query->whereBetween('fecha', [$startDate, $endDate])->count();
             }
-            $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
+            $pacientesQuery = Paciente::where('clinica_id', $clinicaId);
+            if ($sucursalId) $pacientesQuery->where('sucursal_id', $sucursalId);
+            $totalPacientes = $pacientesQuery->count();
             
             if ($allTime) {
-                $citasConfirmadas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'confirmada')->count();
-                $citasPendientes = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'pendiente')->count();
-                $citasCanceladas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'cancelada')->count();
-                $citasCompletadas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'completada')->count();
+                $citasQuery = Cita::where('clinica_id', $clinicaId);
+                if ($sucursalId) $citasQuery->where('sucursal_id', $sucursalId);
+                $citasConfirmadas = (clone $citasQuery)->where('estado', 'confirmada')->count();
+                $citasPendientes = (clone $citasQuery)->where('estado', 'pendiente')->count();
+                $citasCanceladas = (clone $citasQuery)->where('estado', 'cancelada')->count();
+                $citasCompletadas = (clone $citasQuery)->where('estado', 'completada')->count();
             } else {
-                $citasConfirmadas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'confirmada')->whereBetween('fecha', [$startDate, $endDate])->count();
-                $citasPendientes = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'pendiente')->whereBetween('fecha', [$startDate, $endDate])->count();
-                $citasCanceladas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'cancelada')->whereBetween('fecha', [$startDate, $endDate])->count();
-                $citasCompletadas = Cita::where('clinica_id', $clinicaId)
-                    ->where('estado', 'completada')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasQuery = Cita::where('clinica_id', $clinicaId);
+                if ($sucursalId) $citasQuery->where('sucursal_id', $sucursalId);
+                $citasConfirmadas = (clone $citasQuery)->where('estado', 'confirmada')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasPendientes = (clone $citasQuery)->where('estado', 'pendiente')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasCanceladas = (clone $citasQuery)->where('estado', 'cancelada')->whereBetween('fecha', [$startDate, $endDate])->count();
+                $citasCompletadas = (clone $citasQuery)->where('estado', 'completada')->whereBetween('fecha', [$startDate, $endDate])->count();
             }
 
             // Citas por estado
@@ -75,50 +79,50 @@ class AnalyticsController extends Controller
             ];
 
             // Citas por día (últimos 7 días)
-            $citasPorDia = $this->getCitasPorDia($startDate, $endDate, $clinicaId, $allTime);
+            $citasPorDia = $this->getCitasPorDia($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
 
             // Citas por semana
-            $citasPorSemana = $this->getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime);
+            $citasPorSemana = $this->getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
 
             // Citas por mes
-            $citasPorMes = $this->getCitasPorMes($startDate, $endDate, $clinicaId, $allTime);
+            $citasPorMes = $this->getCitasPorMes($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
 
             // Pacientes por edad
-            $pacientesPorEdad = $this->getPacientesPorEdad($clinicaId);
+            $pacientesPorEdad = $this->getPacientesPorEdad($clinicaId, $sucursalId);
 
             // Pacientes por género
-            $pacientesPorGenero = $this->getPacientesPorGenero($clinicaId);
+            $pacientesPorGenero = $this->getPacientesPorGenero($clinicaId, $sucursalId);
 
             // Pacientes pulmonares y ambos
-            $pacientesPulmonares = $this->getPacientesPulmonares($clinicaId);
+            $pacientesPulmonares = $this->getPacientesPulmonares($clinicaId, $sucursalId);
 
             // Estadísticas adicionales
-            $tasaConfirmacion = $this->getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime);
-            $citasPrimeraVez = $this->getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime);
-            $promedioCitasDia = $this->getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime);
-            $diaMasActivo = $this->getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime);
-            $horaPico = $this->getHoraPico($startDate, $endDate, $clinicaId, $allTime);
+            $tasaConfirmacion = $this->getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
+            $citasPrimeraVez = $this->getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
+            $promedioCitasDia = $this->getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
+            $diaMasActivo = $this->getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
+            $horaPico = $this->getHoraPico($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
             
             // Tasa de término (pacientes con expediente final)
-            $tasaTermino = $this->getTasaTermino($clinicaId);
+            $tasaTermino = $this->getTasaTermino($clinicaId, $sucursalId);
             
             // Pacientes que terminaron el tratamiento
-            $pacientesTerminados = $this->getPacientesConExpedienteFinal($clinicaId);
+            $pacientesTerminados = $this->getPacientesConExpedienteFinal($clinicaId, $sucursalId);
             
             // Tasa promedio de incremento en METs
-            $promedioIncrementoMets = $this->getPromedioIncrementoMets($clinicaId);
+            $promedioIncrementoMets = $this->getPromedioIncrementoMets($clinicaId, $sucursalId);
             
             // Duración de programa (distribución por sesiones)
-            $duracionPrograma = $this->getDuracionPrograma($clinicaId);
+            $duracionPrograma = $this->getDuracionPrograma($clinicaId, $sucursalId);
             
             // Distribución de medicamentos
-            $medicamentos = $this->getMedicamentos($clinicaId);
+            $medicamentos = $this->getMedicamentos($clinicaId, $sucursalId);
             
             // Pacientes por año
-            $pacientesPorAnio = $this->getPacientesPorAnio($clinicaId);
+            $pacientesPorAnio = $this->getPacientesPorAnio($clinicaId, $sucursalId);
             
             // Pacientes con expediente clínico por año
-            $pacientesConExpedientePorAnio = $this->getPacientesConExpedientePorAnio($clinicaId);
+            $pacientesConExpedientePorAnio = $this->getPacientesConExpedientePorAnio($clinicaId, $sucursalId);
 
             $analytics = [
                 'total_citas' => $totalCitas,
@@ -161,9 +165,13 @@ class AnalyticsController extends Controller
         }
     }
 
-    private function getTotalCitas($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getTotalCitas($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::where('clinica_id', $clinicaId);
+        
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
         
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -172,15 +180,21 @@ class AnalyticsController extends Controller
         return $query->count();
     }
 
-    private function getTotalPacientes($clinicaId)
+    private function getTotalPacientes($clinicaId, $sucursalId = null)
     {
-        return Paciente::where('clinica_id', $clinicaId)->count();
+        $query = Paciente::where('clinica_id', $clinicaId);
+        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+        return $query->count();
     }
 
-    private function getCitasByStatus($status, $startDate, $endDate, $clinicaId, $allTime = false)
+    private function getCitasByStatus($status, $startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::where('clinica_id', $clinicaId)
                    ->where('estado', $status);
+                   
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
                    
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -204,13 +218,17 @@ class AnalyticsController extends Controller
         return $data;
     }
 
-    private function getCitasPorDia($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getCitasPorDia($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::select(
                 DB::raw('DATE(fecha) as fecha'),
                 DB::raw('COUNT(*) as total')
             )
             ->where('clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
             
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -263,7 +281,7 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getCitasPorMes($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getCitasPorMes($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         // Obtener todas las citas del año actual, no solo del período
         $añoActual = Carbon::now()->year;
@@ -276,6 +294,10 @@ class AnalyticsController extends Controller
                 DB::raw('COUNT(*) as total')
             )
             ->where('clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
             
         // Para el filtro por mes, siempre mostramos el año actual completo, pero si no es allTime
         // podemos filtrar por el rango específico
@@ -318,7 +340,7 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::select(
                 DB::raw('YEAR(fecha) as año'),
@@ -326,6 +348,10 @@ class AnalyticsController extends Controller
                 DB::raw('COUNT(*) as total')
             )
             ->where('clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
             
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -355,10 +381,15 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getPacientesPorGenero($clinicaId)
+    private function getPacientesPorGenero($clinicaId, $sucursalId = null)
     {
-        $masculino = Paciente::where('clinica_id', $clinicaId)->where('genero', 1)->count();
-        $femenino = Paciente::where('clinica_id', $clinicaId)->where('genero', 0)->count();
+        $queryM = Paciente::where('clinica_id', $clinicaId)->where('genero', 1);
+        if ($sucursalId) $queryM->where('sucursal_id', $sucursalId);
+        $masculino = $queryM->count();
+        
+        $queryF = Paciente::where('clinica_id', $clinicaId)->where('genero', 0);
+        if ($sucursalId) $queryF->where('sucursal_id', $sucursalId);
+        $femenino = $queryF->count();
 
         return [
             'labels' => ['Masculino', 'Femenino'],
@@ -366,12 +397,23 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getPacientesPulmonares($clinicaId)
+    private function getPacientesPulmonares($clinicaId, $sucursalId = null)
     {
-        $cardiaca = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca')->count();
-        $pulmonar = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'pulmonar')->count();
-        $ambos = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'ambos')->count();
-        $fisioterapia = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'fisioterapia')->count();
+        $queryC = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca');
+        if ($sucursalId) $queryC->where('sucursal_id', $sucursalId);
+        $cardiaca = $queryC->count();
+        
+        $queryP = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'pulmonar');
+        if ($sucursalId) $queryP->where('sucursal_id', $sucursalId);
+        $pulmonar = $queryP->count();
+        
+        $queryA = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'ambos');
+        if ($sucursalId) $queryA->where('sucursal_id', $sucursalId);
+        $ambos = $queryA->count();
+        
+        $queryF = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'fisioterapia');
+        if ($sucursalId) $queryF->where('sucursal_id', $sucursalId);
+        $fisioterapia = $queryF->count();
 
         return [
             'labels' => ['Cardíaca', 'Pulmonar', 'Ambos', 'Fisioterapia'],
@@ -379,7 +421,7 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getPacientesPorEdad($clinicaId)
+    private function getPacientesPorEdad($clinicaId, $sucursalId = null)
     {
         $rangos = [
             [0, 18],
@@ -392,31 +434,36 @@ class AnalyticsController extends Controller
         $data = [];
 
         foreach ($rangos as $rango) {
-            $count = Paciente::where('clinica_id', $clinicaId)
-                ->whereBetween('edad', $rango)->count();
+            $query = Paciente::where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $count = $query->whereBetween('edad', $rango)->count();
             $data[] = $count;
         }
 
         return $data;
     }
 
-    private function getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getTasaConfirmacion($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
-        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime);
+        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
         
         if ($totalCitas == 0) {
             return 0;
         }
 
-        $citasConfirmadas = $this->getCitasByStatus('confirmada', $startDate, $endDate, $clinicaId, $allTime);
+        $citasConfirmadas = $this->getCitasByStatus('confirmada', $startDate, $endDate, $clinicaId, $allTime, $sucursalId);
         
         return round(($citasConfirmadas / $totalCitas) * 100, 1);
     }
 
-    private function getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getCitasPrimeraVez($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::where('clinica_id', $clinicaId)
                    ->where('primera_vez', true);
+                   
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
                    
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -425,13 +472,15 @@ class AnalyticsController extends Controller
         return $query->count();
     }
 
-    private function getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getPromedioCitasDia($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
-        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime);
+        $totalCitas = $this->getTotalCitas($startDate, $endDate, $clinicaId, $allTime, $sucursalId);
         
         if ($allTime) {
             // Para todas las citas, calcular desde la primera cita hasta hoy
-            $primeraCita = Cita::where('clinica_id', $clinicaId)->orderBy('fecha')->first();
+            $query = Cita::where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $primeraCita = $query->orderBy('fecha')->first();
             if (!$primeraCita) {
                 return 0;
             }
@@ -443,13 +492,17 @@ class AnalyticsController extends Controller
         return $dias > 0 ? round($totalCitas / $dias, 1) : 0;
     }
 
-    private function getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getDiaMasActivo($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         $query = Cita::select(
                 DB::raw('DAYNAME(fecha) as dia_semana'),
                 DB::raw('COUNT(*) as total')
             )
             ->where('clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
             
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -477,10 +530,14 @@ class AnalyticsController extends Controller
         return 'N/A';
     }
 
-    private function getHoraPico($startDate, $endDate, $clinicaId, $allTime = false)
+    private function getHoraPico($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
     {
         // Obtener todas las citas con hora (sin aplicar el cast de datetime)
         $query = Cita::where('clinica_id', $clinicaId);
+        
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
         
         if (!$allTime) {
             $query->whereBetween('fecha', [$startDate, $endDate]);
@@ -538,17 +595,17 @@ class AnalyticsController extends Controller
      * Fórmula: (Px con reporte final / total de px cardíacos) * 100
      * Representa el porcentaje de pacientes que completaron el programa
      */
-    private function getTasaTermino($clinicaId)
+    private function getTasaTermino($clinicaId, $sucursalId = null)
     {
-        $totalPacientes = Paciente::where('clinica_id', $clinicaId)
-        ->where('tipo_paciente', 'cardiaca')
-        ->count();
+        $query = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca');
+        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+        $totalPacientes = $query->count();
         
         if ($totalPacientes == 0) {
             return 0;
         }
 
-        $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId);
+        $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId, $sucursalId);
         $pacientesSinExpFinal = $totalPacientes-$pacientesConExpFinal;
         
         return round(($pacientesConExpFinal / $pacientesSinExpFinal) * 100, 1);
@@ -558,12 +615,13 @@ class AnalyticsController extends Controller
      * Obtener cantidad de pacientes con reporte final (terminaron el programa)
      * Solo cuenta pacientes cardíacos que tienen reporte final
      */
-    private function getPacientesConExpedienteFinal($clinicaId)
+    private function getPacientesConExpedienteFinal($clinicaId, $sucursalId = null)
     {
         // Obtener IDs de pacientes cardíacos de la clínica
-        $pacientesCardiacos = Paciente::where('clinica_id', $clinicaId)
-            ->where('tipo_paciente', 'cardiaca')
-            ->pluck('id');
+        $query = Paciente::where('clinica_id', $clinicaId)
+            ->where('tipo_paciente', 'cardiaca');
+        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+        $pacientesCardiacos = $query->pluck('id');
         
         // Contar pacientes cardíacos que tienen reporte final
         return ReporteFinal::where('clinica_id', $clinicaId)
@@ -576,10 +634,16 @@ class AnalyticsController extends Controller
     /**
      * Obtener el promedio de incremento en METs desde reporte_finals
      */
-    private function getPromedioIncrementoMets($clinicaId)
+    private function getPromedioIncrementoMets($clinicaId, $sucursalId = null)
     {
-        // Obtener el promedio del campo mets_por de la tabla reporte_finals
+        // Obtener IDs de pacientes de la clínica/sucursal
+        $query = Paciente::where('clinica_id', $clinicaId);
+        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+        $pacienteIds = $query->pluck('id');
+        
+        // Obtener el promedio del campo mets_por de la tabla reporte_finals para esos pacientes
         $promedio = ReporteFinal::where('clinica_id', $clinicaId)
+            ->whereIn('paciente_id', $pacienteIds)
             ->whereNotNull('mets_por')
             ->avg('mets_por');
 
@@ -590,10 +654,16 @@ class AnalyticsController extends Controller
      * Obtener distribución de pacientes por duración de programa (sesiones)
      * Rubros: 10, 20, 30, 36 y 56 sesiones
      */
-    private function getDuracionPrograma($clinicaId)
+    private function getDuracionPrograma($clinicaId, $sucursalId = null)
     {
+        // Obtener IDs de pacientes de la clínica/sucursal
+        $query = Paciente::where('clinica_id', $clinicaId);
+        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+        $pacienteIds = $query->pluck('id');
+        
         // Obtener la última estratificación de cada paciente (para tener el valor más reciente)
         $estratificaciones = Estratificacion::where('clinica_id', $clinicaId)
+            ->whereIn('paciente_id', $pacienteIds)
             ->whereNotNull('sesiones')
             ->select('paciente_id', 'sesiones')
             ->get()
@@ -650,13 +720,18 @@ class AnalyticsController extends Controller
     /**
      * Obtener distribución de medicamentos (cuántos pacientes toman cada medicamento)
      */
-    private function getMedicamentos($clinicaId)
+    private function getMedicamentos($clinicaId, $sucursalId = null)
     {
         // Obtener todos los clínicos de la clínica
-        $clinicos = DB::table('clinicos')
+        $query = DB::table('clinicos')
             ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
-            ->where('pacientes.clinica_id', $clinicaId)
-            ->select([
+            ->where('pacientes.clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('pacientes.sucursal_id', $sucursalId);
+        }
+            
+        $clinicos = $query->select([
                 DB::raw('SUM(CASE WHEN betabloqueador = 1 THEN 1 ELSE 0 END) as betabloqueador'),
                 DB::raw('SUM(CASE WHEN nitratos = 1 THEN 1 ELSE 0 END) as nitratos'),
                 DB::raw('SUM(CASE WHEN calcioantagonista = 1 THEN 1 ELSE 0 END) as calcioantagonista'),
@@ -722,14 +797,19 @@ class AnalyticsController extends Controller
      * Obtener total de pacientes por año
      * Usa la fecha de creación del paciente para determinar el año
      */
-    private function getPacientesPorAnio($clinicaId)
+    private function getPacientesPorAnio($clinicaId, $sucursalId = null)
     {
-        $pacientes = Paciente::select(
+        $query = Paciente::select(
                 DB::raw('YEAR(created_at) as anio'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId)
-            ->groupBy('anio')
+            ->where('clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+            
+        $pacientes = $query->groupBy('anio')
             ->orderBy('anio', 'ASC')
             ->get();
 
@@ -752,18 +832,23 @@ class AnalyticsController extends Controller
      * Obtener pacientes con expediente clínico por año
      * Usa la fecha del expediente clínico (campo fecha) para determinar el año
      */
-    private function getPacientesConExpedientePorAnio($clinicaId)
+    private function getPacientesConExpedientePorAnio($clinicaId, $sucursalId = null)
     {
         // Obtener pacientes con al menos un expediente clínico (tabla clinicos)
         // Agrupados por año de la fecha del expediente
-        $expedientes = DB::table('clinicos')
+        $query = DB::table('clinicos')
             ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
             ->select(
                 DB::raw('YEAR(clinicos.fecha) as anio'),
                 DB::raw('COUNT(DISTINCT clinicos.paciente_id) as total')
             )
-            ->where('pacientes.clinica_id', $clinicaId)
-            ->whereNotNull('clinicos.fecha')
+            ->where('pacientes.clinica_id', $clinicaId);
+            
+        if ($sucursalId) {
+            $query->where('pacientes.sucursal_id', $sucursalId);
+        }
+            
+        $expedientes = $query->whereNotNull('clinicos.fecha')
             ->groupBy('anio')
             ->orderBy('anio', 'ASC')
             ->get();

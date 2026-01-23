@@ -124,7 +124,7 @@
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
             <p class="f-bold f-15 text-center mb-0 mt-0">Nota de Alta - Fisioterapia</p>
-            <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
+            <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
             <div class="medio">
                 <p class="text-sm texto-izquierda mb-0 f-bold">Fecha de alta: {{ date('d/m/Y', strtotime($data->fecha)) }}</p>
                 <span class="ml-5 text-right texto-derecha f-bold">Registro: {{ $paciente->registro }}</span>

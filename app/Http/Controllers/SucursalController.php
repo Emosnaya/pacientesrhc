@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sucursal;
+use App\Models\Clinica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,14 +18,13 @@ class SucursalController extends Controller
         
         $query = Sucursal::with('clinica');
         
-        // Si no es super admin, filtrar por clínica del usuario
-        if (!$user->isSuperAdmin) {
-            $query->where('clinica_id', $user->clinica_id);
-        }
-        
-        // Filtros opcionales
+        // Si se especifica clinica_id, filtrar por esa clínica (prioridad)
         if ($request->has('clinica_id')) {
             $query->where('clinica_id', $request->clinica_id);
+        } 
+        // Si no es super admin, filtrar por clínica del usuario
+        elseif (!$user->isSuperAdmin) {
+            $query->where('clinica_id', $user->clinica_id);
         }
         
         if ($request->has('activa')) {
@@ -35,7 +35,10 @@ class SucursalController extends Controller
                            ->orderBy('nombre')
                            ->get();
         
-        return response()->json($sucursales);
+        return response()->json([
+            'success' => true,
+            'data' => $sucursales
+        ]);
     }
 
     /**
@@ -84,7 +87,6 @@ class SucursalController extends Controller
         $user = Auth::user();
         
         $validated = $request->validate([
-            'clinica_id' => 'required|exists:clinicas,id',
             'nombre' => 'required|string|max:255',
             'codigo' => 'nullable|string|unique:sucursales,codigo',
             'direccion' => 'nullable|string',
@@ -98,10 +100,10 @@ class SucursalController extends Controller
             'notas' => 'nullable|string'
         ]);
         
-        // Verificar que el usuario tenga acceso
-        if (!$user->isSuperAdmin && $user->clinica_id != $validated['clinica_id']) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
+        // Usar la clínica del usuario autenticado
+        $validated['clinica_id'] = $user->clinica_id;
+        // Usar la clínica del usuario autenticado
+        $validated['clinica_id'] = $user->clinica_id;
         
         // Verificar si la clínica puede crear más sucursales
         $clinica = Clinica::findOrFail($validated['clinica_id']);
@@ -126,8 +128,9 @@ class SucursalController extends Controller
         $sucursal = Sucursal::create($validated);
         
         return response()->json([
+            'success' => true,
             'message' => 'Sucursal creada exitosamente',
-            'sucursal' => $sucursal->load('clinica')
+            'data' => $sucursal->load('clinica')
         ], 201);
     }
 
@@ -169,8 +172,9 @@ class SucursalController extends Controller
         $sucursal->update($validated);
         
         return response()->json([
+            'success' => true,
             'message' => 'Sucursal actualizada exitosamente',
-            'sucursal' => $sucursal->load('clinica')
+            'data' => $sucursal->load('clinica')
         ]);
     }
 
@@ -205,7 +209,10 @@ class SucursalController extends Controller
         
         $sucursal->delete();
         
-        return response()->json(['message' => 'Sucursal eliminada exitosamente']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Sucursal eliminada exitosamente'
+        ]);
     }
 
     /**

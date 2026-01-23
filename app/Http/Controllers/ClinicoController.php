@@ -77,6 +77,8 @@ class ClinicoController extends Controller
             $nuevoPaciente->imc = $imc;
             $nuevoPaciente->user_id = $user->id;
             $nuevoPaciente->clinica_id = $user->clinica_id;
+            // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+            $nuevoPaciente->sucursal_id = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             $nuevoPaciente->save();
 
@@ -293,6 +295,7 @@ class ClinicoController extends Controller
         $clinico->user_id = $nuevoPaciente->user_id;
         $clinico->paciente_id = $nuevoPaciente->id;
         $clinico->clinica_id = $user->clinica_id;
+        $clinico->sucursal_id = $nuevoPaciente->sucursal_id;
         $clinico->save();
 
         return response()->json("Guardado correctamente");

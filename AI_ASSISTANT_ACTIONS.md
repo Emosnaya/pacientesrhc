@@ -63,6 +63,24 @@ Asistente: [ACCION:obtener_metricas]
 - Pacientes nuevos del mes
 - Citas canceladas del mes
 
+### 6. **Contar Citas de Paciente**
+```
+Usuario: "¿Cuántas citas ha tenido Lidia Ilvea?"
+Asistente: [ACCION:contar_citas_paciente|nombre:Lidia Ilvea]
+```
+
+**Parámetros:**
+- `nombre`: Nombre completo o solo nombre del paciente
+
+**Respuesta incluye:**
+- Total de citas (historial completo)
+- Citas completadas
+- Citas confirmadas (futuras)
+- Citas canceladas
+- Citas en los últimos 6 meses
+- Última cita (fecha, hora, estado)
+- Próxima cita (fecha, hora, estado)
+
 ## 🔄 Flujo de Ejecución
 
 ### Backend (Laravel)
@@ -160,6 +178,34 @@ El asistente tiene acceso a:
 ✅ "Estado de cita actualizado exitosamente"
 ```
 
+### Ejemplo 5: Contar Citas de Paciente
+```
+👤 Usuario: "¿Cuántas citas ha tenido Lidia Ilvea?"
+
+🤖 Dr. CardioBot: "Voy a consultar el historial de citas de Lidia Ilvea."
+
+✅ Resultado:
+📊 HISTORIAL DE CITAS - Lidia Ilvea García (Exp: 12345)
+
+📈 Total de citas: 15
+✅ Completadas: 12
+📅 Confirmadas (futuras): 2
+❌ Canceladas: 1
+📊 Últimos 6 meses: 8
+
+🕐 Última cita: 15/01/2026 a las 10:00 (Completada)
+📅 Próxima cita: 22/01/2026 a las 14:30 (Confirmada)
+```
+
+### Ejemplo 6: Búsqueda Simple
+```
+👤 Usuario: "cuenta cuantas citas ha tenido Maria"
+
+🤖 Dr. CardioBot: "Buscando historial de citas de María..."
+
+✅ María López Martínez ha tenido 8 citas en total. 6 completadas, 1 confirmada próximamente y 1 cancelada.
+```
+
 ## 🔒 Seguridad
 
 ### Validaciones Implementadas
@@ -217,12 +263,13 @@ case 'nueva_accion':
 
 ## 🚀 Próximas Mejoras
 
-- [ ] Agendar citas completas desde el chat
+- [x] Contar citas de un paciente específico (historial completo)
 - [ ] Modificar horarios de citas existentes
 - [ ] Generar reportes PDF de métricas
 - [ ] Enviar notificaciones a pacientes
-- [ ] Búsqueda avanzada de pacientes
+- [ ] Búsqueda avanzada de pacientes por diagnóstico
 - [ ] Estadísticas personalizadas por doctor
+- [ ] Exportar historial de citas a Excel/CSV
 
 ## 📊 Métricas de Uso
 

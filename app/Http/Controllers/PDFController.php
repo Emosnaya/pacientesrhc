@@ -16,6 +16,7 @@ use App\Models\ReporteFinalPulmonar;
 use App\Models\HistoriaClinicaFisioterapia;
 use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
+use App\Models\HistoriaClinicaDental;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -101,8 +102,12 @@ class PDFController extends Controller
         $data = Esfuerzo::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
-        $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente','user')); // Cargar vista PDF con datos
+        $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente','user', 'clinicaLogo')); // Cargar vista PDF con datos
 
         // Nombre del archivo según el tipo de esfuerzo
         $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
@@ -116,8 +121,12 @@ class PDFController extends Controller
         $data = Estratificacion::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
-        $pdf = Pdf::loadView('estrati', compact('data', 'paciente','user'));
+        $pdf = Pdf::loadView('estrati', compact('data', 'paciente','user', 'clinicaLogo'));
         return $pdf->stream('Estratificacion.pdf'); 
     }
 
@@ -126,8 +135,12 @@ class PDFController extends Controller
         $data = Clinico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
-        $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user'));
+        $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user', 'clinicaLogo'));
         return $pdf->stream('Clinico.pdf'); 
     }
     public function reportePdf(Request $request)
@@ -138,6 +151,10 @@ class PDFController extends Controller
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -148,7 +165,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64'));
+        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo'));
         return $pdf->stream('Reporte_Final.pdf'); 
     }
     public function psicoPdf(Request $request)
@@ -156,8 +173,12 @@ class PDFController extends Controller
         $data = ReportePsico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
-        $pdf = Pdf::loadView('psico', compact('data', 'paciente','user'));
+        $pdf = Pdf::loadView('psico', compact('data', 'paciente','user', 'clinicaLogo'));
         return $pdf->stream('Psico.pdf'); 
     }
     public function nutriPdf(Request $request)
@@ -165,8 +186,12 @@ class PDFController extends Controller
         $data = ReporteNutri::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
-        $pdf = Pdf::loadView('nutri', compact('data', 'paciente','user'));
+        $pdf = Pdf::loadView('nutri', compact('data', 'paciente','user', 'clinicaLogo'));
         return $pdf->stream('Nutri.pdf'); 
     }
 
@@ -175,6 +200,10 @@ class PDFController extends Controller
         $data = ExpedientePulmonar::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -185,7 +214,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
         return $pdf->stream('Expediente_Pulmonar.pdf'); 
     }
 
@@ -194,6 +223,10 @@ class PDFController extends Controller
         $data = HistoriaClinicaFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -204,7 +237,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
         return $pdf->stream('Historia_Clinica_Fisioterapia.pdf');
     }
 
@@ -213,6 +246,10 @@ class PDFController extends Controller
         $data = NotaEvolucionFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -223,7 +260,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
         return $pdf->stream('Nota_Evolucion_Fisioterapia.pdf');
     }
 
@@ -232,6 +269,10 @@ class PDFController extends Controller
         $data = NotaAltaFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -242,8 +283,31 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
         return $pdf->stream('Nota_Alta_Fisioterapia.pdf');
+    }
+
+    public function historiaDentalPdf(Request $request)
+    {
+        $data = HistoriaClinicaDental::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Obtener logo de la clínica
+        $clinica = $user->clinica;
+        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        return $pdf->stream('Historia_Clinica_Dental.pdf');
     }
 
     /**

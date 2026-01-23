@@ -27,6 +27,14 @@ class CitaController extends Controller
 
             // Filtrar por clínica del usuario autenticado
             $query->forClinica($user->clinica_id);
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            // Si no viene en el request, usar la del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+            
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
 
             // Filtros
             if ($request->has('fecha')) {
@@ -190,6 +198,7 @@ class CitaController extends Controller
                 }
                 
                 $nuevoPaciente->clinica_id = $user->clinica_id;
+                $nuevoPaciente->sucursal_id = $user->sucursal_id; // Asignar sucursal del usuario
                 $nuevoPaciente->save();
                 
                 $paciente = $nuevoPaciente;
@@ -215,12 +224,18 @@ class CitaController extends Controller
             }
 
             // Verificar si ya existe una cita con el mismo paciente, fecha y hora
-            $citaExistente = Cita::where('paciente_id', $paciente->id)
+            $citaQuery = Cita::where('paciente_id', $paciente->id)
                 ->where('fecha', $request->fecha)
                 ->where('hora', $request->hora)
                 ->where('clinica_id', $user->clinica_id)
-                ->whereIn('estado', ['pendiente', 'confirmada']) // Solo verificar citas activas
-                ->first();
+                ->whereIn('estado', ['pendiente', 'confirmada']); // Solo verificar citas activas
+            
+            // Si el usuario tiene sucursal, validar solo en esa sucursal
+            if ($user->sucursal_id) {
+                $citaQuery->where('sucursal_id', $user->sucursal_id);
+            }
+            
+            $citaExistente = $citaQuery->first();
 
             if ($citaExistente) {
                 return response()->json([
@@ -229,12 +244,16 @@ class CitaController extends Controller
                 ], 422);
             }
 
+            // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
             // Crear la cita (se permiten múltiples citas al mismo tiempo)
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
                 'user_id' => $userId,
                 'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $sucursalId,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
                 'estado' => $request->estado ?? 'pendiente',
@@ -470,6 +489,14 @@ class CitaController extends Controller
             $query = Cita::with(['paciente', 'admin'])
                         ->forClinica($user->clinica_id)
                         ->byMonth($mes, $ano);
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            // Si no viene en el request, usar la del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+            
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
 
             $citas = $query->orderBy('fecha')
                           ->orderBy('hora')
@@ -598,6 +625,9 @@ class CitaController extends Controller
                 ], 403);
             }
 
+            // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
             $citasCreadas = [];
             $citasSkipped = [];
             $primeraVez = true; // Solo la primera cita es "primera vez"
@@ -624,6 +654,7 @@ class CitaController extends Controller
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,
                     'clinica_id' => $user->clinica_id,
+                    'sucursal_id' => $sucursalId,
                     'fecha' => $citaData['fecha'],
                     'hora' => $citaData['hora'],
                     'estado' => $citaData['estado'] ?? 'confirmada',

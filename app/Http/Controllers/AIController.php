@@ -181,6 +181,7 @@ class AIController extends Controller
 
             // Obtener información contextual del usuario y su clínica
             $clinicaId = $user->clinica_id;
+            $clinica = $user->clinica; // Obtener la clínica completa
             
             // Citas próximas de la clínica (próximos 7 días) - INCLUIR ID
             $citasProximas = DB::table('citas')
@@ -208,6 +209,7 @@ class AIController extends Controller
 
             $contextoClinica = [
                 'clinica_id' => $clinicaId,
+                'tipo_clinica' => $clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar',
                 'total_pacientes' => $totalPacientes,
                 'citas_hoy' => $citasHoy,
                 'citas_proximas' => $citasProximas->map(function($cita) {
@@ -304,6 +306,9 @@ class AIController extends Controller
                 
                 case 'analizar_paciente':
                     return $this->analizarPaciente($user, $params);
+                
+                case 'contar_citas_paciente':
+                    return $this->contarCitasPaciente($user, $params);
                 
                 default:
                     return response()->json([
@@ -958,6 +963,142 @@ class AIController extends Controller
             'success' => true,
             'paciente_nombre' => trim($paciente->nombre . ' ' . $paciente->apellidoPat),
             'analisis' => $analisis['analisis']
+        ]);
+    }
+
+    private function contarCitasPaciente($user, $params)
+    {
+        if (!isset($params['nombre'])) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Nombre del paciente requerido'
+            ], 400);
+        }
+
+        // Buscar paciente (reutilizando lógica de búsqueda normalizada)
+        $normalizar = function($texto) {
+            $texto = mb_strtolower($texto, 'UTF-8');
+            $texto = str_replace(
+                ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'],
+                ['a', 'e', 'i', 'o', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'n'],
+                $texto
+            );
+            return trim($texto);
+        };
+        
+        $nombreBuscar = $normalizar($params['nombre']);
+        
+        $pacientes = DB::table('pacientes')
+            ->where('clinica_id', $user->clinica_id)
+            ->get();
+        
+        $paciente = null;
+        $mejorCoincidencia = 0;
+        
+        foreach ($pacientes as $p) {
+            $nombreCompletoPaciente = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
+            $nombrePaciente = $normalizar($p->nombre);
+            
+            if ($nombreCompletoPaciente === $nombreBuscar || $nombrePaciente === $nombreBuscar) {
+                $paciente = $p;
+                $mejorCoincidencia = 1;
+                break;
+            }
+            
+            if (str_starts_with($nombrePaciente, $nombreBuscar) || 
+                str_starts_with($nombreCompletoPaciente, $nombreBuscar)) {
+                if (0.9 > $mejorCoincidencia) {
+                    $mejorCoincidencia = 0.9;
+                    $paciente = $p;
+                }
+                continue;
+            }
+            
+            if (preg_match('/\b' . preg_quote($nombreBuscar, '/') . '\b/', $nombreCompletoPaciente)) {
+                if (0.8 > $mejorCoincidencia) {
+                    $mejorCoincidencia = 0.8;
+                    $paciente = $p;
+                }
+            }
+        }
+
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['nombre']}'"
+            ], 404);
+        }
+
+        // Contar todas las citas del paciente
+        $totalCitas = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->count();
+        
+        // Citas completadas
+        $citasCompletadas = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('estado', 'completada')
+            ->count();
+        
+        // Citas confirmadas (futuras)
+        $citasConfirmadas = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('estado', 'confirmada')
+            ->where('fecha', '>=', now()->format('Y-m-d'))
+            ->count();
+        
+        // Citas canceladas
+        $citasCanceladas = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('estado', 'cancelada')
+            ->count();
+        
+        // Citas en los últimos 6 meses
+        $citasUltimos6Meses = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('fecha', '>=', now()->subMonths(6)->format('Y-m-d'))
+            ->count();
+        
+        // Última cita
+        $ultimaCita = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->orderBy('fecha', 'desc')
+            ->orderBy('hora', 'desc')
+            ->first();
+        
+        // Próxima cita
+        $proximaCita = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('estado', 'confirmada')
+            ->where('fecha', '>=', now()->format('Y-m-d'))
+            ->orderBy('fecha', 'asc')
+            ->orderBy('hora', 'asc')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'paciente' => [
+                'id' => $paciente->id,
+                'nombre_completo' => trim($paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . $paciente->apellidoMat),
+                'expediente' => $paciente->numeroExpediente ?? 'N/A'
+            ],
+            'citas' => [
+                'total' => $totalCitas,
+                'completadas' => $citasCompletadas,
+                'confirmadas' => $citasConfirmadas,
+                'canceladas' => $citasCanceladas,
+                'ultimos_6_meses' => $citasUltimos6Meses
+            ],
+            'ultima_cita' => $ultimaCita ? [
+                'fecha' => $ultimaCita->fecha,
+                'hora' => $ultimaCita->hora,
+                'estado' => $ultimaCita->estado
+            ] : null,
+            'proxima_cita' => $proximaCita ? [
+                'fecha' => $proximaCita->fecha,
+                'hora' => $proximaCita->hora,
+                'estado' => $proximaCita->estado
+            ] : null
         ]);
     }
 }

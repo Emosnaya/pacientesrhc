@@ -154,8 +154,12 @@ class ReporteFinalPulmonarController extends Controller
             'plan' => 'nullable|string'
         ]);
 
+        // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
         $validated['user_id'] = $user->id;
         $validated['clinica_id'] = $user->clinica_id;
+        $validated['sucursal_id'] = $sucursalId;
         $validated['tipo_exp'] = 15;
 
         $reporte = ReporteFinalPulmonar::create($validated);
