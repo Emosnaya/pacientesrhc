@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restablecer Contraseña - CERCAP</title>
+    <title>Restablecer Contraseña - {{ $clinica->nombre ?? 'Sistema Médico' }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -91,9 +91,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://pacientesrhc.com/img/logo.png" alt="CERCAP Logo">
+            <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
             <h1>Restablecer Contraseña</h1>
-            <p>Clínica de Rehabilitación Cardiopulmonar</p>
+            <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
         </div>
         
         <div class="content">
@@ -101,7 +101,7 @@
             
             <p>Hola <strong>{{ $user->nombre }} {{ $user->apellidoPat }}</strong>,</p>
             
-            <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en CERCAP. Si fuiste tú quien hizo esta solicitud, haz clic en el siguiente botón para crear una nueva contraseña:</p>
+            <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. Si fuiste tú quien hizo esta solicitud, haz clic en el siguiente botón para crear una nueva contraseña:</p>
             
             <div style="text-align: center;">
                 <a href="{{ $resetUrl }}" class="button">Restablecer Contraseña</a>
@@ -125,11 +125,10 @@
         </div>
         
         <div class="footer">
-            <p><strong>CERCAP</strong><br>
-            Clínica de Rehabilitación Cardiopulmonar<br>
-            Tel: 5526255547 / 5526255548<br>
-            Email: cercap.cardiopulmonar@gmail.com<br>
-            wwww.cercap.mx
+            <p><strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong><br>
+            @if($clinica->telefono ?? null)Tel: {{ $clinica->telefono }}<br>@endif
+            @if($clinica->email ?? null)Email: {{ $clinica->email }}<br>@endif
+            @if($clinica->direccion ?? null){{ $clinica->direccion }}@endif
         </p>
         </div>
     </div>

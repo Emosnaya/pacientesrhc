@@ -57,9 +57,9 @@
 </head>
 <body>
     <div class="header">
-        <img src="https://pacientesrhc.com/img/logo.png" alt="CERCAP Logo" style="height: 90px; margin-bottom: 15px;">
+        <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo" style="width: 48px; height: 48px; object-fit: contain; margin-bottom: 15px;">
         <h1>{{ $tipoExpedienteNombre ?? 'Expediente Médico' }}</h1>
-        <p>Rehabilitación CardioPulmonar</p>
+        <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
     </div>
     
     <div class="content">
@@ -83,15 +83,20 @@
         <p>Si tiene alguna pregunta o necesita información adicional, no dude en contactarnos.</p>
         
         <p>Saludos cordiales,<br>
-        <strong>Equipo CERCAP</strong></p>
+        <strong>Equipo {{ $clinica->nombre ?? 'Clínica Médica' }}</strong></p>
     </div>
     
     <div class="footer">
-            <p><strong>CERCAP</strong><br>
-            Clínica de Rehabilitación Cardiopulmonar<br>
-            Tel: 5526255547 / 5526255548<br>
-            Email: cercap.cardiopulmonar@gmail.com<br>
-            wwww.cercap.mx
+        <p><strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong><br>
+        @if($clinica->telefono)
+            Tel: {{ $clinica->telefono }}<br>
+        @endif
+        @if($clinica->email)
+            Email: {{ $clinica->email }}<br>
+        @endif
+        @if($clinica->direccion)
+            {{ $clinica->direccion }}
+        @endif
         </p>
     </div>
 </body>

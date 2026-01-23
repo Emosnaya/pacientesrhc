@@ -97,17 +97,194 @@ class PDFController extends Controller
         return $creador;
     }
 
+    /**
+     * Obtener el logo de la clínica en formato base64 para PDF
+     * Redimensiona la imagen a la altura especificada para garantizar el tamaño correcto en dompdf
+     */
+    private function getClinicaLogoBase64($user, $targetHeight = 36)
+    {
+        try {
+            $clinica = $user->clinica;
+            $logoPath = null;
+            
+            if ($clinica && $clinica->logo) {
+                $logoPath = storage_path('app/public/' . $clinica->logo);
+            }
+            
+            // Si no existe el logo de la clínica, usar el logo por defecto
+            if (!$logoPath || !file_exists($logoPath)) {
+                $logoPath = public_path('img/logo.png');
+            }
+            
+            // Si tampoco existe el logo por defecto, retornar null
+            if (!file_exists($logoPath)) {
+                \Log::error('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+            
+            // Verificar si GD está disponible
+            if (!function_exists('imagecreatefrompng')) {
+                \Log::warning('GD no está disponible, usando imagen original');
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Redimensionar la imagen para que dompdf respete el tamaño
+            $imageInfo = @getimagesize($logoPath);
+            if (!$imageInfo) {
+                \Log::error('No se pudo obtener información de la imagen: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            $originalWidth = $imageInfo[0];
+            $originalHeight = $imageInfo[1];
+            $mimeType = $imageInfo['mime'];
+            
+            // Calcular nuevo ancho manteniendo proporción
+            $ratio = $targetHeight / $originalHeight;
+            $newWidth = (int)($originalWidth * $ratio);
+            $newHeight = (int)$targetHeight;
+            
+            // Crear imagen desde el archivo original
+            $sourceImage = null;
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    $sourceImage = @imagecreatefromjpeg($logoPath);
+                    break;
+                case 'image/png':
+                    $sourceImage = @imagecreatefrompng($logoPath);
+                    break;
+                case 'image/gif':
+                    $sourceImage = @imagecreatefromgif($logoPath);
+                    break;
+                case 'image/webp':
+                    if (function_exists('imagecreatefromwebp')) {
+                        $sourceImage = @imagecreatefromwebp($logoPath);
+                    }
+                    break;
+            }
+            
+            if (!$sourceImage) {
+                \Log::warning('No se pudo crear imagen desde: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Crear nueva imagen redimensionada
+            $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Preservar transparencia para PNG y GIF
+            if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+                imagealphablending($resizedImage, false);
+                imagesavealpha($resizedImage, true);
+                $transparent = imagecolorallocatealpha($resizedImage, 0, 0, 0, 127);
+                imagefilledrectangle($resizedImage, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+            
+            // Redimensionar
+            imagecopyresampled(
+                $resizedImage, $sourceImage,
+                0, 0, 0, 0,
+                $newWidth, $newHeight,
+                $originalWidth, $originalHeight
+            );
+            
+            // Capturar output en buffer
+            ob_start();
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    imagejpeg($resizedImage, null, 90);
+                    break;
+                case 'image/png':
+                    imagepng($resizedImage, null, 9);
+                    break;
+                case 'image/gif':
+                    imagegif($resizedImage);
+                    break;
+                case 'image/webp':
+                    if (function_exists('imagewebp')) {
+                        imagewebp($resizedImage);
+                    }
+                    break;
+                default:
+                    imagepng($resizedImage);
+                    $mimeType = 'image/png';
+            }
+            $imageData = ob_get_clean();
+            
+            // Liberar memoria
+            imagedestroy($sourceImage);
+            imagedestroy($resizedImage);
+            
+            \Log::info('Logo redimensionado exitosamente', [
+                'original' => $originalWidth . 'x' . $originalHeight,
+                'nuevo' => $newWidth . 'x' . $newHeight
+            ]);
+            
+            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar logo: ' . $e->getMessage());
+            // Fallback: devolver imagen original sin redimensionar
+            if (isset($logoPath) && file_exists($logoPath)) {
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Obtener la información completa de la clínica para las vistas
+     */
+    private function getClinicaInfo($user)
+    {
+        $clinica = $user->clinica;
+        
+        if (!$clinica) {
+            // Datos por defecto si no hay clínica
+            return (object)[
+                'nombre' => 'Clínica Médica',
+                'telefono' => '',
+                'email' => '',
+                'direccion' => '',
+                'logo' => null,
+                'logo_url' => asset('img/logo.png')
+            ];
+        }
+        
+        // Agregar logo_url al objeto clínica
+        $clinica->logo_url = $clinica->logo 
+            ? asset('storage/' . $clinica->logo) 
+            : asset('img/logo.png');
+        
+        return $clinica;
+    }
+
     public function esfuerzoPdf(Request $request)
     {
         $data = Esfuerzo::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente','user', 'clinicaLogo')); // Cargar vista PDF con datos
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64')); // Cargar vista PDF con datos
 
         // Nombre del archivo según el tipo de esfuerzo
         $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
@@ -122,11 +299,20 @@ class PDFController extends Controller
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        $pdf = Pdf::loadView('estrati', compact('data', 'paciente','user', 'clinicaLogo'));
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('estrati', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
         return $pdf->stream('Estratificacion.pdf'); 
     }
 
@@ -136,11 +322,20 @@ class PDFController extends Controller
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        $pdf = Pdf::loadView('clinico', compact('data', 'paciente','user', 'clinicaLogo'));
+        // Preparar firma digital si existe
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('clinico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
         return $pdf->stream('Clinico.pdf'); 
     }
     public function reportePdf(Request $request)
@@ -152,9 +347,9 @@ class PDFController extends Controller
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -165,7 +360,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('reporte', compact('data', 'paciente','user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Reporte_Final.pdf'); 
     }
     public function psicoPdf(Request $request)
@@ -174,11 +369,11 @@ class PDFController extends Controller
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        $pdf = Pdf::loadView('psico', compact('data', 'paciente','user', 'clinicaLogo'));
+        $pdf = Pdf::loadView('psico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Psico.pdf'); 
     }
     public function nutriPdf(Request $request)
@@ -187,11 +382,11 @@ class PDFController extends Controller
         $paciente =  Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        $pdf = Pdf::loadView('nutri', compact('data', 'paciente','user', 'clinicaLogo'));
+        $pdf = Pdf::loadView('nutri', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nutri.pdf'); 
     }
 
@@ -201,9 +396,9 @@ class PDFController extends Controller
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -214,7 +409,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Expediente_Pulmonar.pdf'); 
     }
 
@@ -224,9 +419,9 @@ class PDFController extends Controller
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -237,7 +432,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Historia_Clinica_Fisioterapia.pdf');
     }
 
@@ -247,9 +442,9 @@ class PDFController extends Controller
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -260,7 +455,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Evolucion_Fisioterapia.pdf');
     }
 
@@ -270,9 +465,9 @@ class PDFController extends Controller
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $paciente->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -283,7 +478,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Alta_Fisioterapia.pdf');
     }
 
@@ -293,9 +488,9 @@ class PDFController extends Controller
         $paciente = Paciente::find($data->paciente_id);
         $user = $this->getDoctorParaFirma($request, $data->user_id);
         
-        // Obtener logo de la clínica
-        $clinica = $user->clinica;
-        $clinicaLogo = $clinica && $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png');
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
 
         // Preparar firma digital si existe
         $firmaBase64 = null;
@@ -306,7 +501,7 @@ class PDFController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = Pdf::loadView('historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+        $pdf = Pdf::loadView('historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Historia_Clinica_Dental.pdf');
     }
 
@@ -438,15 +633,24 @@ class PDFController extends Controller
 
             // Generar PDF según el tipo
             $pdf = null;
+            // Preparar firma digital para todos los expedientes
+            $firmaBase64 = null;
+            if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+                $imagePath = public_path('storage/' . $user->firma_digital);
+                $imageData = file_get_contents($imagePath);
+                $imageType = mime_content_type($imagePath);
+                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+            }
+
             switch ($expedienteType) {
                 case 'esfuerzo':
-                    $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente', 'user'));
+                    $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'estratificacion':
-                    $pdf = Pdf::loadView('estrati', compact('data', 'paciente', 'user'));
+                    $pdf = Pdf::loadView('estrati', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'clinico':
-                    $pdf = Pdf::loadView('clinico', compact('data', 'paciente', 'user'));
+                    $pdf = Pdf::loadView('clinico', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'reporte_final':
                     $esfuerzoUno = Esfuerzo::find($data->pe_1);
@@ -521,6 +725,9 @@ class PDFController extends Controller
                     break;
             }
 
+            // Obtener clínica del usuario
+            $clinica = $user->clinica;
+
             // Enviar correo
             if ($expedienteType === 'reporte_fisio') {
                 // Para fisioterapia, usar el archivo existente
@@ -528,7 +735,8 @@ class PDFController extends Controller
                     'paciente' => $paciente,
                     'expediente' => $data,
                     'mensaje' => $message,
-                    'tipoExpedienteNombre' => $tipoExpedienteNombre
+                    'tipoExpedienteNombre' => $tipoExpedienteNombre,
+                    'clinica' => $clinica
                 ], function ($mail) use ($email, $subject, $pdfContent, $pdfFileName) {
                     $mail->to($email)
                          ->subject($subject)
@@ -540,7 +748,8 @@ class PDFController extends Controller
                     'paciente' => $paciente,
                     'expediente' => $data,
                     'mensaje' => $message,
-                    'tipoExpedienteNombre' => $tipoExpedienteNombre
+                    'tipoExpedienteNombre' => $tipoExpedienteNombre,
+                    'clinica' => $clinica
                 ], function ($mail) use ($email, $subject, $pdf, $pdfFileName) {
                     $mail->to($email)
                          ->subject($subject)

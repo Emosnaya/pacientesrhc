@@ -40,14 +40,16 @@ class AuthController extends Controller
 
         // Enviar correo de verificación
         $verificationUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/verify-email/{$verificationToken}";
+        $clinica = $user->clinica;
         
         try {
             Mail::send('emails.verify-email', [
                 'user' => $user,
-                'verificationUrl' => $verificationUrl
-            ], function ($message) use ($user) {
+                'verificationUrl' => $verificationUrl,
+                'clinica' => $clinica
+            ], function ($message) use ($user, $clinica) {
                 $message->to($user->email)
-                        ->subject('Verifica tu correo electrónico - CERCAP');
+                        ->subject('Verifica tu correo electrónico - ' . ($clinica->nombre ?? 'Sistema Médico'));
             });
         } catch (\Exception $e) {
             // Log error but don't fail registration
@@ -167,14 +169,16 @@ class AuthController extends Controller
         ]);
 
         $resetUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/reset-password/{$resetToken}";
+        $clinica = $user->clinica;
 
         try {
             Mail::send('emails.reset-password', [
                 'user' => $user,
-                'resetUrl' => $resetUrl
-            ], function ($message) use ($user) {
+                'resetUrl' => $resetUrl,
+                'clinica' => $clinica
+            ], function ($message) use ($user, $clinica) {
                 $message->to($user->email)
-                        ->subject('Restablecer contraseña - CERCAP');
+                        ->subject('Restablecer contraseña - ' . ($clinica->nombre ?? 'Sistema Médico'));
             });
 
             return response()->json([

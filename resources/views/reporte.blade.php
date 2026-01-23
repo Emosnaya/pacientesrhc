@@ -10,6 +10,16 @@
 
     <!-- Bootstrap CSS -->
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 36px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 36px;
+            width: auto;
+        }
         /* Estilo para la línea de firma */
         .signature {
         text-align: left;
@@ -205,7 +215,7 @@
     <header class=" mb-0">
       <div class="paciente mt-0">
         <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
-        <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
+        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
         <br>
           <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
           <p class="mb-1 mt-0 f-15">Por medio de este conducto me permito informarle de los por menores del programa de Rehabilitación Cardiaca</p>
@@ -381,13 +391,13 @@
   <p class="f-10 f-normal mb-0">* Frecuencia cardiaca (FC). ** Doble producto=(TA sist)(FC),***Índice de Eficiencia Miocárdica (IEM).</p>
   <p class="f-10 f-normal mb-0 mt-0">^ Tiempo de ejercicio corregido para  protocolo de Bruce.</p>
   <div class="medio">
-    <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue mt-1">CERCAP</p> <span class="ml-5 text-right texto-derecha f-bold mt-1">5526255547/<span class="f-normal txt-r mt-1">cercapmx</span></span>
+    <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue mt-1">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold mt-1">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r mt-1">{{ $clinica->email }}</span>@endif</span>
   </div>
   <div class="mt-5">
     <div>
       <div class="paciente mt-0">
         <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
-        <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
+        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
         <br>
           <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
       </div>
@@ -424,7 +434,7 @@
       
     </div>
     <div class="medio marg-final">
-      <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">CERCAP</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">5526255547/<span class="f-normal txt-r marg-final">cercapmx</span></span>
+      <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
     </div>
 
 

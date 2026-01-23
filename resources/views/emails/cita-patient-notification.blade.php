@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmación de Cita - CERCAP</title>
+    <title>Confirmación de Cita - {{ $clinica->nombre ?? 'Sistema Médico' }}</title>
     <style>
         * {
             margin: 0;
@@ -52,10 +52,11 @@
         }
         
         .header img {
-            max-width: 180px;
-            height: auto;
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
             background: white;
-            padding: 15px;
+            padding: 8px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             margin-bottom: 20px;
@@ -357,47 +358,91 @@
 <body>
     <div class="email-wrapper">
         <div class="header">
-            <img src="https://pacientesrhc.com/img/logo.png" alt="CERCAP Logo">
+            <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
             <h1>✅ Confirmación de Cita</h1>
-            <p>Clínica de Rehabilitación Cardiopulmonar</p>
+            <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
         </div>
         
         <div class="content">
-            <h2>¡Su cita ha sido confirmada!</h2>
+            @if(isset($citas) && count($citas) > 1)
+                <h2>¡Sus {{ count($citas) }} citas han sido confirmadas!</h2>
+            @else
+                <h2>¡Su cita ha sido confirmada!</h2>
+            @endif
             
             <p>Estimado/a <strong>{{ $paciente->nombre }} {{ $paciente->apellidoPat }}</strong>,</p>
             
-            <p>Nos complace confirmar que su cita ha sido programada exitosamente. A continuación encontrará todos los detalles:</p>
-            
-            <div class="appointment-card">
-                <h3>📅 Su Cita Médica</h3>
-                <div class="appointment-info">
-                    <div class="info-item">
-                        <div class="info-label">Fecha</div>
-                        <div class="info-value">{{ \Carbon\Carbon::parse($cita->fecha)->format('d/m/Y') }}</div>
+            @if(isset($citas) && count($citas) > 1)
+                <p>Nos complace confirmar que sus <strong>{{ count($citas) }} citas</strong> han sido programadas exitosamente. A continuación encontrará todos los detalles:</p>
+                
+                @foreach($citas as $index => $citaItem)
+                    <div class="appointment-card" style="margin-top: {{ $index > 0 ? '20px' : '30px' }};">
+                        <h3>📅 Cita #{{ $index + 1 }}</h3>
+                        <div class="appointment-info">
+                            <div class="info-item">
+                                <div class="info-label">Fecha</div>
+                                <div class="info-value">{{ \Carbon\Carbon::parse($citaItem->fecha)->format('d/m/Y') }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Hora</div>
+                                <div class="info-value">{{ \Carbon\Carbon::parse($citaItem->hora)->format('H:i') }}</div>
+                            </div>
+                        </div>
+                        @if($citaItem->notas)
+                            <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.2); border-radius: 8px;">
+                                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">NOTAS:</div>
+                                <div style="font-size: 14px;">{{ $citaItem->notas }}</div>
+                            </div>
+                        @endif
                     </div>
-                    <div class="info-item">
-                        <div class="info-label">Hora</div>
-                        <div class="info-value">{{ \Carbon\Carbon::parse($cita->hora)->format('H:i') }}</div>
+                @endforeach
+            @else
+                <p>Nos complace confirmar que su cita ha sido programada exitosamente. A continuación encontrará todos los detalles:</p>
+                
+                <div class="appointment-card">
+                    <h3>📅 Su Cita Médica</h3>
+                    <div class="appointment-info">
+                        <div class="info-item">
+                            <div class="info-label">Fecha</div>
+                            <div class="info-value">{{ \Carbon\Carbon::parse($cita->fecha)->format('d/m/Y') }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Hora</div>
+                            <div class="info-value">{{ \Carbon\Carbon::parse($cita->hora)->format('H:i') }}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
             
             @php
                 // Generar URL de Google Calendar - extraer solo fecha y solo hora
-                $fechaSolo = \Carbon\Carbon::parse($cita->fecha)->format('Y-m-d');
-                $horaSolo = \Carbon\Carbon::parse($cita->hora)->format('H:i:s');
+                // Para cita única o la primera cita si hay múltiples
+                $citaParaCalendario = isset($citas) && count($citas) > 0 ? $citas[0] : $cita;
+                $fechaSolo = \Carbon\Carbon::parse($citaParaCalendario->fecha)->format('Y-m-d');
+                $horaSolo = \Carbon\Carbon::parse($citaParaCalendario->hora)->format('H:i:s');
                 $fechaInicio = \Carbon\Carbon::parse("{$fechaSolo} {$horaSolo}");
                 $fechaFin = $fechaInicio->copy()->addHour();
                 
                 $googleCalendarUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
-                $googleCalendarUrl .= '&text=' . urlencode('Cita Médica - CERCAP');
+                $clinicaNombre = $clinica->nombre ?? 'Clínica Médica';
+                
+                if(isset($citas) && count($citas) > 1) {
+                    $googleCalendarUrl .= '&text=' . urlencode('Primera Cita Médica - ' . $clinicaNombre);
+                    $detalles = 'Primera de ' . count($citas) . ' citas programadas en ' . $clinicaNombre;
+                } else {
+                    $googleCalendarUrl .= '&text=' . urlencode('Cita Médica - ' . $clinicaNombre);
+                    $detalles = 'Cita en ' . $clinicaNombre;
+                }
+                
                 $googleCalendarUrl .= '&dates=' . $fechaInicio->format('Ymd\THis\Z') . '/' . $fechaFin->format('Ymd\THis\Z');
-                $googleCalendarUrl .= '&details=' . urlencode('Cita en Centro de Rehabilitación Cardiopulmonar CERCAP');
-                $googleCalendarUrl .= '&location=' . urlencode('Real de Mayorazgo 130, Local 3, Col. Xoco, Benito Juárez, CP 03330, CDMX');
+                $googleCalendarUrl .= '&details=' . urlencode($detalles);
+                if ($clinica && $clinica->direccion) {
+                    $googleCalendarUrl .= '&location=' . urlencode($clinica->direccion);
+                }
                 $googleCalendarUrl .= '&sf=true&output=xml';
             @endphp
             
+            @if(!isset($citas) || count($citas) <= 1)
             <div style="text-align: center; margin: 30px 0;">
                 <p style="margin-bottom: 15px; font-size: 16px; color: #2c3e50;">
                     <strong>📅 Agregar a mi calendario:</strong>
@@ -412,8 +457,15 @@
                     Simplemente descargue el archivo adjunto y ábralo.
                 </div>
             </div>
+            @else
+            <div style="text-align: center; margin: 30px 0;">
+                <div class="calendar-note" style="margin-top: 20px;">
+                    📱 <strong>Nota sobre el calendario:</strong> Tiene {{ count($citas) }} citas programadas. Por favor, agregue cada una manualmente a su calendario con las fechas y horas mostradas arriba.
+                </div>
+            </div>
+            @endif
             
-            @if($cita->observaciones)
+            @if(isset($cita) && $cita->observaciones)
             <div class="reminder" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f39c12;">
                 <strong style="color: #d68910;">📝 Notas Importantes:</strong>
                 <p style="color: #856404; margin: 10px 0 0 0; padding: 0;">{{ $cita->observaciones }}</p>
@@ -437,11 +489,16 @@
         
         <div class="footer">
             <p>
-                <strong>CERCAP</strong>
-                Clínica de Rehabilitación Cardiopulmonar<br>
-                Tel: 5526255547 / 5526255548<br>
-                Email: cercap.cardiopulmonar@gmail.com<br>
-                www.cercap.mx
+                <strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong>
+                @if($clinica && $clinica->telefono)
+                    Tel: {{ $clinica->telefono }}<br>
+                @endif
+                @if($clinica && $clinica->email)
+                    Email: {{ $clinica->email }}<br>
+                @endif
+                @if($clinica && $clinica->direccion)
+                    {{ $clinica->direccion }}
+                @endif
             </p>
         </div>
     </div>

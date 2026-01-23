@@ -10,6 +10,16 @@
 
     <!-- Bootstrap CSS -->
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 36px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 36px;
+            width: auto;
+        }
         /* Estilo para la línea de firma */
         .signature {
         text-align: center;
@@ -223,7 +233,7 @@
     <header class="mb-0">
       <div class="paciente ma-t-0 mb-0">
         <p class="f-bold f-15 text-center mb-0 mt-0">Reporte de Prueba Ergométrica {{ isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca' }}</p>
-        <img src="{{ $clinicaLogo }}" alt="logo clínicaclínica" style="height: 90px" class="">
+        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
         <div class="medio">
           <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
         </div>
@@ -433,8 +443,16 @@
   <div class="paciente mt-1 mb-1">
     <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
     <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
-    <p class="mt-0 mb-0"><span class="f-bold">  Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
+    <p class="mt-0 mb-0"><span class="f-bold">Realizó: <span class="f-normal">Dr {{" ". $user->nombre . " " . $user->apellidoPat}}</span></span></p>
   </div>
+  
+  @if(isset($firmaBase64) && $firmaBase64)
+  <div style="position: fixed; bottom: 40px; left: 0; right: 0; text-align: center;">
+    <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 50px; width: auto;"><br>
+    <div style="border-top: 1px solid #333; width: 150px; margin: 2px auto 0 auto;"></div>
+    <span style="font-size: 9px;">Dr. {{$user->nombre . " " . $user->apellidoPat}}</span>
+  </div>
+  @endif
   <div class="contenedor">
     <h2 class="h5 titulo"></h2>
     <div class="linea-t"></div>
