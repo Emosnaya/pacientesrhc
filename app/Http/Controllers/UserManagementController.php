@@ -65,13 +65,15 @@ class UserManagementController extends Controller
         ]);
 
         // Enviar correo con credenciales
+        $clinica = $newUser->clinica;
         try {
             Mail::send('emails.user-credentials', [
                 'user' => $newUser,
-                'password' => $request->password // Enviar la contraseña en texto plano
-            ], function ($message) use ($newUser) {
+                'password' => $request->password, // Enviar la contraseña en texto plano
+                'clinica' => $clinica
+            ], function ($message) use ($newUser, $clinica) {
                 $message->to($newUser->email)
-                        ->subject('Credenciales de Acceso - CERCAP');
+                        ->subject('Credenciales de Acceso - ' . ($clinica->nombre ?? 'Sistema Médico'));
             });
         } catch (\Exception $e) {
             // Log error but don't fail user creation

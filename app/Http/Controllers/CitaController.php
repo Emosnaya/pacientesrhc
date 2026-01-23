@@ -700,15 +700,18 @@ class CitaController extends Controller
     {
         try {
             if ($paciente->email) {
+                $clinica = $admin->clinica;
                 Mail::send('emails.cita-patient-notification', [
                     'cita' => $citas[0], // Primera cita para compatibilidad
                     'citas' => $citas,   // Todas las citas
                     'paciente' => $paciente,
-                    'multiple' => count($citas) > 1
-                ], function ($message) use ($paciente, $citas) {
+                    'multiple' => count($citas) > 1,
+                    'clinica' => $clinica
+                ], function ($message) use ($paciente, $citas, $clinica) {
+                    $clinicaNombre = $clinica ? $clinica->nombre : 'Clínica Médica';
                     $subject = count($citas) > 1 
-                        ? 'Confirmación de ' . count($citas) . ' Citas - CERCAP'
-                        : 'Confirmación de Cita - CERCAP';
+                        ? 'Confirmación de ' . count($citas) . ' Citas - ' . $clinicaNombre
+                        : 'Confirmación de Cita - ' . $clinicaNombre;
                     $message->to($paciente->email)->subject($subject);
                 });
             }

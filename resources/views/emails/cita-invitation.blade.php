@@ -221,7 +221,7 @@
         <div class="email-container">
             <!-- Header con logo -->
             <div class="header">
-                <img src="https://pacientesrhc.com/img/logo.png" alt="CERCAP Logo" class="logo">
+                <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo" class="logo">
                 <h1>{{ $subject }}</h1>
             </div>
 
@@ -292,9 +292,9 @@
                         <div class="info-box-content">
                             <div><strong>Dirección:</strong> Real de Mayorazgo 130, Local 3</div>
                             <div>Col. Xoco, Benito Juárez, CP 03330, CDMX</div>
-                            <div style="color: #64748b; font-size: 13px;">HSAI Universidad Torre Médica II</div>
-                            <div style="margin-top: 12px;"><strong>Teléfono:</strong> 📞 55 2625 5547</div>
-                            <div><strong>Email:</strong> ✉️ cercap.cardiopulmonar@gmail.com</div>
+                            @if($clinica->direccion ?? null)<div style="color: #64748b; font-size: 13px;">{{ $clinica->direccion }}</div>@endif
+                            @if($clinica->telefono ?? null)<div style="margin-top: 12px;"><strong>Teléfono:</strong> 📞 {{ $clinica->telefono }}</div>@endif
+                            @if($clinica->email ?? null)<div><strong>Email:</strong> ✉️ {{ $clinica->email }}</div>@endif
                         </div>
                         @if($action !== 'cancel')
                         <div class="recommendations">
@@ -330,12 +330,11 @@
 
             <!-- Footer -->
             <div class="footer">
-                <div class="clinica-name">🏥 Centro de Rehabilitación Cardiopulmonar CERCAP</div>
+                <div class="clinica-name">🏥 {{ $clinica->nombre ?? 'Clínica Médica' }}</div>
                 <div class="footer-contact">
-                    <div>📞 55 2625 5547</div>
-                    <div>✉️ cercap.cardiopulmonar@gmail.com</div>
-                    <div>📍 Real de Mayorazgo 130, Local 3, Col. Xoco</div>
-                    <div>Benito Juárez, CP 03330, CDMX</div>
+                    @if($clinica->telefono ?? null)<div>📞 {{ $clinica->telefono }}</div>@endif
+                    @if($clinica->email ?? null)<div>✉️ {{ $clinica->email }}</div>@endif
+                    @if($clinica->direccion ?? null)<div>📍 {{ $clinica->direccion }}</div>@endif
                     <div style="font-size: 12px; color: #888; margin-top: 5px;">HSAI Universidad Torre Médica II</div>
                 </div>
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #d0d4e0; font-size: 12px; color: #999;">

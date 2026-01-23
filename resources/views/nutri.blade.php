@@ -10,6 +10,16 @@
 
     <!-- Bootstrap CSS -->
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 36px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 36px;
+            width: auto;
+        }
         /* Estilo para la línea de firma */
         .signature {
         text-align: center;
@@ -446,7 +456,7 @@
     <header class="mb-0">
       <div class="paciente ma-t-0 mb-0">
         <p class="f-bold f-15 text-center mb-0 mt-0">Valoración Nutricional</p>
-        <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
+        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
         <div class="medio">
           <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->created_at))}} </p>
         </div>
@@ -783,7 +793,7 @@
     <p  class="f-15 f-bold mb-0">Cédula: <span>{{$data->cedula_nutriologo}}</span></p>
   </div>  
   <div class="medio marg-final">
-  <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">CERCAP</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">5526255547/<span class="f-normal txt-r marg-final">cercapmx</span></span>
+  <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
   </div> 
 
 

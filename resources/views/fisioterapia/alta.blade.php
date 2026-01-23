@@ -6,6 +6,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Nota de Alta - Fisioterapia</title>
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 60px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 60px;
+            width: auto;
+        }
         body {
             font-family: Arial, sans-serif;
             font-size: 10px;
@@ -124,7 +134,7 @@
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
             <p class="f-bold f-15 text-center mb-0 mt-0">Nota de Alta - Fisioterapia</p>
-            <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
+            <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
             <div class="medio">
                 <p class="text-sm texto-izquierda mb-0 f-bold">Fecha de alta: {{ date('d/m/Y', strtotime($data->fecha)) }}</p>
                 <span class="ml-5 text-right texto-derecha f-bold">Registro: {{ $paciente->registro }}</span>

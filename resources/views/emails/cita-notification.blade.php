@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notificación de Cita - CERCAP</title>
+    <title>Notificación de Cita - {{ $clinica->nombre ?? 'Sistema Médico' }}</title>
     <style>
         * {
             margin: 0;
@@ -251,9 +251,9 @@
 <body>
     <div class="email-wrapper">
         <div class="header">
-            <img src="https://pacientesrhc.com/img/logo.png" alt="CERCAP Logo">
+            <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
             <h1>Nueva Cita Programada</h1>
-            <p>Clínica de Rehabilitación Cardiopulmonar</p>
+            <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
         </div>
         
         <div class="content">
@@ -303,11 +303,10 @@
         
         <div class="footer">
             <p>
-                <strong>CERCAP</strong>
-                Clínica de Rehabilitación Cardiopulmonar<br>
-                Tel: 5526255547 / 5526255548<br>
-                Email: cercap.cardiopulmonar@gmail.com<br>
-                www.cercap.mx
+                <strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong><br>
+                @if($clinica->telefono ?? null)Tel: {{ $clinica->telefono }}<br>@endif
+                @if($clinica->email ?? null)Email: {{ $clinica->email }}<br>@endif
+                @if($clinica->direccion ?? null){{ $clinica->direccion }}@endif
             </p>
         </div>
     </div>
