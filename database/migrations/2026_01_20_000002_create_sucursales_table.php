@@ -131,7 +131,7 @@ return new class extends Migration
             $table->index('sucursal_id');
         });
         
-        Schema::table('ia_usage', function (Blueprint $table) {
+        Schema::table('ai_usage', function (Blueprint $table) {
             $table->foreignId('clinica_id')->nullable()->after('id')->constrained()->onDelete('set null');
             $table->foreignId('sucursal_id')->nullable()->after('clinica_id')->constrained('sucursales')->onDelete('set null');
             $table->index('clinica_id');
@@ -145,7 +145,7 @@ return new class extends Migration
     public function down(): void
     {
         // Eliminar foreign keys y columnas - orden inverso
-        Schema::table('ia_usage', function (Blueprint $table) {
+        Schema::table('ai_usage', function (Blueprint $table) {
             $table->dropForeign(['sucursal_id']);
             $table->dropForeign(['clinica_id']);
             $table->dropColumn(['sucursal_id', 'clinica_id']);

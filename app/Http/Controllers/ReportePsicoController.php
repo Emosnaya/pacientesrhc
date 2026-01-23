@@ -85,6 +85,7 @@ class ReportePsicoController extends Controller
         // Asignar el user_id del dueño del paciente
         $reportePsico->user_id = $paciente->user_id;
         $reportePsico->clinica_id = $user->clinica_id;
+        $reportePsico->sucursal_id = $paciente->sucursal_id;
         $reportePsico->psicologo = $data['psicologo'];
         $reportePsico->cedula_psicologo = $data['cedula_psicologo'];
         $reportePsico->save();

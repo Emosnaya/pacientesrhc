@@ -12,22 +12,29 @@ class Clinica extends Model
 
     protected $fillable = [
         'nombre',
+        'tipo_clinica',
+        'modulos_habilitados',
         'email',
         'logo',
         'telefono',
         'direccion',
         'plan',
+        'duration',
         'pagado',
         'fecha_vencimiento',
         'activa',
-        'permite_multiples_sucursales'
+        'permite_multiples_sucursales',
+        'max_sucursales',
+        'max_usuarios',
+        'max_pacientes'
     ];
 
     protected $casts = [
         'pagado' => 'boolean',
         'activa' => 'boolean',
         'permite_multiples_sucursales' => 'boolean',
-        'fecha_vencimiento' => 'date'
+        'fecha_vencimiento' => 'date',
+        'modulos_habilitados' => 'array'
     ];
 
     protected $appends = [

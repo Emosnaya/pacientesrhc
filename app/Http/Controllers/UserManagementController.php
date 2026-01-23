@@ -34,11 +34,20 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
             'isAdmin' => 'boolean',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Validar que la sucursal pertenezca a la clínica del admin
+        if ($request->sucursal_id) {
+            $sucursal = \App\Models\Sucursal::find($request->sucursal_id);
+            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'La sucursal no pertenece a tu clínica'], 403);
+            }
         }
 
         $newUser = User::create([
@@ -51,7 +60,8 @@ class UserManagementController extends Controller
             'isAdmin' => $request->isAdmin ?? false,
             'email_verified' => true, // Admin created users are pre-verified
             'email_verified_at' => now(),
-            'clinica_id' => $user->clinica_id // Asignar a la misma clínica que el admin
+            'clinica_id' => $user->clinica_id, // Asignar a la misma clínica que el admin
+            'sucursal_id' => $request->sucursal_id // Asignar sucursal si se proporciona
         ]);
 
         // Enviar correo con credenciales
@@ -134,11 +144,20 @@ class UserManagementController extends Controller
             'cedula' => 'nullable|string|unique:users,cedula,' . $id,
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:8',
-            'isAdmin' => 'boolean'
+            'isAdmin' => 'boolean',
+            'sucursal_id' => 'nullable|exists:sucursales,id'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Validar que la sucursal pertenezca a la clínica del admin
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $sucursal = \App\Models\Sucursal::find($request->sucursal_id);
+            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'La sucursal no pertenece a tu clínica'], 403);
+            }
         }
 
         $updateData = [
@@ -149,6 +168,11 @@ class UserManagementController extends Controller
             'email' => $request->email,
             'isAdmin' => $request->isAdmin ?? false
         ];
+
+        // Actualizar sucursal si se proporciona
+        if ($request->has('sucursal_id')) {
+            $updateData['sucursal_id'] = $request->sucursal_id;
+        }
 
         // Solo actualizar la contraseña si se proporciona
         if ($request->filled('password')) {

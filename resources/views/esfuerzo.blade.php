@@ -223,7 +223,7 @@
     <header class="mb-0">
       <div class="paciente ma-t-0 mb-0">
         <p class="f-bold f-15 text-center mb-0 mt-0">Reporte de Prueba Ergométrica {{ isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca' }}</p>
-        <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
+        <img src="{{ $clinicaLogo }}" alt="logo clínicaclínica" style="height: 90px" class="">
         <div class="medio">
           <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
         </div>

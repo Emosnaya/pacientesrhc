@@ -284,7 +284,7 @@
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
             <p class="f-bold f-15 text-center mb-0 mt-0">Expediente de Rehabilitación Pulmonar</p>
-            <img src="img/logo.png" alt="cercap logo" style="height: 70px" class="">
+            <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 70px" class="">
             <div class="medio mb-3">
               <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha_consulta ? date('d/m/Y', strtotime($data->fecha_consulta)) : 'N/A' }} </p> 
               <span class="ml-5 text-right texto-derecha f-bold">Hora: {{ $data->hora_consulta ? date('H:i', strtotime($data->hora_consulta)) : 'N/A' }}</span>

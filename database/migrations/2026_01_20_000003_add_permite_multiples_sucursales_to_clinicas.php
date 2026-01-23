@@ -17,7 +17,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clinicas', function (Blueprint $table) {
-            $table->boolean('permite_multiples_sucursales')->default(false)->after('descripcion');
+            $table->boolean('permite_multiples_sucursales')->default(false)->after('activa');
             $table->index('permite_multiples_sucursales');
         });
     }

@@ -16,13 +16,23 @@ class PacienteController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(){
+    public function index(Request $request){
         $user = Auth::user();
         
-        // Obtener todos los pacientes de la misma clínica
-        $pacientes = Paciente::whereHas('user', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
-        })->get();
+        // Obtener pacientes de la misma clínica
+        $query = Paciente::whereHas('user', function($q) use ($user) {
+            $q->where('clinica_id', $user->clinica_id);
+        });
+        
+        // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+        // Si no viene en el request, usar la del usuario
+        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+        
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+        
+        $pacientes = $query->get();
         
         return new PacienteCollection($pacientes);
     }
@@ -95,7 +105,11 @@ class PacienteController extends Controller
             $paciente->user_id = $user->id;
         }
 
+        // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
         $paciente->clinica_id = $user->clinica_id;
+        $paciente->sucursal_id = $sucursalId;
 
         $paciente->save();
 

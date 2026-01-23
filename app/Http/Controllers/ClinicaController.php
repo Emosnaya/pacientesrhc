@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Clinica;
+use App\Models\Sucursal;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,18 @@ use Illuminate\Support\Str;
 
 class ClinicaController extends Controller
 {
+    /**
+     * Obtener tipos de clínicas disponibles
+     */
+    public function getTipos()
+    {
+        return response()->json([
+            'tipos' => config('clinica_tipos.tipos'),
+            'modulos_seleccionables' => config('clinica_tipos.modulos_seleccionables'),
+            'default' => config('clinica_tipos.default')
+        ]);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -36,10 +49,14 @@ class ClinicaController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:255',
+            'tipo_clinica' => 'nullable|string|in:' . implode(',', array_keys(config('clinica_tipos.tipos'))),
+            'modulos_habilitados' => 'nullable|array',
+            'modulos_habilitados.*' => 'string|in:' . implode(',', array_keys(config('clinica_tipos.modulos_seleccionables'))),
             'email' => 'required|email|unique:clinicas,email',
             'telefono' => 'nullable|string|max:20',
             'direccion' => 'nullable|string|max:500',
-            'plan' => 'required|in:mensual,trimestral,anual',
+            'plan' => 'required|in:profesional,clinica,empresarial',
+            'duration' => 'required|in:mensual,anual',
             'precio_final' => 'required|numeric|min:0',
             'cupon' => 'nullable|string|max:50',
             'payment_method' => 'required|string|max:50',
@@ -62,16 +79,26 @@ class ClinicaController extends Controller
         }
 
         try {
+            // Determinar límites según el plan
+            $limites = $this->getPlanLimits($request->plan);
+            
             // Crear la clínica
             $clinica = Clinica::create([
                 'nombre' => $request->nombre,
+                'tipo_clinica' => $request->tipo_clinica ?? 'rehabilitacion_cardiopulmonar',
+                'modulos_habilitados' => $request->modulos_habilitados ?? [],
                 'email' => $request->email,
                 'telefono' => $request->telefono,
                 'direccion' => $request->direccion,
                 'plan' => $request->plan,
+                'duration' => $request->duration,
                 'pagado' => true, // Pago procesado exitosamente
-                'fecha_vencimiento' => $this->calculateExpirationDate($request->plan),
+                'fecha_vencimiento' => $this->calculateExpirationDate($request->duration),
                 'activa' => true,
+                'permite_multiples_sucursales' => $limites['sucursales'] > 1,
+                'max_sucursales' => $limites['sucursales'],
+                'max_usuarios' => $limites['usuarios'],
+                'max_pacientes' => $limites['pacientes'],
             ]);
 
             // Manejar logo si se subió
@@ -82,17 +109,21 @@ class ClinicaController extends Controller
                     mkdir($directory, 0755, true);
                 }
                 
-                // Asegurar que la carpeta existe
-                $directory = storage_path('app/public/clinicas/logos');
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-                
                 $logoPath = $request->file('logo')->store('clinicas/logos', 'public');
                 $clinica->update(['logo' => $logoPath]);
             }
 
-            // Crear usuario administrador de la clínica
+            // Crear sucursal principal automáticamente
+            $sucursal = $clinica->sucursales()->create([
+                'nombre' => $request->nombre . ' - Principal',
+                'codigo' => 'SUC-' . str_pad($clinica->id, 3, '0', STR_PAD_LEFT) . '-001',
+                'direccion' => $request->direccion,
+                'telefono' => $request->telefono,
+                'es_principal' => true,
+                'activa' => true,
+            ]);
+
+            // Crear usuario administrador de la clínica (super admin)
             $admin = User::create([
                 'nombre' => $request->admin_nombre,
                 'apellidoPat' => $request->admin_apellidoPat,
@@ -101,29 +132,36 @@ class ClinicaController extends Controller
                 'password' => Hash::make($request->admin_password),
                 'cedula' => $request->admin_cedula,
                 'isAdmin' => true,
+                'isSuperAdmin' => true, // Super admin de la clínica
                 'clinica_id' => $clinica->id,
+                'sucursal_id' => $sucursal->id, // Asignar a sucursal principal
                 'email_verified' => true,
             ]);
 
             // Log de la transacción de pago
             \Log::info('Clínica registrada con pago exitoso', [
                 'clinica_id' => $clinica->id,
+                'sucursal_id' => $sucursal->id,
                 'plan' => $request->plan,
+                'duration' => $request->duration,
                 'precio_final' => $request->precio_final,
                 'cupon' => $request->cupon,
                 'payment_method' => $request->payment_method,
                 'transaction_id' => $request->transaction_id,
-                'admin_email' => $request->admin_email
+                'admin_email' => $request->admin_email,
+                'limites' => $limites
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Clínica registrada exitosamente. Puedes iniciar sesión con el email del administrador.',
-                'clinica' => $clinica->load('users'),
-                'admin' => $admin
+                'clinica' => $clinica->load('users', 'sucursales'),
+                'admin' => $admin,
+                'sucursal' => $sucursal
             ], 201);
 
         } catch (\Exception $e) {
+            \Log::error('Error al crear clínica: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear la clínica: ' . $e->getMessage()
@@ -232,21 +270,16 @@ class ClinicaController extends Controller
     }
 
     /**
-     * Calcular fecha de vencimiento basada en el plan
+     * Calcular fecha de vencimiento según duración
      */
-    private function calculateExpirationDate($plan)
+    private function calculateExpirationDate($duration)
     {
         $now = now();
         
-        switch ($plan) {
-            case 'mensual':
-                return $now->addMonth();
-            case 'trimestral':
-                return $now->addMonths(3);
-            case 'anual':
-                return $now->addYear();
-            default:
-                return $now->addMonth();
+        if ($duration === 'anual') {
+            return $now->addYear();
+        } else {
+            return $now->addMonth();
         }
     }
 
@@ -457,5 +490,34 @@ class ClinicaController extends Controller
                 'message' => 'Error al subir el logo: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Obtener límites según el plan
+     */
+    private function getPlanLimits($plan)
+    {
+        $limits = [
+            'profesional' => [
+                'sucursales' => 1,
+                'usuarios' => 3,
+                'pacientes' => 200,
+                'ia_mensual' => 500
+            ],
+            'clinica' => [
+                'sucursales' => 5,
+                'usuarios' => 15,
+                'pacientes' => 1000,
+                'ia_mensual' => 2500
+            ],
+            'empresarial' => [
+                'sucursales' => 999, // Ilimitado
+                'usuarios' => 999, // Ilimitado
+                'pacientes' => 999999, // Ilimitado
+                'ia_mensual' => 999999 // Ilimitado
+            ]
+        ];
+
+        return $limits[$plan] ?? $limits['profesional'];
     }
 }

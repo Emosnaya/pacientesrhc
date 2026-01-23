@@ -27,15 +27,22 @@ class DashboardController extends Controller
     public function getStats(Request $request)
     {
         try {
-            $clinicaId = $request->user()->clinica_id;
+            $user = $request->user();
+            $clinicaId = $user->clinica_id;
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Total de pacientes
-            $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
+            $query = Paciente::where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $totalPacientes = $query->count();
 
             // Pacientes activos (con actualización en últimos 30 días)
-            $pacientesActivos = Paciente::where('clinica_id', $clinicaId)
-                ->where('updated_at', '>=', now()->subDays(30))
-                ->count();
+            $query = Paciente::where('clinica_id', $clinicaId)
+                ->where('updated_at', '>=', now()->subDays(30));
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $pacientesActivos = $query->count();
 
             // Tasa de actividad
             $tasaActividad = $totalPacientes > 0
@@ -43,17 +50,19 @@ class DashboardController extends Controller
                 : 0;
 
             // Pacientes que requieren seguimiento (sin actividad en +14 días)
-            $requierenSeguimiento = Paciente::where('clinica_id', $clinicaId)
-                ->where('updated_at', '<', now()->subDays(14))
-                ->count();
+            $query = Paciente::where('clinica_id', $clinicaId)
+                ->where('updated_at', '<', now()->subDays(14));
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $requierenSeguimiento = $query->count();
 
             // Reportes de esta semana
-            $reportesSemanales = $this->countWeeklyReports($clinicaId);
+            $reportesSemanales = $this->countWeeklyReports($clinicaId, $sucursalId);
 
             // Pacientes nuevos esta semana
-            $pacientesNuevos = Paciente::where('clinica_id', $clinicaId)
-                ->where('created_at', '>=', now()->startOfWeek())
-                ->count();
+            $query = Paciente::where('clinica_id', $clinicaId)
+                ->where('created_at', '>=', now()->startOfWeek());
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $pacientesNuevos = $query->count();
 
             return response()->json([
                 'success' => true,
@@ -81,12 +90,21 @@ class DashboardController extends Controller
     public function getAlerts(Request $request)
     {
         try {
-            $clinicaId = $request->user()->clinica_id;
+            $user = $request->user();
+            $clinicaId = $user->clinica_id;
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Obtener pacientes sin actividad reciente
-            $pacientesSinSeguimiento = Paciente::where('clinica_id', $clinicaId)
-                ->where('updated_at', '<', now()->subDays(14))
-                ->select('id', 'nombre', 'apellidoPat', 'registro', 'updated_at')
+            $query = Paciente::where('clinica_id', $clinicaId)
+                ->where('updated_at', '<', now()->subDays(14));
+            
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
+            
+            $pacientesSinSeguimiento = $query->select('id', 'nombre', 'apellidoPat', 'registro', 'updated_at')
                 ->orderBy('updated_at', 'asc')
                 ->limit(10)
                 ->get();
@@ -125,16 +143,22 @@ class DashboardController extends Controller
         try {
             Log::info('📊 Generando insights del dashboard...');
 
-            $clinicaId = $request->user()->clinica_id;
+            $user = $request->user();
+            $clinicaId = $user->clinica_id;
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Obtener datos de pacientes
-            $pacientes = Paciente::where('clinica_id', $clinicaId)
-                ->select('id', 'nombre', 'apellidoPat', 'registro', 'created_at', 'updated_at')
+            $query = Paciente::where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            
+            $pacientes = $query->select('id', 'nombre', 'apellidoPat', 'registro', 'created_at', 'updated_at')
                 ->get()
                 ->toArray();
 
             // Obtener reportes recientes (última semana)
-            $reportes = $this->getRecentReports($clinicaId);
+            $reportes = $this->getRecentReports($clinicaId, $sucursalId);
 
             // Generar insights con IA
             $result = $this->aiService->generateDashboardInsights($pacientes, $reportes);
@@ -158,20 +182,23 @@ class DashboardController extends Controller
     /**
      * Contar reportes de la semana actual
      */
-    private function countWeeklyReports($clinicaId)
+    private function countWeeklyReports($clinicaId, $sucursalId = null)
     {
         $startOfWeek = now()->startOfWeek();
         
-        $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId) {
+        $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
-        $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId) {
+        $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
-        $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId) {
+        $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
         return $fisio + $psico + $nutri;
@@ -180,13 +207,14 @@ class DashboardController extends Controller
     /**
      * Obtener reportes recientes para análisis
      */
-    private function getRecentReports($clinicaId)
+    private function getRecentReports($clinicaId, $sucursalId = null)
     {
         $oneWeekAgo = now()->subDays(7);
 
         // Reportes de fisioterapia
-        $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId) {
+        $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)
         ->select('id', 'created_at')
@@ -196,8 +224,9 @@ class DashboardController extends Controller
         });
 
         // Reportes de psicología
-        $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId) {
+        $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)
         ->select('id', 'created_at')
@@ -207,8 +236,9 @@ class DashboardController extends Controller
         });
 
         // Reportes de nutrición
-        $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId) {
+        $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
             $query->where('clinica_id', $clinicaId);
+            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)
         ->select('id', 'created_at')

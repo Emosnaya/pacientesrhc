@@ -92,6 +92,8 @@ class EsfuerzoController extends Controller
             $nuevoPaciente->imc = $imc;
             $nuevoPaciente->user_id = $user->id;
             $nuevoPaciente->clinica_id = $user->clinica_id;
+            // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+            $nuevoPaciente->sucursal_id = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             $nuevoPaciente->save();
 
@@ -409,6 +411,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->user_id = $nuevoPaciente->user_id;
         $pesfuerzo->tipo_exp = 1;
         $pesfuerzo->clinica_id = $user->clinica_id;
+        $pesfuerzo->sucursal_id = $nuevoPaciente->sucursal_id;
 
         $pesfuerzo->paciente_id = $nuevoPaciente->id;
         $pesfuerzo->save();

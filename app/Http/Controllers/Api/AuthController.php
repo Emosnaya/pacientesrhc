@@ -91,6 +91,9 @@ class AuthController extends Controller
         $user = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Cargar la relación de la clínica para tener el tipo_clinica disponible
+        $user->load('clinica');
+
         return response()->json([
             'token' => $token,
             'user' => $user

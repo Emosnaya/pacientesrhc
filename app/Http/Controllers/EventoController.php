@@ -20,6 +20,13 @@ class EventoController extends Controller
 
             // Filtrar por clínica del usuario autenticado
             $query->forClinica($user->clinica_id);
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+            
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
 
             // Filtros
             if ($request->has('fecha')) {
@@ -60,9 +67,18 @@ class EventoController extends Controller
             $mes = $request->get('mes', now()->month);
             $año = $request->get('año', now()->year);
 
-            $eventos = Evento::forClinica($user->clinica_id)
-                ->byMonth($mes, $año)
-                ->orderBy('fecha', 'asc')
+            $query = Evento::forClinica($user->clinica_id)
+                ->byMonth($mes, $año);
+            
+            // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
+            // Si no viene en el request, usar la del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+            
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
+
+            $eventos = $query->orderBy('fecha', 'asc')
                 ->orderBy('hora', 'asc')
                 ->get();
 
@@ -115,9 +131,13 @@ class EventoController extends Controller
                 ], 422);
             }
 
+            // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
             $evento = Evento::create([
                 'user_id' => $user->id,
                 'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $sucursalId,
                 'tipo' => $data['tipo'],
                 'titulo' => $data['titulo'],
                 'descripcion' => $data['descripcion'] ?? null,

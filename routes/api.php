@@ -27,6 +27,8 @@ use App\Http\Controllers\CualidadFisicaController;
 use App\Http\Controllers\ReporteFinalPulmonarController;
 use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Http\Controllers\SucursalController;
+use App\Http\Controllers\HistoriaClinicaDentalController;
+use App\Http\Controllers\OdontogramaController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -45,7 +47,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return $request->user()->load(['sucursal', 'clinica']);
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     
@@ -77,6 +79,14 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/reporte',ReporteFinalController::class);
     Route::apiResource('/psico',ReportePsicoController::class);
     Route::apiResource('/nutri',ReporteNutriController::class);
+    
+    // Rutas de Historia Clínica Dental y Odontograma
+    Route::apiResource('/historia-dental', HistoriaClinicaDentalController::class);
+    Route::get('/historia-dental/paciente/{pacienteId}', [HistoriaClinicaDentalController::class, 'getByPaciente']);
+    Route::apiResource('/odontogramas', OdontogramaController::class);
+    Route::get('/odontogramas/paciente/{pacienteId}', [OdontogramaController::class, 'getByPaciente']);
+    Route::get('/odontogramas/paciente/{pacienteId}/latest', [OdontogramaController::class, 'getLatestByPaciente']);
+    
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
@@ -86,6 +96,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/fisioterapia/historia/imprimir/{id}',[PDFController::class,'historiaFisioterapiaPdf']);
     Route::get('/fisioterapia/evolucion/imprimir/{id}',[PDFController::class,'notaEvolucionFisioterapiaPdf']);
     Route::get('/fisioterapia/alta/imprimir/{id}',[PDFController::class,'notaAltaFisioterapiaPdf']);
+    Route::get('/historia-dental/imprimir/{id}',[PDFController::class,'historiaDentalPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     
     // Obtener lista de doctores con firma para seleccionar
@@ -246,6 +257,7 @@ Route::post('/reset-password/{token}', [AuthController::class, 'resetPassword'])
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
 
 // Rutas para registro de clínicas (públicas)
+Route::get('/clinicas/tipos', [\App\Http\Controllers\ClinicaController::class, 'getTipos']);
 Route::post('/clinicas', [\App\Http\Controllers\ClinicaController::class, 'store']);
 
 // Rutas para obtener información de clínicas (autenticadas)

@@ -65,6 +65,7 @@ class ReporteFisioController extends Controller
         $fisio->tipo_exp = 7;
         // Asignar el user_id del dueño del paciente
         $fisio->clinica_id = $user->clinica_id;
+        $fisio->sucursal_id = $paciente->sucursal_id;
         $fisio->save();
 
         return response()->json($fisio, 201);

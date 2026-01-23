@@ -25,6 +25,52 @@ class AIService
     }
 
     /**
+     * Obtener configuración del asistente según el tipo de clínica
+     */
+    protected function getAssistantConfig($tipoClinica)
+    {
+        $configs = [
+            'rehabilitacion_cardiopulmonar' => [
+                'name' => 'Dr. CardioBot',
+                'specialty' => 'cardiología y rehabilitación cardiopulmonar',
+                'description' => 'un asistente médico virtual especializado en cardiología y rehabilitación cardiopulmonar',
+                'focus' => 'salud cardiovascular y pulmonar',
+                'treatments' => 'tratamientos y procedimientos cardíacos y pulmonares'
+            ],
+            'fisioterapia' => [
+                'name' => 'FisioBot',
+                'specialty' => 'fisioterapia y rehabilitación física',
+                'description' => 'un asistente especializado en fisioterapia y rehabilitación física',
+                'focus' => 'rehabilitación motora, lesiones deportivas y terapia física',
+                'treatments' => 'tratamientos fisioterapéuticos, ejercicios de rehabilitación y terapia manual'
+            ],
+            'dental' => [
+                'name' => 'DentalBot',
+                'specialty' => 'odontología',
+                'description' => 'un asistente dental especializado en salud bucal',
+                'focus' => 'salud dental, prevención de caries y tratamientos odontológicos',
+                'treatments' => 'procedimientos dentales, ortodoncia, endodoncia y periodoncia'
+            ],
+            'psicologia' => [
+                'name' => 'PsicoBot',
+                'specialty' => 'psicología clínica',
+                'description' => 'un asistente psicológico especializado en salud mental',
+                'focus' => 'salud mental, terapia psicológica y bienestar emocional',
+                'treatments' => 'terapias psicológicas, técnicas de manejo emocional y apoyo psicológico'
+            ],
+            'nutricion' => [
+                'name' => 'NutriBot',
+                'specialty' => 'nutrición clínica',
+                'description' => 'un asistente nutricional especializado en alimentación saludable',
+                'focus' => 'nutrición, planes alimenticios y hábitos saludables',
+                'treatments' => 'planes nutricionales, dietas terapéuticas y educación alimentaria'
+            ]
+        ];
+
+        return $configs[$tipoClinica] ?? $configs['rehabilitacion_cardiopulmonar'];
+    }
+
+    /**
      * Seleccionar el mejor modelo disponible basado en uso actual
      */
     protected function selectBestModel()
@@ -446,6 +492,10 @@ Pacientes con mejoras significativas: $mejoras
     public function medicalChat($message, $conversationHistory = [], $contextoClinica = [])
     {
         try {
+            // Obtener configuración del asistente según el tipo de clínica
+            $tipoClinica = $contextoClinica['tipo_clinica'] ?? 'rehabilitacion_cardiopulmonar';
+            $assistantConfig = $this->getAssistantConfig($tipoClinica);
+            
             // Construir información contextual de la clínica
             $infoClinica = '';
             if (!empty($contextoClinica)) {
@@ -463,13 +513,13 @@ Pacientes con mejoras significativas: $mejoras
                 }
             }
 
-            $systemPrompt = "Eres Dr. CardioBot, un asistente médico virtual especializado en cardiología y rehabilitación cardíaca. 
+            $systemPrompt = "Eres {$assistantConfig['name']}, {$assistantConfig['description']}. 
             
 TUS CAPACIDADES:
-1. Responder preguntas médicas generales sobre salud cardiovascular
+1. Responder preguntas médicas generales sobre {$assistantConfig['focus']}
 2. Consultar información sobre citas de la clínica del usuario
 3. Ayudar a agendar citas (recopilando: nombre paciente, fecha preferida, hora, motivo)
-4. Proporcionar información sobre tratamientos y procedimientos cardíacos
+4. Proporcionar información sobre {$assistantConfig['treatments']}
 5. Dar consejos de prevención y estilo de vida saludable
 6. Consultar estadísticas y métricas de la clínica
 7. ACCIONES QUE PUEDES EJECUTAR (responde con el comando entre corchetes):
@@ -482,7 +532,8 @@ TUS CAPACIDADES:
    - Analizar estado del paciente: [ACCION:analizar_paciente|nombre:Juan Pérez]
    - Crear recordatorio: [ACCION:crear_evento|tipo:recordatorio|titulo:texto|fecha:2026-01-10|hora:14:00]
    - Ver métricas de citas: [ACCION:obtener_metricas]
-   - Ver analíticas de pacientes: [ACCION:obtener_analiticas_pacientes]{$infoClinica}
+   - Ver analíticas de pacientes: [ACCION:obtener_analiticas_pacientes]
+   - Contar citas de un paciente: [ACCION:contar_citas_paciente|nombre:Juan Pérez]{$infoClinica}
 
 REGLAS IMPORTANTES:
 - Puedes consultar las citas próximas cuando el usuario pregunte (ej: ¿Cuántas citas tengo hoy?, ¿Qué citas tengo mañana?)
@@ -539,6 +590,15 @@ Asistente: Voy a consultar las analíticas de tus pacientes. [ACCION:obtener_ana
 
 Usuario: Dame información sobre la edad de mis pacientes
 Asistente: Te muestro las estadísticas de edad de tus pacientes. [ACCION:obtener_analiticas_pacientes]
+
+Usuario: ¿Cuántas citas ha tenido Lidia Ilvea?
+Asistente: Voy a consultar el historial completo de citas de Lidia Ilvea. [ACCION:contar_citas_paciente|nombre:Lidia Ilvea]
+
+Usuario: Cuenta las citas de Juan Pérez
+Asistente: Voy a revisar cuántas citas ha tenido Juan Pérez. [ACCION:contar_citas_paciente|nombre:Juan Pérez]
+
+Usuario: Historial de citas de María López
+Asistente: Consultando el historial de citas de María López. [ACCION:contar_citas_paciente|nombre:María López]
 
 Usuario: ¿Qué es un electrocardiograma?
 Asistente: Un electrocardiograma (ECG) es una prueba que registra la actividad eléctrica del corazón. Es indolora, rápida (5-10 min) y ayuda a detectar problemas como arritmias o infartos. ¿Necesitas agendar uno?";

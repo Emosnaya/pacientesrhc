@@ -205,7 +205,7 @@
     <header class=" mb-0">
       <div class="paciente mt-0">
         <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
-        <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
+        <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
         <br>
           <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
           <p class="mb-1 mt-0 f-15">Por medio de este conducto me permito informarle de los por menores del programa de Rehabilitación Cardiaca</p>
@@ -387,7 +387,7 @@
     <div>
       <div class="paciente mt-0">
         <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
-        <img src="img/logo.png" alt="cercap logo" style="height: 90px" class="">
+        <img src="{{ $clinicaLogo }}" alt="logo clínica" style="height: 90px" class="">
         <br>
           <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
       </div>
