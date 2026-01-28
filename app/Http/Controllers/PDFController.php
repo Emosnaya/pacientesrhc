@@ -17,6 +17,7 @@ use App\Models\HistoriaClinicaFisioterapia;
 use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
 use App\Models\HistoriaClinicaDental;
+use App\Models\Odontograma;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -505,6 +506,29 @@ class PDFController extends Controller
         return $pdf->stream('Historia_Clinica_Dental.pdf');
     }
 
+    public function odontogramaPdf(Request $request)
+    {
+        $data = Odontograma::find($request->id);
+        
+        if (!$data) {
+            return response()->json(['error' => 'Odontograma no encontrado'], 404);
+        }
+
+        // Por ahora retornar error indicando que el PDF de odontograma no está implementado
+        return response()->json([
+            'error' => 'La vista PDF para Odontograma aún no está implementada. Próximamente disponible.',
+            'message' => 'El expediente se guardó correctamente, pero la visualización PDF está en desarrollo.'
+        ], 501);
+        
+        // TODO: Implementar vista blade para odontograma
+        // $paciente = Paciente::find($data->paciente_id);
+        // $user = $this->getDoctorParaFirma($request, $data->user_id);
+        // $clinica = $this->getClinicaInfo($user);
+        // $clinicaLogo = $this->getClinicaLogoBase64($user);
+        // $pdf = Pdf::loadView('odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
+        // return $pdf->stream('Odontograma.pdf');
+    }
+
     /**
      * Enviar expediente por correo
      */
@@ -512,7 +536,7 @@ class PDFController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'expediente_id' => 'required|integer',
-            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar,cualidad_fisica,reporte_final_pulmonar',
+            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar,cualidad_fisica,reporte_final_pulmonar,historia_dental,odontograma',
             'email' => 'required|email',
             'subject' => 'nullable|string|max:255',
             'message' => 'nullable|string|max:1000'
@@ -595,6 +619,18 @@ class PDFController extends Controller
                     $paciente = Paciente::find($data->paciente_id);
                     $user = $this->getDoctorParaFirma($request, $data->user_id);
                     $pdfFileName = 'Reporte_Final_Pulmonar.pdf';
+                    break;
+                case 'historia_dental':
+                    $data = HistoriaClinicaDental::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    $pdfFileName = 'Historia_Clinica_Dental.pdf';
+                    break;
+                case 'odontograma':
+                    $data = Odontograma::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    $user = $this->getDoctorParaFirma($request, $data->user_id ?? $paciente->user_id);
+                    $pdfFileName = 'Odontograma.pdf';
                     break;
             }
 

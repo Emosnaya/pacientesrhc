@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/fisioterapia/evolucion/imprimir/{id}',[PDFController::class,'notaEvolucionFisioterapiaPdf']);
     Route::get('/fisioterapia/alta/imprimir/{id}',[PDFController::class,'notaAltaFisioterapiaPdf']);
     Route::get('/historia-dental/imprimir/{id}',[PDFController::class,'historiaDentalPdf']);
+    Route::get('/odontogramas/imprimir/{id}',[PDFController::class,'odontogramaPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     
     // Obtener lista de doctores con firma para seleccionar

@@ -17,6 +17,8 @@ use App\Models\NotaAltaFisioterapia;
 use App\Models\CualidadFisica;
 use App\Models\ReporteFinalPulmonar;
 use App\Models\PruebaEsfuerzoPulmonar;
+use App\Models\HistoriaClinicaDental;
+use App\Models\Odontograma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -239,6 +241,34 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 17. Historia Clínica Dental
+        $historiasDentales = HistoriaClinicaDental::where('paciente_id', $pacienteId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 17,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Clínica Dental'
+                ];
+            });
+
+        // 18. Odontogramas
+        $odontogramas = Odontograma::where('paciente_id', $pacienteId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 18,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Odontograma'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -254,7 +284,9 @@ class ExpedienteUnificadoController extends Controller
             ->merge($altasFisioterapia)
             ->merge($cualidadesFisicas)
             ->merge($reportesFinalesPulmonares)
-            ->merge($pruebasEsfuerzoPulmonar);
+            ->merge($pruebasEsfuerzoPulmonar)
+            ->merge($historiasDentales)
+            ->merge($odontogramas);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();
