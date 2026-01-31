@@ -353,6 +353,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->r_qmax =  $data['rQmax'];
         $pesfuerzo->umbral_aeer_anaer = $data['umbralAer'];
         $pesfuerzo->po2_teor = $data['poTeorico'];
+        $pesfuerzo->vo2_max_percent = isset($data['vo2MaxPercent']) && $data['vo2MaxPercent'] !== '' ? $data['vo2MaxPercent'] : null;
         $pesfuerzo->fc_max_calc =  $fcMaxCalc;
         $pesfuerzo->fc_85 =  $fc85;
         $pesfuerzo->fc_max_alcanzado =  $fcMaxAlcanzado;
@@ -703,6 +704,7 @@ class EsfuerzoController extends Controller
         $esfuerzoFind->r_qmax =  $request['r_qmax'];
         $esfuerzoFind->umbral_aeer_anaer = $request['umbral_aeer_anaer'];
         $esfuerzoFind->po2_teor = $request['po2_teor'];
+        $esfuerzoFind->vo2_max_percent = isset($request['vo2_max_percent']) && $request['vo2_max_percent'] !== '' ? $request['vo2_max_percent'] : (isset($request['vo2MaxPercent']) && $request['vo2MaxPercent'] !== '' ? $request['vo2MaxPercent'] : null);
         $esfuerzoFind->fc_max_calc =  $fcMaxCalc;
         $esfuerzoFind->fc_85 =  $fc85;
         $esfuerzoFind->fc_max_alcanzado =  $fcMaxAlcanzado;

@@ -363,10 +363,10 @@
       </div>
         <p  class="f-bold mb-0 m-t-2">Tiempo de esfuerzo: <span class="f-normal">{{ round($data->tiempoEsfuerzo,2)}}  min (tiempo calculado correspondiente a protocolo de @if(isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo == 'pulmonar' && isset($data->naughton) && $data->naughton == 1) Naughton @elseif($data->bruce == 1) Bruce @elseif($data->balke == 1) Balke @else Bruce @endif) </span>
       <span class="f-bold">  Suspensión de la prueba : <span class="f-normal">{{$data->motivoSuspension}}</span></span></p> <p class="mt-0 mb-0"> <span class="f-bold">  METs Teórico: <span  class="f-normal">{{round($data->mets_teorico_general,2)}}</span></span>
-      <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">{{round($data->mets_max/$data->mets_teorico_general*100,2)}}</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
+      <span class="f-bold ml-3">  %METS max alcanzado: <span  class="f-normal">@if($data->medicionGases===1 && $data->vo2_max_percent !== null){{ round($data->vo2_max_percent, 2) }}@else{{ $data->mets_teorico_general != 0 ? round($data->mets_max/$data->mets_teorico_general*100,2) : '—' }}@endif</span></span> <span class="f-bold ml-3">  R. Pres: <span  class="f-normal">{{round($data->resp_presora,2)}}</span></span>
       <span class="f-bold ml-3">  MVo2(METs): <span  class="f-normal">{{round($data->mvo2/3.5*0.1,2)}}</span></span></p> <p class="mt-0 mb-0">  <span class="f-bold">  R. Cron: <span  class="f-normal">{{round($data->resp_crono,2)}}</span></span>
       <span class="f-bold ml-3">  TASmax/TASbasal: <span  class="f-normal">{{sprintf("%.2f", floor($data->indice_tas * 100) / 100);}}</span></span>  <span class="f-bold ml-3">  IEM: <span  class="f-normal">{{sprintf("%.2f", floor($data->iem * 100) / 100);}}</span></span>
-      <span class="f-bold ml-3">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold ml-3">  Rec TAS (3/1): <span  class="f-normal">{{sprintf("%.2f", floor(($data->tas_3er_min/$data->tas_1er_min) * 100) / 100);}}</span></span>
+      <span class="f-bold ml-3">  Recup. FC al 1er min (lpm): <span  class="f-normal">{{$data->fcmax_fc1er}}</span></span>  <span class="f-bold ml-3">  Rec TAS (3/1): <span  class="f-normal">{{ $data->tas_1er_min != 0 ? sprintf("%.2f", floor(($data->tas_3er_min/$data->tas_1er_min) * 100) / 100) : '—' }}</span></span>
       <span class="f-bold ml-5">  PCE (mmHg%): <span  class="f-normal">{{round($data->pce)}}</span></span></p>
   </div>
 </div>
@@ -386,28 +386,6 @@
       <div class="linea-is"></div>
     </div>
     <div class="table-container-g ml-2 bck-gray">
-      <table class="table-g">  
-        <thead class="thead-striped">
-          <tr>
-            <th scope="col" class="f-bold border-t">Ind. tobillo/brazo(ITB)</th>
-            <th scope="col" class="border-t">Basal</th>
-            <th scope="col" class="border-t">Post-esfuerzo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row" class="border-t">Pie derecho</th>
-            <td class="border-t">NV</td>
-            <td class="border-t">NV</td>
-          </tr>
-          <tr>
-            <th scope="row" class="border-t">Pie Izquierdo</th>
-            <td class="border-t">NV</td>
-            <td class="border-t">NV</td>
-          </tr>
-        </tbody>
-        </table>
-        <span class="f-7 m-t-07">>0.9= Normal <span class="ml-3">0.41-0.9=Leve</span> <span class="ml-3">0.41-0.7= Moderada</span> <span class="ml-3"> &lt;0.40 = Grave</span></span>
       </div>
       <div class="ml-2 text-container-g bck-gray">
         <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}}</span></p>
@@ -416,10 +394,9 @@
   </div>
   <br>
   <br>
-  <br>
   </div>
   <div class="paciente mt-0">
-    <p class="f-bold text-sm bck-gray" >Tipo de isquemia: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
+    <p class="f-bold text-sm bck-gray" >Tipo de cambio: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
     <div class="contenedor ">
       <h2 class="h5 titulo m-t-0">Arritmias</h2>
       <div class="linea-ar"></div>
