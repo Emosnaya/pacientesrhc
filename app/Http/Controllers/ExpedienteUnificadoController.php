@@ -19,6 +19,7 @@ use App\Models\ReporteFinalPulmonar;
 use App\Models\PruebaEsfuerzoPulmonar;
 use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
+use App\Models\NotaSeguimientoPulmonar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -147,7 +148,7 @@ class ExpedienteUnificadoController extends Controller
                     'fecha' => $item->fecha_consulta,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
-                    'tipo_nombre' => 'Expediente Pulmonar'
+                    'tipo_nombre' => 'Expediente Clínico Pulmonar'
                 ];
             });
 
@@ -269,6 +270,21 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 19. Notas de Seguimiento Pulmonar
+        $notasSeguimientoPulmonar = NotaSeguimientoPulmonar::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $user->clinica_id)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 19,
+                    'fecha' => $item->fecha_consulta,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Nota de Seguimiento Pulmonar'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -286,7 +302,8 @@ class ExpedienteUnificadoController extends Controller
             ->merge($reportesFinalesPulmonares)
             ->merge($pruebasEsfuerzoPulmonar)
             ->merge($historiasDentales)
-            ->merge($odontogramas);
+            ->merge($odontogramas)
+            ->merge($notasSeguimientoPulmonar);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

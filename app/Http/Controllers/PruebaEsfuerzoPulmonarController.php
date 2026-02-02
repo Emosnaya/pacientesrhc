@@ -299,19 +299,19 @@ class PruebaEsfuerzoPulmonarController extends Controller
 
         $data = $prueba;
         $paciente = $prueba->paciente;
-        $usuario = $prueba->user;
+        // Usar el médico que realizó la prueba para nombre y firma en el PDF
+        $userParaFirma = $prueba->user ?? $user;
 
-        // Get firma if exists
+        // Obtener firma digital (mismo criterio que PDFController)
         $firmaBase64 = null;
-        if ($usuario->firma) {
-            $firmaPath = storage_path('app/public/' . $usuario->firma);
-            if (file_exists($firmaPath)) {
-                $firmaData = file_get_contents($firmaPath);
-                $firmaBase64 = 'data:image/png;base64,' . base64_encode($firmaData);
-            }
+        if ($userParaFirma && $userParaFirma->firma_digital && file_exists(public_path('storage/' . $userParaFirma->firma_digital))) {
+            $imagePath = public_path('storage/' . $userParaFirma->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = PDF::loadView('pruebaesfuerzopulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = PDF::loadView('pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->stream('prueba_esfuerzo_pulmonar_' . $paciente->registro . '.pdf');
@@ -332,19 +332,19 @@ class PruebaEsfuerzoPulmonarController extends Controller
 
         $data = $prueba;
         $paciente = $prueba->paciente;
-        $usuario = $prueba->user;
+        // Usar el médico que realizó la prueba para nombre y firma en el PDF
+        $userParaFirma = $prueba->user ?? $user;
 
-        // Get firma if exists
+        // Obtener firma digital (mismo criterio que PDFController)
         $firmaBase64 = null;
-        if ($usuario->firma) {
-            $firmaPath = storage_path('app/public/' . $usuario->firma);
-            if (file_exists($firmaPath)) {
-                $firmaData = file_get_contents($firmaPath);
-                $firmaBase64 = 'data:image/png;base64,' . base64_encode($firmaData);
-            }
+        if ($userParaFirma && $userParaFirma->firma_digital && file_exists(public_path('storage/' . $userParaFirma->firma_digital))) {
+            $imagePath = public_path('storage/' . $userParaFirma->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = PDF::loadView('pruebaesfuerzopulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+        $pdf = PDF::loadView('pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('prueba_esfuerzo_pulmonar_' . $paciente->registro . '.pdf');

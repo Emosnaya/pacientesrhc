@@ -18,6 +18,7 @@ use App\Models\NotaEvolucionFisioterapia;
 use App\Models\NotaAltaFisioterapia;
 use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
+use App\Models\NotaSeguimientoPulmonar;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -481,6 +482,30 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Alta_Fisioterapia.pdf');
+    }
+
+    public function notaSeguimientoPulmonarPdf(Request $request)
+    {
+        $data = NotaSeguimientoPulmonar::find($request->id);
+        if (!$data) {
+            abort(404);
+        }
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
+
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
+
+        $firmaBase64 = null;
+        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
+            $imagePath = public_path('storage/' . $user->firma_digital);
+            $imageData = file_get_contents($imagePath);
+            $imageType = mime_content_type($imagePath);
+            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        }
+
+        $pdf = Pdf::loadView('nota_seguimiento_pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        return $pdf->stream('Nota_Seguimiento_Pulmonar.pdf');
     }
 
     public function historiaDentalPdf(Request $request)

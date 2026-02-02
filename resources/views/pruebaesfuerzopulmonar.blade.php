@@ -391,14 +391,16 @@
 
         <!-- Firma -->
         <div style="margin-top: 30px; text-align: center;">
-            @if(isset($firmaBase64))
+            @if(isset($firmaBase64) && $firmaBase64)
                 <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px; height: auto">
             @endif
+            @if(isset($userParaFirma) && $userParaFirma)
             <div style="border-top: 2px solid #000; width: 300px; margin: 5px auto 5px auto;"></div>
-            <p class="f-10 f-bold mb-1">{{ $user->name }}</p>
+            <p class="f-10 f-bold mb-1">Dr. {{ trim($userParaFirma->nombre . ' ' . ($userParaFirma->apellidoPat ?? '')) }}</p>
             <p class="f-9 mb-1">Médico Especialista en Medicina de Rehabilitación</p>
-            @if($user->cedula_profesional)
-            <p class="f-9">Cédula: {{ $user->cedula_profesional }}</p>
+            @if(!empty($userParaFirma->cedula))
+            <p class="f-9">Cédula Profesional: {{ $userParaFirma->cedula }}</p>
+            @endif
             @endif
         </div>
     </main>

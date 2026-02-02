@@ -29,6 +29,7 @@ use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
+use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -98,6 +99,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/fisioterapia/alta/imprimir/{id}',[PDFController::class,'notaAltaFisioterapiaPdf']);
     Route::get('/historia-dental/imprimir/{id}',[PDFController::class,'historiaDentalPdf']);
     Route::get('/odontogramas/imprimir/{id}',[PDFController::class,'odontogramaPdf']);
+    Route::get('/nota-seguimiento-pulmonar/imprimir/{id}', [PDFController::class, 'notaSeguimientoPulmonarPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     
     // Obtener lista de doctores con firma para seleccionar
@@ -215,6 +217,15 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::delete('/{id}', [ReporteFinalPulmonarController::class, 'destroy']);
         Route::get('/{id}/print', [ReporteFinalPulmonarController::class, 'print']);
         Route::get('/{id}/download', [ReporteFinalPulmonarController::class, 'download']);
+    });
+
+    // Rutas para Nota de Seguimiento Pulmonar
+    Route::prefix('nota-seguimiento-pulmonar')->group(function () {
+        Route::get('/', [NotaSeguimientoPulmonarController::class, 'index']);
+        Route::post('/', [NotaSeguimientoPulmonarController::class, 'store']);
+        Route::get('/{id}', [NotaSeguimientoPulmonarController::class, 'show']);
+        Route::put('/{id}', [NotaSeguimientoPulmonarController::class, 'update']);
+        Route::delete('/{id}', [NotaSeguimientoPulmonarController::class, 'destroy']);
     });
 
     // Rutas para Prueba de Esfuerzo Pulmonar
