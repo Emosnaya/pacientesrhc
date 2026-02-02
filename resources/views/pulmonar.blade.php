@@ -379,6 +379,10 @@
                   <td class="border-r f-bold">Antecedentes Traumáticos</td>
                   <td colspan="3" class="text-lft">{{ $data->antecedentes_traumaticos ?: 'No registrado' }}</td>
                 </tr>
+                <tr>
+                  <td class="border-r f-bold">Exposicionales</td>
+                  <td colspan="3" class="text-lft">{{ $data->antecedentes_exposicionales ?: 'No registrado' }}</td>
+                </tr>
               </tbody>
         </table>
 
@@ -566,71 +570,51 @@
               </tbody>
         </table>
 
-        <!-- Pruebas Funcionales - Inicial vs Final -->
+        <!-- Pruebas Funcionales -->
         <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Pruebas Funcionales - Comparativo</h2>
+            <h2 class="h8 titulo">Pruebas Funcionales</h2>
             <div class="linea-eval"></div>
         </div>
         <table class="tabla text-lft border-t text-center m-t-0 table-striped">
             <thead>
                 <tr>
-                  <th class="border-r f-bold" style="width: 40%;">Prueba</th>
-                  <th class="border-r f-bold" style="width: 30%;">Valor Inicial</th>
-                  <th class="f-bold" style="width: 30%;">Valor Final</th>
+                  <th class="border-r f-bold" style="width: 50%;">Prueba</th>
+                  <th class="f-bold" style="width: 50%;">Valor</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                   <td class="border-r f-bold text-lft">Sit to Stand 5 rep (seg)</td>
-                  <td class="border-r">{{ $data->sit_to_stand_5rep ?: 'N/A' }}</td>
-                  <td>{{ $data->sit_to_stand_5rep_final ?: 'N/A' }}</td>
+                  <td>{{ $data->sit_to_stand_5rep ?: 'N/A' }}</td>
                 </tr>
                 <tr>
                   <td class="border-r f-bold text-lft">Sit to Stand 30s (rep)</td>
-                  <td class="border-r">{{ $data->sit_to_stand_30seg ?: 'N/A' }}</td>
-                  <td>{{ $data->sit_to_stand_30seg_final ?: 'N/A' }}</td>
+                  <td>{{ $data->sit_to_stand_30seg ?: 'N/A' }}</td>
                 </tr>
                 <tr>
                   <td class="border-r f-bold text-lft">Sit to Stand 60s (rep)</td>
-                  <td class="border-r">{{ $data->sit_to_stand_60seg ?: 'N/A' }}</td>
-                  <td>{{ $data->sit_to_stand_60seg_final ?: 'N/A' }}</td>
+                  <td>{{ $data->sit_to_stand_60seg ?: 'N/A' }}</td>
                 </tr>
                 <tr>
                   <td class="border-r f-bold text-lft">Dinamometría Derecha (kg)</td>
-                  <td class="border-r">{{ $data->dinamometria_derecha ?: 'N/A' }}</td>
-                  <td>{{ $data->dinamometria_derecha_final ?: 'N/A' }}</td>
+                  <td>{{ $data->dinamometria_derecha ?: 'N/A' }}</td>
                 </tr>
                 <tr>
                   <td class="border-r f-bold text-lft">Dinamometría Izquierda (kg)</td>
-                  <td class="border-r">{{ $data->dinamometria_izquierda ?: 'N/A' }}</td>
-                  <td>{{ $data->dinamometria_izquierda_final ?: 'N/A' }}</td>
-                </tr>
-              </tbody>
-        </table>
-
-        <!-- Signos Vitales Finales -->
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Signos Vitales Finales</h2>
-            <div class="linea-eval"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
-            <tbody>
-                <tr>
-                  <td class="border-r f-bold" style="width: 25%;">SAT Final (%)</td>
-                  <td class="border-r" style="width: 25%;">{{ $data->sat_final ?: 'N/A' }}</td>
-                  <td class="border-r f-bold" style="width: 25%;">FC Final (lpm)</td>
-                  <td style="width: 25%;">{{ $data->fc_final ?: 'N/A' }}</td>
+                  <td>{{ $data->dinamometria_izquierda ?: 'N/A' }}</td>
                 </tr>
                 <tr>
-                  <td class="border-r f-bold">Nadir (%)</td>
-                  <td class="border-r">{{ $data->nadir ?: 'N/A' }}</td>
-                  <td class="border-r f-bold">FC Pico (lpm)</td>
-                  <td>{{ $data->fc_pico ?: 'N/A' }}</td>
+                  <td class="border-r f-bold text-lft">Signos vitales iniciales</td>
+                  <td class="text-lft">FC: {{ $data->fc_inicial ?: 'N/A' }} · SAT: {{ $data->sat_inicial ?: 'N/A' }} · Fio2: {{ $data->fio2_inicial ?? 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <td class="border-r f-bold text-lft">Signos vitales finales</td>
+                  <td class="text-lft">FC: {{ $data->fc_final ?: 'N/A' }} · SAT: {{ $data->sat_final ?: 'N/A' }} · Fio2: {{ $data->fio2_final ?? 'N/A' }}</td>
                 </tr>
                 @if($data->otros_exploracion)
                 <tr>
                   <td class="border-r f-bold">Otros hallazgos</td>
-                  <td colspan="3" class="text-lft text-jst">{{ $data->otros_exploracion }}</td>
+                  <td class="text-lft text-jst">{{ $data->otros_exploracion }}</td>
                 </tr>
                 @endif
               </tbody>
