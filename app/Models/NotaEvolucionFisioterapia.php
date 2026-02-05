@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class NotaEvolucionFisioterapia extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'nota_evolucion_fisioterapia';
 
@@ -31,6 +32,14 @@ class NotaEvolucionFisioterapia extends Model
         'fecha' => 'date',
         'hora' => 'datetime:H:i',
         'dolor_eva' => 'integer',
+        // Cifrado de campos sensibles
+        'diagnostico_fisioterapeutico' => 'encrypted',
+        'observaciones_subjetivas' => 'encrypted',
+        'observaciones_objetivas' => 'encrypted',
+        'tecnicas_modalidades_aplicadas' => 'encrypted',
+        'ejercicio_terapeutico' => 'encrypted',
+        'respuesta_tratamiento' => 'encrypted',
+        'plan' => 'encrypted',
     ];
 
     public function paciente()

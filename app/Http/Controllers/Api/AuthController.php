@@ -32,6 +32,7 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'cedula' => $validated['cedula'],
             'password' => Hash::make($validated['password']),
+            'rol' => $validated['rol'] ?? null,
             'isAdmin' => filter_var($validated['isAdmin'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'imagen' => 'perfiles/avatar-default.png', // Imagen por defecto
             'email_verification_token' => $verificationToken,

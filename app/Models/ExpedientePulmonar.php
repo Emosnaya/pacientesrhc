@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ExpedientePulmonar extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     /**
      * The attributes that are mass assignable.
@@ -107,7 +108,19 @@ class ExpedientePulmonar extends Model
         'enfermedades_cronicas' => 'array',
         'medicamentos_actuales' => 'array',
         'dinamometria_derecha' => 'decimal:2',
-        'dinamometria_izquierda' => 'decimal:2'
+        'dinamometria_izquierda' => 'decimal:2',
+        // Campos cifrados para cumplir NOM-024
+        'antecedentes_heredo_familiares' => 'encrypted',
+        'antecedentes_alergicos' => 'encrypted',
+        'antecedentes_quirurgicos' => 'encrypted',
+        'antecedentes_traumaticos' => 'encrypted',
+        'antecedentes_exposicionales' => 'encrypted',
+        'tabaquismo_detalle' => 'encrypted',
+        'alcoholismo_detalle' => 'encrypted',
+        'toxicomanias_detalle' => 'encrypted',
+        'diagnosticos_finales' => 'encrypted',
+        'plan_tratamiento' => 'encrypted',
+        'motivo_envio' => 'encrypted',
     ];
 
     /**

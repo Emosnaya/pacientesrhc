@@ -420,19 +420,18 @@
     <div class="paciente mt-4">
       <p  class="f-15 f-normal mb-5">Agradeciendo su confianza y preferencia. Aprovecho para enviarle un cordial saludo y quedo a sus órdenes.</p>
     </div>
+    @if(isset($firmaBase64) && $firmaBase64)
     <div class="paciente mt-5">
       <p  class="f-15 f-normal mb-5">Atentamente,</p>
     </div>
     <div class="paciente mt-5 text-left">
-      @if($firmaBase64)
-        <div class="signature">
-          <img src="{{ $firmaBase64 }}" alt="Firma Digital">
-        </div>
-      @endif
-      <p  class="f-15 f-bold mb-0">Dr <span>{{$user->nombre . ' ' . $user->apellidoPat }}</span></p>
+      <div class="signature">
+        <img src="{{ $firmaBase64 }}" alt="Firma Digital">
+      </div>
+      <p  class="f-15 f-bold mb-0">{{ $user->nombre_con_titulo }}</p>
       <p  class="f-15 f-normal mb-2">Rehabilitación Cardiaca.</p>
-      
     </div>
+    @endif
     <div class="medio marg-final">
       <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
     </div>

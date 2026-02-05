@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PruebaEsfuerzoPulmonar extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'paciente_id',
@@ -99,6 +100,9 @@ class PruebaEsfuerzoPulmonar extends Model
         'plan_banda_sin_fin' => 'boolean',
         'plan_ergometro_brazos' => 'boolean',
         'plan_bicicleta_estatica' => 'boolean',
+        // Campos sensibles cifrados
+        'interpretacion' => 'encrypted',
+        'plan_manejo_complementario' => 'encrypted',
     ];
 
     public function paciente()

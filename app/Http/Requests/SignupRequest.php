@@ -38,7 +38,8 @@ class SignupRequest extends FormRequest
                     ->symbols()
                     ->numbers() 
             ],
-            'isAdmin' => 'string'
+            'isAdmin' => 'string',
+            'rol' => 'nullable|string|in:' . (config('roles.validacion_in') ?? 'doctor,doctora,licenciado,recepcionista,administrativo,laboratorista'),
         ];
     }
     public function messages(){

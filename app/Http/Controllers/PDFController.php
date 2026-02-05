@@ -19,6 +19,7 @@ use App\Models\NotaAltaFisioterapia;
 use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
 use App\Models\NotaSeguimientoPulmonar;
+use App\Models\Receta;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -31,72 +32,55 @@ use Illuminate\Support\Facades\Auth;
 class PDFController extends Controller
 {
     /**
-     * Obtener el doctor que firmará el documento
-     * Prioridad:
-     * 1. doctor_firma_id enviado en el request (si tiene firma digital)
-     * 2. Usuario actual autenticado (si tiene firma digital)
-     * 3. Primer doctor de la clínica con firma digital
-     * 4. Usuario que creó el expediente (fallback)
+     * Quien firma el PDF. Por seguridad NUNCA se acepta doctor_firma_id del request:
+     * solo la firma del usuario actual o sin firma.
+     * - Usuario actual con firma digital cargada → se usa su firma.
+     * - Sin firma cargada o no logueado → null (PDF sin apartado de doctor/firma).
      */
     private function getDoctorParaFirma(Request $request, $creadorUserId)
     {
-        \Log::info('🔍 getDoctorParaFirma - Parametros recibidos', [
-            'doctor_firma_id_en_request' => $request->doctor_firma_id ?? 'NO EXISTE',
-            'creador_user_id' => $creadorUserId,
-            'all_request' => $request->all()
-        ]);
-
-        // 1. Si envían doctor_firma_id específico
-        if ($request->has('doctor_firma_id') && $request->doctor_firma_id) {
-            $doctorSeleccionado = User::where('id', $request->doctor_firma_id)
-                ->whereNotNull('firma_digital')
-                ->first();
-            
-            if ($doctorSeleccionado) {
-                \Log::info('✅ Doctor seleccionado por doctor_firma_id', [
-                    'doctor_id' => $doctorSeleccionado->id,
-                    'nombre' => $doctorSeleccionado->nombre
-                ]);
-                return $doctorSeleccionado;
-            } else {
-                \Log::warning('⚠️ doctor_firma_id proporcionado pero doctor no encontrado o sin firma', [
-                    'doctor_firma_id' => $request->doctor_firma_id
-                ]);
-            }
+        $usuarioActual = Auth::user();
+        if (!$usuarioActual) {
+            return User::find($creadorUserId);
         }
 
-        // 2. Usuario actual si tiene firma
-        $usuarioActual = Auth::user();
-        if ($usuarioActual && $usuarioActual->firma_digital) {
-            \Log::info('✅ Usando usuario actual con firma', [
-                'user_id' => $usuarioActual->id,
-                'nombre' => $usuarioActual->nombre
-            ]);
+        // Si el usuario actual tiene firma digital cargada, firmar con su propia firma (sin depender del rol)
+        if ($usuarioActual->firma_digital) {
             return $usuarioActual;
         }
 
-        // 3. Buscar cualquier doctor de la clínica con firma
-        if ($usuarioActual) {
-            $doctorConFirma = User::where('clinica_id', $usuarioActual->clinica_id)
-                ->whereNotNull('firma_digital')
-                ->first();
-            
-            if ($doctorConFirma) {
-                \Log::info('✅ Usando doctor de la clínica con firma', [
-                    'doctor_id' => $doctorConFirma->id,
-                    'nombre' => $doctorConFirma->nombre
-                ]);
-                return $doctorConFirma;
-            }
-        }
+        return null;
+    }
 
-        // 4. Fallback: usuario que creó el expediente
-        $creador = User::find($creadorUserId);
-        \Log::info('✅ Fallback: usando creador del expediente', [
-            'user_id' => $creador->id ?? null,
-            'nombre' => $creador->nombre ?? null
-        ]);
-        return $creador;
+    /**
+     * Resolver usuario para PDF: quien firma (puede ser null si es administrativo) y usuario para clinica/logo.
+     */
+    private function resolveUsuarioPdf(Request $request, $creadorUserId): array
+    {
+        $userFirma = $this->getDoctorParaFirma($request, $creadorUserId);
+        $user = $userFirma ?? User::find($creadorUserId) ?? Auth::user();
+        return [$user, $userFirma];
+    }
+
+    /**
+     * Obtener firma digital del usuario en base64 (data URL).
+     * Prueba public/storage y storage/app/public por si no existe el symlink.
+     */
+    private function getFirmaBase64($user): ?string
+    {
+        if (!$user || !$user->firma_digital) {
+            return null;
+        }
+        $path = public_path('storage/' . $user->firma_digital);
+        if (!file_exists($path)) {
+            $path = storage_path('app/public/' . $user->firma_digital);
+        }
+        if (!file_exists($path)) {
+            return null;
+        }
+        $imageData = file_get_contents($path);
+        $imageType = mime_content_type($path);
+        return 'data:' . $imageType . ';base64,' . base64_encode($imageData);
     }
 
     /**
@@ -271,22 +255,15 @@ class PDFController extends Controller
     {
         $data = Esfuerzo::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64')); // Cargar vista PDF con datos
+        $pdf = Pdf::loadView('cardiaca.esfuerzo', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64')); // Cargar vista PDF con datos
 
         // Nombre del archivo según el tipo de esfuerzo
         $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
@@ -299,22 +276,15 @@ class PDFController extends Controller
     {
         $data = Estratificacion::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('estrati', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
+        $pdf = Pdf::loadView('cardiaca.estrati', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
         return $pdf->stream('Estratificacion.pdf'); 
     }
 
@@ -322,22 +292,15 @@ class PDFController extends Controller
     {
         $data = Clinico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('clinico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
+        $pdf = Pdf::loadView('cardiaca.clinico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
         return $pdf->stream('Clinico.pdf'); 
     }
     public function reportePdf(Request $request)
@@ -346,31 +309,24 @@ class PDFController extends Controller
         $esfuerzoUno = Esfuerzo::find($data->pe_1);
         $esfuerzoDos = Esfuerzo::find($data->pe_2);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
-        
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Reporte_Final.pdf'); 
     }
     public function psicoPdf(Request $request)
     {
         $data = ReportePsico::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
@@ -382,8 +338,8 @@ class PDFController extends Controller
     {
         $data = ReporteNutri::find($request->id);
         $paciente =  Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
@@ -396,22 +352,15 @@ class PDFController extends Controller
     {
         $data = ExpedientePulmonar::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        $pdf = Pdf::loadView('pulmonar.pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Expediente_Pulmonar.pdf'); 
     }
 
@@ -419,20 +368,13 @@ class PDFController extends Controller
     {
         $data = HistoriaClinicaFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $paciente->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
         $pdf = Pdf::loadView('fisioterapia.historia', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Historia_Clinica_Fisioterapia.pdf');
@@ -442,20 +384,13 @@ class PDFController extends Controller
     {
         $data = NotaEvolucionFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $paciente->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
         $pdf = Pdf::loadView('fisioterapia.evolucion', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Evolucion_Fisioterapia.pdf');
@@ -465,20 +400,13 @@ class PDFController extends Controller
     {
         $data = NotaAltaFisioterapia::find($request->id);
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $paciente->user_id);
-        
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $paciente->user_id);
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
         $pdf = Pdf::loadView('fisioterapia.alta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Alta_Fisioterapia.pdf');
@@ -491,44 +419,68 @@ class PDFController extends Controller
             abort(404);
         }
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
 
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
 
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-        }
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('nota_seguimiento_pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        $pdf = Pdf::loadView('pulmonar.nota_seguimiento_pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
         return $pdf->stream('Nota_Seguimiento_Pulmonar.pdf');
     }
 
     public function historiaDentalPdf(Request $request)
     {
         $data = HistoriaClinicaDental::find($request->id);
+        if (!$data) {
+            abort(404, 'Historia clínica dental no encontrada');
+        }
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
-        
+        if (!$paciente) {
+            abort(404, 'Paciente no encontrado');
+        }
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+        if (!$user) {
+            abort(404, 'No se pudo determinar el médico para la firma');
+        }
+
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
 
-        // Preparar firma digital si existe
-        $firmaBase64 = null;
-        if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-            $imagePath = public_path('storage/' . $user->firma_digital);
-            $imageData = file_get_contents($imagePath);
-            $imageType = mime_content_type($imagePath);
-            $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
+
+        $pdf = Pdf::loadView('dental.historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        return $pdf->stream('Historia_Clinica_Dental.pdf');
+    }
+
+    /**
+     * PDF de Receta Médica
+     */
+    public function recetaPdf(Request $request, $id)
+    {
+        $data = Receta::with('medicamentos')->find($id);
+        if (!$data) {
+            abort(404, 'Receta no encontrada');
+        }
+        $paciente = Paciente::find($data->paciente_id);
+        if (!$paciente) {
+            abort(404, 'Paciente no encontrado');
+        }
+        $userFirma = $this->getDoctorParaFirma($request, $data->user_id);
+        $user = $userFirma ?? User::find($data->user_id) ?? Auth::user();
+        if (!$user) {
+            abort(404, 'No se pudo determinar el médico para la firma');
         }
 
-        $pdf = Pdf::loadView('historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
-        return $pdf->stream('Historia_Clinica_Dental.pdf');
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
+
+        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        return $pdf->stream('Receta_Medica.pdf');
     }
 
     public function odontogramaPdf(Request $request)
@@ -539,19 +491,25 @@ class PDFController extends Controller
             return response()->json(['error' => 'Odontograma no encontrado'], 404);
         }
 
-        // Por ahora retornar error indicando que el PDF de odontograma no está implementado
-        return response()->json([
-            'error' => 'La vista PDF para Odontograma aún no está implementada. Próximamente disponible.',
-            'message' => 'El expediente se guardó correctamente, pero la visualización PDF está en desarrollo.'
-        ], 501);
+        $paciente = Paciente::find($data->paciente_id);
+        $user = $this->getDoctorParaFirma($request, $data->user_id);
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
         
-        // TODO: Implementar vista blade para odontograma
-        // $paciente = Paciente::find($data->paciente_id);
-        // $user = $this->getDoctorParaFirma($request, $data->user_id);
-        // $clinica = $this->getClinicaInfo($user);
-        // $clinicaLogo = $this->getClinicaLogoBase64($user);
-        // $pdf = Pdf::loadView('odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
-        // return $pdf->stream('Odontograma.pdf');
+        // Obtener firma base64
+        $firmaBase64 = null;
+        if ($user->firma) {
+            $firmaPath = storage_path('app/public/' . $user->firma);
+            if (file_exists($firmaPath)) {
+                $firmaBase64 = $this->getFirmaBase64($user);
+            }
+        }
+
+        // Decodificar los dientes (están guardados como JSON)
+        $dientes = is_string($data->dientes) ? json_decode($data->dientes, true) : $data->dientes;
+
+        $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64', 'dientes'));
+        return $pdf->stream('Odontograma_' . $paciente->nombre . '_' . $paciente->apellido_paterno . '.pdf');
     }
 
     /**
@@ -581,80 +539,81 @@ class PDFController extends Controller
             $data = null;
             $paciente = null;
             $user = null;
+            $userFirma = null;
             $pdfFileName = '';
 
             switch ($expedienteType) {
                 case 'esfuerzo':
                     $data = Esfuerzo::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $tipoEsfuerzo = $data->tipo_esfuerzo ?? 'cardiaco';
                     $pdfFileName = $tipoEsfuerzo === 'pulmonar' ? 'Prueba_Esfuerzo_Pulmonar.pdf' : 'Prueba_Esfuerzo_Cardiaca.pdf';
                     break;
                 case 'estratificacion':
                     $data = Estratificacion::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Estratificacion.pdf';
                     break;
                 case 'clinico':
                     $data = Clinico::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Clinico.pdf';
                     break;
                 case 'reporte_final':
                     $data = ReporteFinal::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Reporte_Final.pdf';
                     break;
                 case 'reporte_psico':
                     $data = ReportePsico::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Reporte_Psico.pdf';
                     break;
                 case 'reporte_nutri':
                     $data = ReporteNutri::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Reporte_Nutri.pdf';
                     break;
                 case 'reporte_fisio':
                     $data = ReporteFisio::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id ?? $paciente->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Reporte_Fisio.pdf';
                     break;
                 case 'expediente_pulmonar':
                     $data = ExpedientePulmonar::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Expediente_Pulmonar.pdf';
                     break;
                 case 'cualidad_fisica':
                     $data = CualidadFisica::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Cualidades_Fisicas.pdf';
                     break;
                 case 'reporte_final_pulmonar':
                     $data = ReporteFinalPulmonar::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Reporte_Final_Pulmonar.pdf';
                     break;
                 case 'historia_dental':
                     $data = HistoriaClinicaDental::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
                     $pdfFileName = 'Historia_Clinica_Dental.pdf';
                     break;
                 case 'odontograma':
                     $data = Odontograma::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    $user = $this->getDoctorParaFirma($request, $data->user_id ?? $paciente->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Odontograma.pdf';
                     break;
             }
@@ -694,40 +653,26 @@ class PDFController extends Controller
 
             // Generar PDF según el tipo
             $pdf = null;
-            // Preparar firma digital para todos los expedientes
-            $firmaBase64 = null;
-            if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-                $imagePath = public_path('storage/' . $user->firma_digital);
-                $imageData = file_get_contents($imagePath);
-                $imageType = mime_content_type($imagePath);
-                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-            }
+            $firmaBase64 = $this->getFirmaBase64($userFirma);
 
             switch ($expedienteType) {
                 case 'esfuerzo':
-                    $pdf = Pdf::loadView('esfuerzo', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.esfuerzo', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'estratificacion':
-                    $pdf = Pdf::loadView('estrati', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.estrati', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'clinico':
-                    $pdf = Pdf::loadView('clinico', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.clinico', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'reporte_final':
                     $esfuerzoUno = Esfuerzo::find($data->pe_1);
                     $esfuerzoDos = Esfuerzo::find($data->pe_2);
                     $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
                     
-                    // Preparar firma digital si existe
-                    $firmaBase64 = null;
-                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-                        $imagePath = public_path('storage/' . $user->firma_digital);
-                        $imageData = file_get_contents($imagePath);
-                        $imageType = mime_content_type($imagePath);
-                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-                    }
-                    
-                    $pdf = Pdf::loadView('reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64'));
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+
+                    $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64'));
                     break;
                 case 'reporte_psico':
                     $pdf = Pdf::loadView('psico', compact('data', 'paciente', 'user'));
@@ -752,37 +697,16 @@ class PDFController extends Controller
                     }
                     break;
                 case 'expediente_pulmonar':
-                    // Preparar firma digital si existe
-                    $firmaBase64 = null;
-                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-                        $imagePath = public_path('storage/' . $user->firma_digital);
-                        $imageData = file_get_contents($imagePath);
-                        $imageType = mime_content_type($imagePath);
-                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-                    }
-                    $pdf = Pdf::loadView('pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+                    $pdf = Pdf::loadView('pulmonar.pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'cualidad_fisica':
-                    // Preparar firma digital si existe
-                    $firmaBase64 = null;
-                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-                        $imagePath = public_path('storage/' . $user->firma_digital);
-                        $imageData = file_get_contents($imagePath);
-                        $imageType = mime_content_type($imagePath);
-                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-                    }
-                    $pdf = Pdf::loadView('cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+                    $pdf = Pdf::loadView('cardiaca.cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
                 case 'reporte_final_pulmonar':
-                    // Preparar firma digital si existe
-                    $firmaBase64 = null;
-                    if ($user->firma_digital && file_exists(public_path('storage/' . $user->firma_digital))) {
-                        $imagePath = public_path('storage/' . $user->firma_digital);
-                        $imageData = file_get_contents($imagePath);
-                        $imageType = mime_content_type($imagePath);
-                        $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
-                    }
-                    $pdf = Pdf::loadView('reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+                    $pdf = Pdf::loadView('pulmonar.reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
                     break;
             }
 

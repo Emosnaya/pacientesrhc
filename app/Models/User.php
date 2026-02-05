@@ -31,7 +31,8 @@ class User extends Authenticatable
         'email_verification_token',
         'email_verified',
         'clinica_id',
-        'sucursal_id'
+        'sucursal_id',
+        'rol'
     ];
 
     /**
@@ -55,6 +56,30 @@ class User extends Authenticatable
         'isSuperAdmin' => 'boolean',
         'email_verified' => 'boolean',
     ];
+
+    /**
+     * Atributos que se agregan al serializar (JSON) para API / sidebar / expedientes
+     */
+    protected $appends = ['titulo_profesional', 'nombre_con_titulo'];
+
+    /**
+     * Título profesional según rol: Dr., Dra., Lic. (vacío si no aplica)
+     */
+    public function getTituloProfesionalAttribute(): string
+    {
+        $titulos = config('roles.titulos', []);
+        return $this->rol && isset($titulos[$this->rol]) ? $titulos[$this->rol] : '';
+    }
+
+    /**
+     * Nombre completo con título para mostrar en sidebar y expedientes: "Dr. Juan Pérez"
+     */
+    public function getNombreConTituloAttribute(): string
+    {
+        $nombre = trim(($this->nombre ?? '') . ' ' . ($this->apellidoPat ?? '') . ' ' . ($this->apellidoMat ?? ''));
+        $titulo = $this->titulo_profesional;
+        return $titulo ? $titulo . ' ' . $nombre : $nombre;
+    }
 
     /**
      * Relación con la clínica
@@ -118,6 +143,24 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->isAdmin ?? false;
+    }
+
+    /**
+     * Rol es "firmante" (doctor, doctora, licenciado): solo puede usar su propia firma
+     */
+    public function isFirmante(): bool
+    {
+        $roles = config('roles.roles_firmantes', ['doctor', 'doctora', 'licenciado']);
+        return $this->rol && in_array($this->rol, $roles);
+    }
+
+    /**
+     * Rol es administrativo (recepcionista, administrativo, laboratorista): solo descarga sin firma
+     */
+    public function isAdministrativo(): bool
+    {
+        $roles = config('roles.roles_administrativos', ['recepcionista', 'administrativo', 'laboratorista']);
+        return $this->rol && in_array($this->rol, $roles);
     }
 
     /**

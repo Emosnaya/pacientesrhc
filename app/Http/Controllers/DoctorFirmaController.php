@@ -27,7 +27,10 @@ class DoctorFirmaController extends Controller
             'usuario_actual' => [
                 'id' => $user->id,
                 'nombre_completo' => $user->nombre . ' ' . $user->apellidoPat . ' ' . $user->apellidoMat,
-                'tiene_firma' => !empty($user->firma_digital)
+                'tiene_firma' => !empty($user->firma_digital),
+                'rol' => $user->rol,
+                'requiere_firma' => $user->isFirmante(),
+                'es_administrativo' => $user->isAdministrativo(),
             ]
         ]);
     }

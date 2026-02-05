@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class HistoriaClinicaFisioterapia extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'historia_clinica_fisioterapia';
 
@@ -40,6 +41,17 @@ class HistoriaClinicaFisioterapia extends Model
     protected $casts = [
         'fecha' => 'date',
         'hora' => 'datetime:H:i',
+        // Cifrado de campos sensibles
+        'motivo_consulta' => 'encrypted',
+        'padecimiento_actual' => 'encrypted',
+        'antecedentes_heredofamiliares' => 'encrypted',
+        'antecedentes_personales_patologicos' => 'encrypted',
+        'antecedentes_personales_no_patologicos' => 'encrypted',
+        'antecedentes_quirurgicos_traumaticos' => 'encrypted',
+        'diagnostico_medico' => 'encrypted',
+        'diagnostico_fisioterapeutico' => 'encrypted',
+        'objetivos_tratamiento' => 'encrypted',
+        'pronostico' => 'encrypted',
     ];
 
     public function paciente()

@@ -26,7 +26,8 @@ class Clinica extends Model
         'permite_multiples_sucursales',
         'max_sucursales',
         'max_usuarios',
-        'max_pacientes'
+        'max_pacientes',
+        'receta_pdf_config',
     ];
 
     protected $casts = [
@@ -34,7 +35,8 @@ class Clinica extends Model
         'activa' => 'boolean',
         'permite_multiples_sucursales' => 'boolean',
         'fecha_vencimiento' => 'date',
-        'modulos_habilitados' => 'array'
+        'modulos_habilitados' => 'array',
+        'receta_pdf_config' => 'array'
     ];
 
     protected $appends = [

@@ -6,30 +6,31 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Nota de Seguimiento Pulmonar</title>
     <style>
-        .logo-container { height: 60px; overflow: hidden; display: inline-block; }
-        .logo-container img { height: 60px; width: auto; }
-        body { font-family: Arial, sans-serif; font-size: 10px; line-height: 1.3; }
-        .paciente { font-size: 11px; }
+        .logo-container { height: 36px; overflow: hidden; display: inline-block; }
+        .logo-container img { height: 36px; width: auto; }
+        body { font-family: Arial, sans-serif; font-size: 9px; line-height: 1.3; }
+        .paciente { font-size: 10px; }
         .f-bold { font-weight: bold; }
         .f-normal { font-weight: normal; }
-        .f-10 { font-size: 10px; }
-        .f-15 { font-size: 14px; }
+        .f-10 { font-size: 8.5px; }
+        .f-15 { font-size: 13px; }
         .text-center { text-align: center; }
         .text-lft { text-align: left; }
         .medio { position: relative; }
         .texto-izquierda { text-align: left; position: absolute; left: 0; }
         .texto-derecha { text-align: right; position: absolute; right: 0; }
         .contenedor { position: relative; text-align: justify; margin-bottom: 0; margin-top: 1.5rem; }
-        .titulo { display: inline-block; position: relative; z-index: 1; padding-right: 0.5rem; font-size: 13px; font-weight: bold; }
-        .linea { position: absolute; left: 0; right: 0; top: 0.6rem; border-bottom: 2px solid black; z-index: 0; }
-        .m-t-0 { margin-top: 0.3rem; }
+        .titulo { display: inline-block; position: relative; z-index: 1; padding-right: 0.5rem; font-size: 12px; font-weight: bold; }
+        .linea { position: absolute; left: 0; right: 0; top: 0.5rem; border-bottom: 3px solid black; z-index: 0; }
+        .m-t-0 { margin-top: -0.7rem; }
         .bck-gray { background-color: #DDDEE1; }
         .tabla { font-size: 10px; margin-bottom: 0.8rem; width: 100%; }
         .tabla td { padding: 5px 8px; }
         .border-t { border: 1px solid black; }
-        .signature { margin-top: 2rem; text-align: center; }
-        .signature-line { border-top: 1px solid #000; width: 250px; margin: 0 auto 5px; margin-top: 2rem; }
-        .signature-text { font-size: 9px; }
+        .signature { margin-top: 3rem; text-align: center; width: 100%; }
+        .signature img { display: block; margin: 0 auto 0.2rem; max-width: 150px; height: auto; }
+        .signature-line { border-top: 1px solid #000; width: 250px; margin: 0.2rem auto 0.3rem; }
+        .signature-text { font-size: 8px; text-align: center; margin: 0.2rem 0; }
     </style>
 </head>
 <body>
@@ -54,9 +55,8 @@
         @if($data->ficha_identificacion)
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">Ficha de identificación del paciente</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->ficha_identificacion }}</td>
@@ -68,9 +68,8 @@
         @if($data->diagnosticos)
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">Diagnósticos</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->diagnosticos }}</td>
@@ -81,9 +80,8 @@
 
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">S - Subjetivo</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->s_subjetivo ?: '—' }}</td>
@@ -93,9 +91,8 @@
 
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">O - Objetivo</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->o_objetivo ?: '—' }}</td>
@@ -105,9 +102,8 @@
 
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">A - Apreciación</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->a_apreciacion ?: '—' }}</td>
@@ -117,9 +113,8 @@
 
         <div class="contenedor mt-1">
             <h2 class="h8 titulo">P - Plan</h2>
-            <div class="linea"></div>
         </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->p_plan ?: '—' }}</td>
@@ -127,16 +122,16 @@
             </tbody>
         </table>
 
+        @if(isset($firmaBase64) && $firmaBase64)
         <div class="signature">
-            @if(isset($firmaBase64) && $firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px;">
-            @endif
+            <img src="{{ $firmaBase64 }}" alt="Firma">
             <div class="signature-line"></div>
-            <p class="signature-text"><strong>{{ $user->nombre ?? '' }} {{ $user->apellidoPat ?? '' }}</strong></p>
+            <p class="signature-text f-bold mb-0">{{ $user->nombre_con_titulo }}</p>
             @if($user->cedula ?? null)
-            <p class="signature-text">Cédula: {{ $user->cedula }}</p>
+            <p class="signature-text mb-0">Cédula: {{ $user->cedula }}</p>
             @endif
         </div>
+        @endif
     </main>
 </body>
 </html>

@@ -20,30 +20,24 @@
             height: 36px;
             width: auto;
         }
-        body {
-            font-size: 9px;
-            margin: 0;
-            padding: 5px;
-        }
+        /* Estilo para la línea de firma */
         .signature {
-            text-align: right;
-            width: 100%;
-            margin-top: 0rem;
-            padding-right: 2rem;
-        }
+        text-align: center;
+        width: 100%;
+    }
     .line {
         display: inline-block;
         border-top: 1px solid black;
         width: 20%;
-        margin-top: 3rem;
+        margin-top: 4rem;
         margin-right: 2rem;
         margin-left: 2rem;
         padding: 1rem;
     }
     .text {
-        font-size: 9px;
+        font-size: 8px;
         text-align: center;
-        width: 100%;
+        width: 100%; /* Espacio entre línea y texto */
     }
         .tabla{
             font-size: 7.5px;
@@ -51,13 +45,10 @@
             width: 100%;
         }
         .f-10{
-          font-size: 9px;
+          font-size: 8.5px;
         }
         .f-15{
           font-size: 13px;
-        }
-        .f-7{
-          font-size: 7px;
         }
         .paciente{
             font-size: 10px;
@@ -152,33 +143,35 @@
     right: 0;
   }
   .contenedor {
-    position: relative;
-    text-align: justify;
-    margin-bottom: 0;
-    margin-top: 0.5rem;
+    position: relative; /* Establece contexto de posición */
+    text-align:justify; /* Alinea contenido al centro horizontalmente */
+    margin-bottom: 0; /* Espacio opcional al final del contenedor */
   }
   
   .titulo {
-    display: inline-block;
-    position: relative;
-    z-index: 1;
-    padding-right: 0.5rem;
-    font-size: 14px;
+    display: inline-block;/* Hace que el título sea un bloque en línea */ /* Opcional: fondo blanco detrás del título */ /* Espaciado opcional alrededor del título */
+    position: relative; /* Establece contexto de posición */
+    z-index: 1; /* Asegura que el título esté por encima de la línea */
+    font-size: 12px; /* Tamaño de fuente para subtítulos */
+    font-weight: bold; /* Negrita para los títulos */
   }
-  .m-t-2{
+  .m-t-1{
     margin-top: -1rem;
   }
+  .m-t-2{
+    margin-top: -2rem;
+  }
   .m-t-0{
-    margin-top: -0.5rem;
+    margin-top: -0.7rem;
   }
   
   .linea {
-    position: absolute;
-    left: 0;
+    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
+    left: 4rem; /* Comienza desde el borde izquierdo del contenedor */
     right: 0;
-    top: 0.6rem;
-    border-bottom: 2px solid black;
-    z-index: 0;
+    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
+    border-bottom: 3px solid black; /* Línea sólida negra */
+    z-index: 0; /* Detrás del título */
   }
   .linea-heredo {
     position: absolute;
@@ -668,16 +661,16 @@
         </table>
         @endif
 
+        @if(isset($firmaBase64) && $firmaBase64)
         <!-- Firma al lado derecho al final -->
         <div style="margin-top: 0.5rem; text-align: right; padding-right: 2rem;">
-            @if($firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-height: 60px; max-width: 150px; display: block; margin-left: auto; margin-bottom: 0.5rem;">
-            @endif
-            <p class="f-bold mb-0" style="text-align: right; font-size: 10px;">Dr. {{ $user->nombre . ' ' . $user->apellidoPat }}</p>
+            <img src="{{ $firmaBase64 }}" alt="Firma" style="max-height: 60px; max-width: 150px; display: block; margin-left: auto; margin-bottom: 0.5rem;">
+            <p class="f-bold mb-0" style="text-align: right; font-size: 10px;">{{ $user->nombre_con_titulo }}</p>
             @if($user->cedula)
-            <p class="f-7 mb-0" style="text-align: right;">Cédula Profesional: {{ $user->cedula }}</p>
+            <p class="" style="text-align: right; font-size: 10px;">Cédula Profesional: {{ $user->cedula }}</p>
             @endif
         </div>
+        @endif
     </main>
   </body>   
 </html>
