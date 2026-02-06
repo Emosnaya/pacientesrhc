@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Odontograma extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Auditable;
 
     protected $fillable = [
         'paciente_id',
@@ -57,6 +58,20 @@ class Odontograma extends Model
         'ae_necrosis_pulpar' => 'boolean',
         'ae_pulpitis_irreversible' => 'boolean',
         'ae_lesiones_periapicales' => 'boolean',
+        // Cifrado de campos sensibles
+        'diagnostico' => 'encrypted',
+        'pronostico' => 'encrypted',
+        'observaciones' => 'encrypted',
+        'ap_calculo_supragingival_dientes' => 'encrypted',
+        'ap_calculo_infragingival_dientes' => 'encrypted',
+        'ap_movilidad_dental_dientes' => 'encrypted',
+        'ap_bolsas_periodontales_dientes' => 'encrypted',
+        'ap_pseudobolsas_dientes' => 'encrypted',
+        'ap_indice_placa_dientes' => 'encrypted',
+        'ae_endo_defectuosa_dientes' => 'encrypted',
+        'ae_necrosis_pulpar_dientes' => 'encrypted',
+        'ae_pulpitis_irreversible_dientes' => 'encrypted',
+        'ae_lesiones_periapicales_dientes' => 'encrypted',
     ];
 
     /**

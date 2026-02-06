@@ -33,6 +33,7 @@ class UserManagementController extends Controller
             'cedula' => '',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
+            'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
             'isAdmin' => 'boolean',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -57,6 +58,7 @@ class UserManagementController extends Controller
             'cedula' => $request->cedula,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'rol' => $request->rol ?: null,
             'isAdmin' => $request->isAdmin ?? false,
             'email_verified' => true, // Admin created users are pre-verified
             'email_verified_at' => now(),
@@ -106,7 +108,7 @@ class UserManagementController extends Controller
     public function listAllUsers(Request $request): JsonResponse
     {
         $user = $request->user();
-        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
+        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'isAdmin', 'sucursal_id', 'created_at')
             ->where('clinica_id', $user->clinica_id)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -146,6 +148,7 @@ class UserManagementController extends Controller
             'cedula' => 'nullable|string|unique:users,cedula,' . $id,
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:8',
+            'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
             'isAdmin' => 'boolean',
             'sucursal_id' => 'nullable|exists:sucursales,id'
         ]);
@@ -168,6 +171,7 @@ class UserManagementController extends Controller
             'apellidoMat' => $request->apellidoMat,
             'cedula' => $request->cedula,
             'email' => $request->email,
+            'rol' => $request->rol ?: null,
             'isAdmin' => $request->isAdmin ?? false
         ];
 

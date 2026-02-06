@@ -6,10 +6,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Reporte Final Rehabilitación Pulmonar</title>
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 36px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 36px;
+            width: auto;
+        }
         body {
             font-family: Arial, sans-serif;
             font-size: 9px;
-                        margin: 0;
+            margin: 0;
             line-height: 1.2;
         }
         .paciente {
@@ -22,13 +32,13 @@
             font-weight: normal;
         }
         .f-9 {
-            font-size: 9px;
+            font-size: 8.5px;
         }
         .f-10 {
-            font-size: 10px;
+            font-size: 8.5px;
         }
         .f-15 {
-            font-size: 14px;
+            font-size: 13px;
         }
         .text-center {
             text-align: center;
@@ -68,18 +78,17 @@
             padding-right: 0.5rem;
             font-size: 12px;
             font-weight: bold;
-            background-color: white;
         }
         .linea {
             position: absolute;
             left: 0;
             right: 0;
-            top: 0.6rem;
-            border-bottom: 2px solid black;
+            top: 0.5rem;
+            border-bottom: 3px solid black;
             z-index: 0;
         }
         .m-t-0 {
-            margin-top: -0.3rem;
+            margin-top: -0.7rem;
         }
         .bck-blue {
             background-color: #4A90E2;
@@ -107,45 +116,25 @@
             text-align: center;
         }
         .signature {
-            margin-top: 1.5rem;
+            margin-top: 3rem;
             text-align: center;
+            width: 100%;
+        }
+        .signature img {
+            display: block;
+            margin: 0 auto 0.2rem;
+            max-width: 150px;
+            height: auto;
         }
         .signature-line {
             border-top: 1px solid #000;
             width: 250px;
-            margin: 0 auto 5px;
-            margin-top: 0.5rem;
+            margin: 0.2rem auto 0.3rem;
         }
         .signature-text {
-            font-size: 9px;
-        }
-
-        /* Firma */
-        .signature-section {
-            margin-top: 40px;
+            font-size: 8px;
             text-align: center;
-        }
-
-        .signature-line {
-            border-top: 2px solid #000;
-            width: 300px;
-            margin: 5px auto 5px auto;
-        }
-
-        .signature-name {
-            font-weight: bold;
-            font-size: 11pt;
-            margin-bottom: 2px;
-        }
-
-        .signature-title {
-            font-size: 10pt;
-            color: #666;
-        }
-
-        .signature-credentials {
-            font-size: 9pt;
-            color: #888;
+            margin: 0.2rem 0;
         }
     </style>
 </head>
@@ -154,9 +143,11 @@
         <div class="paciente ma-t-0 mb-0">
             <p class="f-bold f-15 text-center mb-0 mt-0">REPORTE DE TÉRMINO</p>
             <p class="f-bold text-center mb-0 mt-0">Programa de Rehabilitación Pulmonar</p>
-            <img src="img/logo.png" alt="cercap logo" style="height: 80px" class="">
-            <div class="medio">
-                <p class="text-sm texto-izquierda mb-0 f-bold f-9">Fecha inicio: {{ $data->fecha_inicio ? date('d/m/Y', strtotime($data->fecha_inicio)) : 'N/A' }}</p>
+            @if(isset($clinicaLogo))
+            <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
+            @endif
+            <div class="medio mt-2">
+                <p class="texto-izquierda mb-0 f-bold f-9">Fecha inicio: {{ $data->fecha_inicio ? date('d/m/Y', strtotime($data->fecha_inicio)) : 'N/A' }}</p>
                 <span class="ml-5 text-right texto-derecha f-bold f-9">Registro: {{ $paciente->registro }}</span>
             </div>
             <br>
@@ -169,7 +160,7 @@
         </div>
     </header>
 
-    <main class="mt-0">
+    <main class="mt-2">
         <!-- Diagnóstico -->
         @if($data->diagnostico)
         <div class="contenedor mt-1">
@@ -281,37 +272,20 @@
 
         <p class="f-9 mt-3">Quedo a sus órdenes para cualquier duda o aclaración.</p>
 
+        @if(isset($firmaBase64) && $firmaBase64)
         <!-- Firma del médico -->
         <div class="signature">
-            @if(isset($firmaBase64))
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px; height: auto">
-            @endif
+            <img src="{{ $firmaBase64 }}" alt="Firma">
             <div class="signature-line"></div>
-            <p class="signature-text f-bold mb-0">{{ $user->name }}</p>
+            <p class="signature-text f-bold mb-0">{{ $user->nombre_con_titulo }}</p>
             <p class="signature-text mb-0">Médico Especialista en Medicina de Rehabilitación</p>
             <p class="signature-text mb-0">Alta especialidad en Rehabilitación Pulmonar</p>
-            @if($user->cedula_profesional)
-            <p class="signature-text">Cédula: {{ $user->cedula_profesional }}</p>
+            @if(!empty($user->cedula))
+            <p class="signature-text mb-0">Cédula Profesional: {{ $user->cedula }}</p>
             @endif
         </div>
+        @endif
     </main>
 
-    <footer style="margin-top: 0.5rem; padding-top: 0.1rem; border-top: 1px solid #000;">
-        <div style="display: table; width: 100%;">
-            <div style="display: table-cell; width: 50%; vertical-align: top;">
-                <p class="f-9 mb-0"><strong>Torre Médica II</strong></p>
-                <p class="f-9 mb-0">Real Mayorazgo 130, local 3</p>
-                <p class="f-9 mb-0">Col. Xoco, Benito Juárez</p>
-                <p class="f-9 mb-0">C.P. 03330 CDMX</p>
-            </div>
-            <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
-                <p class="f-9 mb-0"><strong>Informes y citas:</strong></p>
-                <p class="f-9 mb-0">☎ 55 2625 5547 / 55 2625 5548</p>
-                <p class="f-9 mb-0">☎ 56 3034 8666</p>
-                <p class="f-9 mb-0">✉ cercap.cardiopulmonar@gmail.com</p>
-                <p class="f-9 mb-0"><strong>www.cercap.mx</strong></p>
-            </div>
-        </div>
-    </footer>
 </body>
 </html>

@@ -625,19 +625,20 @@
           <p class="f-bold f-10 f-10 mt-0 mb-0">{{$data->fc_diana_str}}: <span class="f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span> </p>
       </div>
       <div class="mt-1 mb-0">
-        <span class="f-bold mt-0 mb-0 f-10">Realizó:</span><span class="f-10 ml-2">Dr.  {{$user->nombre . "   " . $user->apellidoPat}}</span>
+        @if(isset($firmaBase64) && $firmaBase64)
+        <span class="f-bold mt-0 mb-0 f-10">Realizó:</span><span class="f-10 ml-2">{{ $user->nombre_con_titulo }}</span>
+        @endif
       </div>
-      <div class="mt-0">
-        <span class="f-bold mt-0 mb-0 f-10">Comentarios:</span><span class="f-10 ml-2">{{$data->comentarios}}</span>
-      </div>
-
       @if(isset($firmaBase64) && $firmaBase64)
       <div style="position: fixed; bottom: 30px; left: 0; right: 0; text-align: center;">
         <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 40px; width: auto;"><br>
         <div style="border-top: 1px solid #333; width: 120px; margin: 2px auto 0 auto;"></div>
-        <span style="font-size: 8px;">Dr. {{$user->nombre . " " . $user->apellidoPat}}</span>
+        <span style="font-size: 8px;">{{ $user->nombre_con_titulo }}</span>
       </div>
       @endif
+      <div class="mt-0">
+        <span class="f-bold mt-0 mb-0 f-10">Comentarios:</span><span class="f-10 ml-2">{{$data->comentarios}}</span>
+      </div>
 
     </main>
 

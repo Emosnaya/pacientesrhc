@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Paciente extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
      /**
      * The attributes that are mass assignable.
@@ -39,6 +40,23 @@ class Paciente extends Model
         'user_id',
         'clinica_id',
         'sucursal_id'
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'nombre' => 'encrypted',
+        'apellidoPat' => 'encrypted',
+        'apellidoMat' => 'encrypted',
+        'telefono' => 'encrypted',
+        'email' => 'encrypted',
+        'domicilio' => 'encrypted',
+        'diagnostico' => 'encrypted',
+        'medicamentos' => 'encrypted',
+        'fechaNacimiento' => 'date',
     ];
 
     /**

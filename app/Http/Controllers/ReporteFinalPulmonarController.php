@@ -281,11 +281,15 @@ class ReporteFinalPulmonarController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = PDF::loadView('reportefinalpulmonar', [
+        // Obtener logo de la clínica
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+
+        $pdf = PDF::loadView('pulmonar.reportefinalpulmonar', [
             'data' => $data,
             'paciente' => $paciente,
             'user' => $firmaUser,
-            'firmaBase64' => $firmaBase64
+            'firmaBase64' => $firmaBase64,
+            'clinicaLogo' => $clinicaLogo
         ]);
 
         $pdf->setPaper('letter', 'portrait');
@@ -323,15 +327,137 @@ class ReporteFinalPulmonarController extends Controller
             $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
         }
 
-        $pdf = PDF::loadView('reportefinalpulmonar', [
+        // Obtener logo de la clínica
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+
+        $pdf = PDF::loadView('pulmonar.reportefinalpulmonar', [
             'data' => $data,
             'paciente' => $paciente,
             'user' => $firmaUser,
-            'firmaBase64' => $firmaBase64
+            'firmaBase64' => $firmaBase64,
+            'clinicaLogo' => $clinicaLogo
         ]);
 
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('Reporte_Final_Pulmonar_' . $paciente->registro . '.pdf');
+    }
+
+    /**
+     * Get clinic logo as base64 for PDF rendering
+     * Get clinic logo as base64 for PDF rendering
+     */
+    private function getClinicaLogoBase64($user, $targetHeight = 36)
+    {
+        try {
+            $clinica = $user->clinica;
+            $logoPath = null;
+            
+            if ($clinica && $clinica->logo) {
+                $logoPath = storage_path('app/public/' . $clinica->logo);
+            }
+            
+            // Si no existe el logo de la clínica, usar el logo por defecto
+            if (!$logoPath || !file_exists($logoPath)) {
+                $logoPath = public_path('img/logo.png');
+            }
+            
+            // Si tampoco existe el logo por defecto, retornar null
+            if (!file_exists($logoPath)) {
+                \Log::error('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+            
+            // Verificar si GD está disponible
+            if (!function_exists('imagecreatefrompng')) {
+                \Log::warning('GD no está disponible, usando imagen original');
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Redimensionar la imagen para que dompdf respete el tamaño
+            $imageInfo = @getimagesize($logoPath);
+            if (!$imageInfo) {
+                \Log::error('No se pudo obtener información de la imagen: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            $originalWidth = $imageInfo[0];
+            $originalHeight = $imageInfo[1];
+            $mimeType = $imageInfo['mime'];
+            
+            // Calcular nuevas dimensiones manteniendo aspecto
+            $aspectRatio = $originalWidth / $originalHeight;
+            $newHeight = $targetHeight;
+            $newWidth = round($newHeight * $aspectRatio);
+            
+            // Crear imagen según el tipo
+            $sourceImage = null;
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    $sourceImage = @imagecreatefromjpeg($logoPath);
+                    break;
+                case 'image/png':
+                    $sourceImage = @imagecreatefrompng($logoPath);
+                    break;
+                case 'image/gif':
+                    $sourceImage = @imagecreatefromgif($logoPath);
+                    break;
+            }
+            
+            if (!$sourceImage) {
+                \Log::error('No se pudo crear imagen desde: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Crear nueva imagen redimensionada
+            $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Preservar transparencia para PNG
+            if ($mimeType === 'image/png') {
+                imagealphablending($resizedImage, false);
+                imagesavealpha($resizedImage, true);
+                $transparent = imagecolorallocatealpha($resizedImage, 255, 255, 255, 127);
+                imagefilledrectangle($resizedImage, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+            
+            // Redimensionar
+            imagecopyresampled(
+                $resizedImage, $sourceImage,
+                0, 0, 0, 0,
+                $newWidth, $newHeight,
+                $originalWidth, $originalHeight
+            );
+            
+            // Convertir a base64
+            ob_start();
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    imagejpeg($resizedImage, null, 90);
+                    break;
+                case 'image/png':
+                    imagepng($resizedImage, null, 9);
+                    break;
+                case 'image/gif':
+                    imagegif($resizedImage);
+                    break;
+            }
+            $imageData = ob_get_clean();
+            
+            imagedestroy($sourceImage);
+            imagedestroy($resizedImage);
+            
+            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar logo de clínica: ' . $e->getMessage());
+            return null;
+        }
     }
 }

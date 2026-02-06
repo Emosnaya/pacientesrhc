@@ -289,6 +289,9 @@ class AIController extends Controller
                 case 'eliminar_cita':
                     return $this->eliminarCita($user, $params);
                 
+                case 'eliminar_citas_masivo':
+                    return $this->eliminarCitasMasivo($user, $params);
+                
                 case 'agendar_cita':
                     return $this->agendarCita($user, $params);
                 
@@ -309,6 +312,48 @@ class AIController extends Controller
                 
                 case 'contar_citas_paciente':
                     return $this->contarCitasPaciente($user, $params);
+                
+                // ===== ANÁLISIS Y REPORTES AVANZADOS =====
+                case 'generar_reporte_metricas':
+                    return $this->generarReporteMetricas($user, $params);
+                
+                case 'analisis_predictivo_citas':
+                    return $this->analisisPredictivoCitas($user);
+                
+                case 'identificar_pacientes_riesgo':
+                    return $this->identificarPacientesRiesgo($user);
+                
+                case 'sugerencias_mejora_operativa':
+                    return $this->sugerenciasMejoraOperativa($user);
+                
+                // ===== NOTIFICACIONES INTELIGENTES =====
+                case 'generar_resumen_diario':
+                    return $this->generarResumenDiario($user);
+                
+                case 'obtener_alertas_seguimiento':
+                    return $this->obtenerAlertasSeguimiento($user);
+                
+                case 'sugerencias_proactivas':
+                    return $this->sugerenciasProactivas($user);
+                
+                // ===== EXPEDIENTES CLÍNICOS =====
+                case 'crear_expediente':
+                    return $this->crearExpediente($user, $params);
+                
+                case 'editar_expediente':
+                    return $this->editarExpediente($user, $params);
+                
+                case 'generar_reporte_clinico':
+                    return $this->generarReporteClinico($user, $params);
+                
+                case 'buscar_en_expedientes':
+                    return $this->buscarEnExpedientes($user, $params);
+                
+                case 'comparar_expedientes':
+                    return $this->compararExpedientes($user, $params);
+                
+                case 'obtener_expediente':
+                    return $this->obtenerExpediente($user, $params);
                 
                 default:
                     return response()->json([
@@ -401,6 +446,162 @@ class AIController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Cita eliminada exitosamente'
+        ]);
+    }
+
+    private function eliminarCitasMasivo($user, $params)
+    {
+        // Construir query base
+        $query = DB::table('citas')
+            ->where('clinica_id', $user->clinica_id);
+
+        $filtrosAplicados = [];
+
+        // Filtro por estado
+        if (isset($params['estado']) && !empty($params['estado'])) {
+            $query->where('estado', $params['estado']);
+            $filtrosAplicados[] = "estado '{$params['estado']}'";
+        }
+
+        // Filtro por paciente (búsqueda flexible)
+        if (isset($params['paciente_nombre']) && !empty($params['paciente_nombre'])) {
+            // Función para normalizar texto
+            $normalizar = function($texto) {
+                $texto = mb_strtolower($texto, 'UTF-8');
+                $texto = str_replace(
+                    ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'],
+                    ['a', 'e', 'i', 'o', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'n'],
+                    $texto
+                );
+                return trim($texto);
+            };
+            
+            $nombreBuscar = $normalizar($params['paciente_nombre']);
+            
+            // Obtener todos los pacientes de la clínica
+            $pacientes = DB::table('pacientes')
+                ->where('clinica_id', $user->clinica_id)
+                ->get();
+            
+            // Buscar paciente normalizando nombres
+            $pacienteEncontrado = null;
+            foreach ($pacientes as $p) {
+                $nombreCompletoPaciente = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
+                $nombrePaciente = $normalizar($p->nombre);
+                
+                if ($nombreCompletoPaciente === $nombreBuscar || 
+                    $nombrePaciente === $nombreBuscar ||
+                    str_starts_with($nombreCompletoPaciente, $nombreBuscar) ||
+                    strpos($nombreCompletoPaciente, $nombreBuscar) !== false) {
+                    $pacienteEncontrado = $p;
+                    break;
+                }
+            }
+
+            if (!$pacienteEncontrado) {
+                return response()->json([
+                    'success' => false,
+                    'error' => "No se encontró al paciente '{$params['paciente_nombre']}' en tu clínica."
+                ], 404);
+            }
+
+            $query->where('paciente_id', $pacienteEncontrado->id);
+            $filtrosAplicados[] = "paciente '{$pacienteEncontrado->nombre} {$pacienteEncontrado->apellidoPat}'";
+        }
+
+        // Filtro por fecha específica
+        if (isset($params['fecha']) && !empty($params['fecha'])) {
+            $query->where('fecha', $params['fecha']);
+            $filtrosAplicados[] = "fecha {$params['fecha']}";
+        }
+
+        // Filtro por rango de fechas
+        if (isset($params['fecha_inicio']) && !empty($params['fecha_inicio'])) {
+            $query->where('fecha', '>=', $params['fecha_inicio']);
+            $filtrosAplicados[] = "desde {$params['fecha_inicio']}";
+        }
+        if (isset($params['fecha_fin']) && !empty($params['fecha_fin'])) {
+            $query->where('fecha', '<=', $params['fecha_fin']);
+            $filtrosAplicados[] = "hasta {$params['fecha_fin']}";
+        }
+
+        // Filtro por mes y año
+        if (isset($params['mes']) && isset($params['año'])) {
+            $mes = str_pad($params['mes'], 2, '0', STR_PAD_LEFT);
+            $query->whereRaw("DATE_FORMAT(fecha, '%Y-%m') = '{$params['año']}-{$mes}'");
+            $filtrosAplicados[] = "mes {$params['mes']}/{$params['año']}";
+        }
+
+        // Validar que se aplicó al menos un filtro
+        if (empty($filtrosAplicados)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Debes especificar al menos un filtro (estado, paciente, fecha, etc.)'
+            ], 400);
+        }
+
+        // Contar cuántas se van a eliminar (para confirmación)
+        $count = $query->count();
+
+        if ($count === 0) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No se encontraron citas con los filtros especificados.',
+                'count' => 0,
+                'filtros' => implode(', ', $filtrosAplicados)
+            ]);
+        }
+
+        // Obtener vista previa de las citas a eliminar
+        $citasPreview = DB::table('citas')
+            ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
+            ->where('citas.clinica_id', $user->clinica_id);
+
+        // Aplicar los mismos filtros para preview
+        if (isset($params['estado']) && !empty($params['estado'])) {
+            $citasPreview->where('citas.estado', $params['estado']);
+        }
+        if (isset($pacienteEncontrado)) {
+            $citasPreview->where('citas.paciente_id', $pacienteEncontrado->id);
+        }
+        if (isset($params['fecha']) && !empty($params['fecha'])) {
+            $citasPreview->where('citas.fecha', $params['fecha']);
+        }
+        if (isset($params['fecha_inicio']) && !empty($params['fecha_inicio'])) {
+            $citasPreview->where('citas.fecha', '>=', $params['fecha_inicio']);
+        }
+        if (isset($params['fecha_fin']) && !empty($params['fecha_fin'])) {
+            $citasPreview->where('citas.fecha', '<=', $params['fecha_fin']);
+        }
+        if (isset($params['mes']) && isset($params['año'])) {
+            $mes = str_pad($params['mes'], 2, '0', STR_PAD_LEFT);
+            $citasPreview->whereRaw("DATE_FORMAT(citas.fecha, '%Y-%m') = '{$params['año']}-{$mes}'");
+        }
+
+        $preview = $citasPreview
+            ->select(
+                'citas.id',
+                'citas.fecha',
+                'citas.hora',
+                'citas.estado',
+                DB::raw('CONCAT(pacientes.nombre, " ", pacientes.apellidoPat) as paciente_nombre')
+            )
+            ->orderBy('citas.fecha')
+            ->orderBy('citas.hora')
+            ->limit(10)
+            ->get();
+
+        // Eliminar las citas
+        $query->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Se eliminaron {$count} citas exitosamente.",
+            'count' => $count,
+            'filtros' => implode(', ', $filtrosAplicados),
+            'preview' => $preview->take(5)->map(function($cita) {
+                return "{$cita->fecha} {$cita->hora} - {$cita->paciente_nombre} ({$cita->estado})";
+            })->toArray()
         ]);
     }
 
@@ -1100,5 +1301,982 @@ class AIController extends Controller
                 'estado' => $proximaCita->estado
             ] : null
         ]);
+    }
+
+    // ==========================================
+    // ANÁLISIS Y REPORTES AVANZADOS
+    // ==========================================
+
+    private function generarReporteMetricas($user, $params)
+    {
+        $periodo = $params['periodo'] ?? 'mes'; // dia, semana, mes, trimestre, año
+        $formato = $params['formato'] ?? 'resumido'; // resumido, detallado
+
+        $fechaInicio = match($periodo) {
+            'dia' => now()->startOfDay(),
+            'semana' => now()->startOfWeek(),
+            'mes' => now()->startOfMonth(),
+            'trimestre' => now()->startOfQuarter(),
+            'año' => now()->startOfYear(),
+            default => now()->startOfMonth()
+        };
+
+        $clinicaId = $user->clinica_id;
+
+        // Métricas de citas
+        $totalCitas = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('created_at', '>=', $fechaInicio)
+            ->count();
+
+        $citasCompletadas = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('estado', 'completada')
+            ->where('created_at', '>=', $fechaInicio)
+            ->count();
+
+        $citasCanceladas = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('estado', 'cancelada')
+            ->where('created_at', '>=', $fechaInicio)
+            ->count();
+
+        $tasaCancelacion = $totalCitas > 0 ? round(($citasCanceladas / $totalCitas) * 100, 1) : 0;
+        $tasaCompletadas = $totalCitas > 0 ? round(($citasCompletadas / $totalCitas) * 100, 1) : 0;
+
+        // Métricas de pacientes
+        $pacientesNuevos = DB::table('pacientes')
+            ->where('clinica_id', $clinicaId)
+            ->where('created_at', '>=', $fechaInicio)
+            ->count();
+
+        $pacientesActivos = DB::table('citas')
+            ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
+            ->where('citas.clinica_id', $clinicaId)
+            ->where('citas.fecha', '>=', $fechaInicio)
+            ->distinct('pacientes.id')
+            ->count('pacientes.id');
+
+        // Ingresos (si existe tabla de pagos)
+        $ingresos = DB::table('pagos')
+            ->where('clinica_id', $clinicaId)
+            ->where('created_at', '>=', $fechaInicio)
+            ->where('estado', 'pagado')
+            ->sum('monto') ?? 0;
+
+        $reporte = [
+            'periodo' => $periodo,
+            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
+            'fecha_fin' => now()->format('Y-m-d'),
+            'citas' => [
+                'total' => $totalCitas,
+                'completadas' => $citasCompletadas,
+                'canceladas' => $citasCanceladas,
+                'tasa_cancelacion' => $tasaCancelacion . '%',
+                'tasa_completadas' => $tasaCompletadas . '%'
+            ],
+            'pacientes' => [
+                'nuevos' => $pacientesNuevos,
+                'activos' => $pacientesActivos
+            ],
+            'ingresos' => [
+                'total' => '$' . number_format($ingresos, 2)
+            ]
+        ];
+
+        if ($formato === 'detallado') {
+            // Agregar detalles adicionales
+            $diaMasActivo = DB::table('citas')
+                ->where('clinica_id', $clinicaId)
+                ->where('fecha', '>=', $fechaInicio)
+                ->selectRaw('DATE_FORMAT(fecha, "%W") as dia, COUNT(*) as total')
+                ->groupBy('dia')
+                ->orderBy('total', 'desc')
+                ->first();
+
+            $horaPico = DB::table('citas')
+                ->where('clinica_id', $clinicaId)
+                ->where('fecha', '>=', $fechaInicio)
+                ->selectRaw('HOUR(hora) as hora, COUNT(*) as total')
+                ->groupBy('hora')
+                ->orderBy('total', 'desc')
+                ->first();
+
+            $reporte['detalles'] = [
+                'dia_mas_activo' => $diaMasActivo ? $diaMasActivo->dia : 'N/A',
+                'hora_pico' => $horaPico ? $horaPico->hora . ':00' : 'N/A'
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'reporte' => $reporte,
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    private function analisisPredictivoCitas($user)
+    {
+        $clinicaId = $user->clinica_id;
+
+        // Análisis de cancelaciones
+        $citasUltimos30Dias = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->get();
+
+        $totalCitas = $citasUltimos30Dias->count();
+        $citasCanceladas = $citasUltimos30Dias->where('estado', 'cancelada')->count();
+        $tasaCancelacion = $totalCitas > 0 ? round(($citasCanceladas / $totalCitas) * 100, 1) : 0;
+
+        // Patrones de cancelación por día de semana
+        $cancelacionesPorDia = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('estado', 'cancelada')
+            ->where('created_at', '>=', now()->subDays(90))
+            ->selectRaw('DAYNAME(fecha) as dia, COUNT(*) as total')
+            ->groupBy('dia')
+            ->orderBy('total', 'desc')
+            ->get();
+
+        // Patrones de cancelación por hora
+        $cancelacionesPorHora = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('estado', 'cancelada')
+            ->where('created_at', '>=', now()->subDays(90))
+            ->selectRaw('HOUR(hora) as hora, COUNT(*) as total')
+            ->groupBy('hora')
+            ->orderBy('total', 'desc')
+            ->limit(3)
+            ->get();
+
+        // Predicción simple
+        $citasProximaSemana = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->whereBetween('fecha', [now()->addDay(), now()->addDays(7)])
+            ->count();
+
+        $cancelacionesEsperadas = round($citasProximaSemana * ($tasaCancelacion / 100));
+
+        return response()->json([
+            'success' => true,
+            'analisis' => [
+                'tasa_cancelacion_actual' => $tasaCancelacion . '%',
+                'citas_proxima_semana' => $citasProximaSemana,
+                'cancelaciones_esperadas' => $cancelacionesEsperadas,
+                'dias_mayor_cancelacion' => $cancelacionesPorDia->take(3)->map(function($item) {
+                    return $item->dia . ' (' . $item->total . ' cancelaciones)';
+                })->toArray(),
+                'horas_mayor_cancelacion' => $cancelacionesPorHora->map(function($item) {
+                    return $item->hora . ':00' . ' (' . $item->total . ' cancelaciones)';
+                })->toArray(),
+                'recomendacion' => $tasaCancelacion > 20 
+                    ? 'Alta tasa de cancelación. Considera implementar recordatorios automáticos 24h antes.'
+                    : 'Tasa de cancelación normal. Mantén los recordatorios actuales.'
+            ]
+        ]);
+    }
+
+    private function identificarPacientesRiesgo($user)
+    {
+        $clinicaId = $user->clinica_id;
+
+        // Pacientes sin citas recientes (más de 60 días)
+        $pacientesSinCitasRecientes = DB::table('pacientes')
+            ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->whereNotNull('citas.id')
+            ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
+            ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
+            ->havingRaw('MAX(citas.fecha) < ?', [now()->subDays(60)->format('Y-m-d')])
+            ->limit(10)
+            ->get();
+
+        // Pacientes con alta tasa de cancelación
+        $pacientesAltaCancelacion = DB::table('pacientes')
+            ->join('citas', 'pacientes.id', '=', 'citas.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, 
+                COUNT(*) as total_citas,
+                SUM(CASE WHEN citas.estado = "cancelada" THEN 1 ELSE 0 END) as canceladas,
+                ROUND((SUM(CASE WHEN citas.estado = "cancelada" THEN 1 ELSE 0 END) / COUNT(*)) * 100, 1) as tasa_cancelacion')
+            ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
+            ->having('total_citas', '>=', 3)
+            ->having('tasa_cancelacion', '>', 40)
+            ->limit(10)
+            ->get();
+
+        // Pacientes que nunca han completado una cita
+        $pacientesSinCompletadas = DB::table('pacientes')
+            ->join('citas', 'pacientes.id', '=', 'citas.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, COUNT(*) as total_citas')
+            ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
+            ->havingRaw('SUM(CASE WHEN citas.estado = "completada" THEN 1 ELSE 0 END) = 0')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'pacientes_riesgo' => [
+                'sin_citas_recientes' => $pacientesSinCitasRecientes->map(function($p) {
+                    return [
+                        'nombre' => $p->nombre . ' ' . $p->apellidoPat,
+                        'ultima_cita' => $p->ultima_cita,
+                        'dias_sin_cita' => now()->diffInDays($p->ultima_cita),
+                        'razon' => 'Sin citas hace más de 60 días'
+                    ];
+                })->toArray(),
+                'alta_cancelacion' => $pacientesAltaCancelacion->map(function($p) {
+                    return [
+                        'nombre' => $p->nombre . ' ' . $p->apellidoPat,
+                        'total_citas' => $p->total_citas,
+                        'canceladas' => $p->canceladas,
+                        'tasa_cancelacion' => $p->tasa_cancelacion . '%',
+                        'razon' => 'Alta tasa de cancelación'
+                    ];
+                })->toArray(),
+                'sin_completadas' => $pacientesSinCompletadas->map(function($p) {
+                    return [
+                        'nombre' => $p->nombre . ' ' . $p->apellidoPat,
+                        'total_citas' => $p->total_citas,
+                        'razon' => 'Nunca ha completado una cita'
+                    ];
+                })->toArray()
+            ],
+            'total_en_riesgo' => $pacientesSinCitasRecientes->count() + 
+                                 $pacientesAltaCancelacion->count() + 
+                                 $pacientesSinCompletadas->count()
+        ]);
+    }
+
+    private function sugerenciasMejoraOperativa($user)
+    {
+        $clinicaId = $user->clinica_id;
+        $sugerencias = [];
+
+        // Análisis de horarios
+        $citasPorHora = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('fecha', '>=', now()->subDays(30))
+            ->selectRaw('HOUR(hora) as hora, COUNT(*) as total')
+            ->groupBy('hora')
+            ->orderBy('total', 'asc')
+            ->get();
+
+        $horaMenosOcupada = $citasPorHora->first();
+        if ($horaMenosOcupada && $horaMenosOcupada->total < 5) {
+            $sugerencias[] = [
+                'tipo' => 'optimizacion_horarios',
+                'prioridad' => 'media',
+                'mensaje' => "La hora de {$horaMenosOcupada->hora}:00 tiene poca demanda ({$horaMenosOcupada->total} citas/mes). Considera ofrecer promociones o ajustar horarios.",
+                'accion_sugerida' => 'Revisar disponibilidad de horarios'
+            ];
+        }
+
+        // Análisis de cancelaciones
+        $tasaCancelacion = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN estado = "cancelada" THEN 1 ELSE 0 END) as canceladas
+            ')
+            ->first();
+
+        $tasa = $tasaCancelacion->total > 0 
+            ? round(($tasaCancelacion->canceladas / $tasaCancelacion->total) * 100, 1) 
+            : 0;
+
+        if ($tasa > 20) {
+            $sugerencias[] = [
+                'tipo' => 'reducir_cancelaciones',
+                'prioridad' => 'alta',
+                'mensaje' => "Tasa de cancelación de {$tasa}% es alta. Implementa recordatorios automáticos por WhatsApp/SMS 24h antes de la cita.",
+                'accion_sugerida' => 'Configurar recordatorios automáticos'
+            ];
+        }
+
+        // Análisis de capacidad
+        $citasHoy = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('fecha', now()->format('Y-m-d'))
+            ->count();
+
+        $promedioSemanal = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('fecha', '>=', now()->subDays(30))
+            ->count() / 4;
+
+        if ($citasHoy < ($promedioSemanal * 0.5)) {
+            $sugerencias[] = [
+                'tipo' => 'baja_ocupacion',
+                'prioridad' => 'baja',
+                'mensaje' => "Hoy tienes {$citasHoy} citas, por debajo del promedio. Contacta pacientes pendientes de agendar.",
+                'accion_sugerida' => 'Llamar a pacientes sin citas próximas'
+            ];
+        }
+
+        // Pacientes sin expediente clínico
+        $pacientesSinExpediente = DB::table('pacientes')
+            ->leftJoin('expedientes_clinicos', 'pacientes.id', '=', 'expedientes_clinicos.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->whereNull('expedientes_clinicos.id')
+            ->count();
+
+        if ($pacientesSinExpediente > 5) {
+            $sugerencias[] = [
+                'tipo' => 'expedientes_incompletos',
+                'prioridad' => 'media',
+                'mensaje' => "Tienes {$pacientesSinExpediente} pacientes sin expediente clínico. Completa la información para mejor seguimiento.",
+                'accion_sugerida' => 'Crear expedientes faltantes'
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'sugerencias' => $sugerencias,
+            'total_sugerencias' => count($sugerencias),
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    // ==========================================
+    // NOTIFICACIONES INTELIGENTES
+    // ==========================================
+
+    private function generarResumenDiario($user)
+    {
+        $clinicaId = $user->clinica_id;
+        $hoy = now()->format('Y-m-d');
+
+        // Citas de hoy
+        $citasHoy = DB::table('citas')
+            ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
+            ->where('citas.clinica_id', $clinicaId)
+            ->where('citas.fecha', $hoy)
+            ->select('citas.*', DB::raw('CONCAT(pacientes.nombre, " ", pacientes.apellidoPat) as paciente_nombre'))
+            ->orderBy('citas.hora')
+            ->get();
+
+        $citasCompletadas = $citasHoy->where('estado', 'completada')->count();
+        $citasPendientes = $citasHoy->where('estado', 'confirmada')->count();
+        $citasCanceladas = $citasHoy->where('estado', 'cancelada')->count();
+
+        // Próximas citas (próximos 3 días)
+        $citasProximas = DB::table('citas')
+            ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
+            ->where('citas.clinica_id', $clinicaId)
+            ->whereBetween('citas.fecha', [now()->addDay()->format('Y-m-d'), now()->addDays(3)->format('Y-m-d')])
+            ->where('citas.estado', '!=', 'cancelada')
+            ->select('citas.fecha', 'citas.hora', DB::raw('CONCAT(pacientes.nombre, " ", pacientes.apellidoPat) as paciente_nombre'))
+            ->orderBy('citas.fecha')
+            ->orderBy('citas.hora')
+            ->limit(5)
+            ->get();
+
+        // Tareas pendientes
+        $eventosPendientes = DB::table('eventos')
+            ->where('user_id', $user->id)
+            ->where('fecha', '<=', now()->addDays(3)->format('Y-m-d'))
+            ->where('completado', false)
+            ->orderBy('fecha')
+            ->limit(5)
+            ->get();
+
+        // Pacientes que requieren seguimiento
+        $pacientesSeguimiento = DB::table('pacientes')
+            ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
+            ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
+            ->havingRaw('MAX(citas.fecha) BETWEEN ? AND ?', [
+                now()->subDays(45)->format('Y-m-d'),
+                now()->subDays(30)->format('Y-m-d')
+            ])
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'resumen_diario' => [
+                'fecha' => $hoy,
+                'citas_hoy' => [
+                    'total' => $citasHoy->count(),
+                    'completadas' => $citasCompletadas,
+                    'pendientes' => $citasPendientes,
+                    'canceladas' => $citasCanceladas,
+                    'detalle' => $citasHoy->take(10)->map(function($cita) {
+                        return [
+                            'hora' => substr($cita->hora, 0, 5),
+                            'paciente' => $cita->paciente_nombre,
+                            'estado' => $cita->estado
+                        ];
+                    })->toArray()
+                ],
+                'proximas_citas' => $citasProximas->map(function($cita) {
+                    return [
+                        'fecha' => $cita->fecha,
+                        'hora' => substr($cita->hora, 0, 5),
+                        'paciente' => $cita->paciente_nombre
+                    ];
+                })->toArray(),
+                'tareas_pendientes' => $eventosPendientes->map(function($evento) {
+                    return [
+                        'fecha' => $evento->fecha,
+                        'titulo' => $evento->titulo,
+                        'tipo' => $evento->tipo
+                    ];
+                })->toArray(),
+                'pacientes_seguimiento' => $pacientesSeguimiento->map(function($p) {
+                    return [
+                        'nombre' => $p->nombre . ' ' . $p->apellidoPat,
+                        'ultima_cita' => $p->ultima_cita,
+                        'dias_sin_cita' => now()->diffInDays($p->ultima_cita)
+                    ];
+                })->toArray()
+            ],
+            'mensaje' => "Buenos días! Tienes {$citasHoy->count()} citas programadas para hoy.",
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    private function obtenerAlertasSeguimiento($user)
+    {
+        $clinicaId = $user->clinica_id;
+        $alertas = [];
+
+        // Citas próximas sin confirmar (en las próximas 24 horas)
+        $citasSinConfirmar = DB::table('citas')
+            ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
+            ->where('citas.clinica_id', $clinicaId)
+            ->where('citas.estado', 'pendiente')
+            ->whereBetween('citas.fecha', [now()->format('Y-m-d'), now()->addDay()->format('Y-m-d')])
+            ->select('citas.*', DB::raw('CONCAT(pacientes.nombre, " ", pacientes.apellidoPat) as paciente_nombre'))
+            ->get();
+
+        if ($citasSinConfirmar->count() > 0) {
+            $alertas[] = [
+                'tipo' => 'citas_sin_confirmar',
+                'prioridad' => 'alta',
+                'cantidad' => $citasSinConfirmar->count(),
+                'mensaje' => "Tienes {$citasSinConfirmar->count()} citas pendientes de confirmar en las próximas 24 horas.",
+                'pacientes' => $citasSinConfirmar->map(function($c) {
+                    return $c->paciente_nombre . ' - ' . $c->fecha . ' ' . substr($c->hora, 0, 5);
+                })->toArray()
+            ];
+        }
+
+        // Pacientes sin citas hace más de 3 meses
+        $pacientesInactivos = DB::table('pacientes')
+            ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
+            ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
+            ->havingRaw('MAX(citas.fecha) < ?', [now()->subDays(90)->format('Y-m-d')])
+            ->limit(10)
+            ->get();
+
+        if ($pacientesInactivos->count() > 0) {
+            $alertas[] = [
+                'tipo' => 'pacientes_inactivos',
+                'prioridad' => 'media',
+                'cantidad' => $pacientesInactivos->count(),
+                'mensaje' => "{$pacientesInactivos->count()} pacientes sin citas hace más de 3 meses. Considera contactarlos para seguimiento.",
+                'pacientes' => $pacientesInactivos->map(function($p) {
+                    return [
+                        'nombre' => $p->nombre . ' ' . $p->apellidoPat,
+                        'ultima_cita' => $p->ultima_cita
+                    ];
+                })->toArray()
+            ];
+        }
+
+        // Recordatorios/eventos para hoy
+        $recordatoriosHoy = DB::table('eventos')
+            ->where('user_id', $user->id)
+            ->where('fecha', now()->format('Y-m-d'))
+            ->where('completado', false)
+            ->get();
+
+        if ($recordatoriosHoy->count() > 0) {
+            $alertas[] = [
+                'tipo' => 'recordatorios',
+                'prioridad' => 'normal',
+                'cantidad' => $recordatoriosHoy->count(),
+                'mensaje' => "Tienes {$recordatoriosHoy->count()} recordatorios para hoy.",
+                'recordatorios' => $recordatoriosHoy->map(function($r) {
+                    return $r->titulo . ($r->hora ? ' - ' . substr($r->hora, 0, 5) : '');
+                })->toArray()
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'alertas' => $alertas,
+            'total_alertas' => count($alertas),
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    private function sugerenciasProactivas($user)
+    {
+        $clinicaId = $user->clinica_id;
+        $sugerencias = [];
+
+        // Sugerencia: Agendar citas para pacientes sin citas próximas
+        $pacientesSinCitasProximas = DB::table('pacientes')
+            ->leftJoin('citas', function($join) {
+                $join->on('pacientes.id', '=', 'citas.paciente_id')
+                     ->where('citas.fecha', '>=', now()->format('Y-m-d'));
+            })
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->whereNull('citas.id')
+            ->limit(5)
+            ->get(['pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat']);
+
+        if ($pacientesSinCitasProximas->count() > 0) {
+            $sugerencias[] = [
+                'tipo' => 'agendar_citas',
+                'icono' => '📅',
+                'mensaje' => "¿Quieres agendar citas para los {$pacientesSinCitasProximas->count()} pacientes que no tienen citas próximas?",
+                'accion' => 'Puedo ayudarte a agendarlas',
+                'pacientes' => $pacientesSinCitasProximas->map(function($p) {
+                    return $p->nombre . ' ' . $p->apellidoPat;
+                })->toArray()
+            ];
+        }
+
+        // Sugerencia: Optimizar horarios vacíos
+        $horasVacias = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('fecha', '>=', now()->format('Y-m-d'))
+            ->where('fecha', '<=', now()->addDays(7)->format('Y-m-d'))
+            ->selectRaw('fecha, COUNT(*) as total')
+            ->groupBy('fecha')
+            ->having('total', '<', 5)
+            ->get();
+
+        if ($horasVacias->count() > 0) {
+            $sugerencias[] = [
+                'tipo' => 'optimizar_agenda',
+                'icono' => '⏰',
+                'mensaje' => "Tienes {$horasVacias->count()} días con poca ocupación la próxima semana. ¿Quieres que te sugiera pacientes para contactar?",
+                'accion' => 'Mostrar lista de pacientes sugeridos',
+                'dias' => $horasVacias->pluck('fecha')->toArray()
+            ];
+        }
+
+        // Sugerencia: Crear expedientes faltantes
+        $pacientesSinExpediente = DB::table('pacientes')
+            ->leftJoin('expedientes_clinicos', 'pacientes.id', '=', 'expedientes_clinicos.paciente_id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->whereNull('expedientes_clinicos.id')
+            ->count();
+
+        if ($pacientesSinExpediente > 0) {
+            $sugerencias[] = [
+                'tipo' => 'completar_expedientes',
+                'icono' => '📋',
+                'mensaje' => "Hay {$pacientesSinExpediente} pacientes sin expediente clínico. ¿Quieres que te ayude a crearlos?",
+                'accion' => 'Iniciar creación de expedientes'
+            ];
+        }
+
+        // Sugerencia: Enviar recordatorios
+        $citasMañana = DB::table('citas')
+            ->where('clinica_id', $clinicaId)
+            ->where('fecha', now()->addDay()->format('Y-m-d'))
+            ->where('estado', 'confirmada')
+            ->count();
+
+        if ($citasMañana > 0) {
+            $sugerencias[] = [
+                'tipo' => 'enviar_recordatorios',
+                'icono' => '🔔',
+                'mensaje' => "Tienes {$citasMañana} citas mañana. ¿Quieres enviar recordatorios automáticos a los pacientes?",
+                'accion' => 'Enviar recordatorios por WhatsApp/SMS'
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'sugerencias' => $sugerencias,
+            'total_sugerencias' => count($sugerencias),
+            'mensaje' => count($sugerencias) > 0 
+                ? "Tengo " . count($sugerencias) . " sugerencias para mejorar tu gestión hoy."
+                : "Todo está al día! No tengo sugerencias en este momento.",
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    // ==========================================
+    // EXPEDIENTES CLÍNICOS
+    // ==========================================
+
+    private function obtenerExpediente($user, $params)
+    {
+        if (!isset($params['paciente_nombre'])) {
+            return response()->json(['success' => false, 'error' => 'Nombre del paciente requerido'], 400);
+        }
+
+        // Buscar paciente
+        $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+        
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['paciente_nombre']}'"
+            ], 404);
+        }
+
+        // Obtener expediente
+        $expediente = DB::table('expedientes_clinicos')
+            ->where('paciente_id', $paciente->id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$expediente) {
+            return response()->json([
+                'success' => true,
+                'tiene_expediente' => false,
+                'paciente' => [
+                    'id' => $paciente->id,
+                    'nombre' => $paciente->nombre . ' ' . $paciente->apellidoPat
+                ],
+                'mensaje' => "El paciente {$paciente->nombre} {$paciente->apellidoPat} no tiene expediente clínico aún."
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'tiene_expediente' => true,
+            'paciente' => [
+                'id' => $paciente->id,
+                'nombre' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+                'edad' => $paciente->edad ?? 'N/A',
+                'genero' => $paciente->genero == 1 ? 'Masculino' : 'Femenino'
+            ],
+            'expediente' => [
+                'id' => $expediente->id,
+                'antecedentes_personales' => $expediente->antecedentes_personales,
+                'antecedentes_familiares' => $expediente->antecedentes_familiares,
+                'diagnostico_actual' => $expediente->diagnostico_actual,
+                'tratamiento_actual' => $expediente->tratamiento_actual,
+                'notas' => $expediente->notas,
+                'ultima_actualizacion' => $expediente->updated_at
+            ]
+        ]);
+    }
+
+    private function crearExpediente($user, $params)
+    {
+        if (!isset($params['paciente_nombre'])) {
+            return response()->json(['success' => false, 'error' => 'Nombre del paciente requerido'], 400);
+        }
+
+        // Buscar paciente
+        $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+        
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['paciente_nombre']}'"
+            ], 404);
+        }
+
+        // Verificar si ya tiene expediente
+        $expedienteExistente = DB::table('expedientes_clinicos')
+            ->where('paciente_id', $paciente->id)
+            ->exists();
+
+        if ($expedienteExistente) {
+            return response()->json([
+                'success' => false,
+                'error' => "El paciente {$paciente->nombre} {$paciente->apellidoPat} ya tiene un expediente clínico. Usa 'editar expediente' para modificarlo."
+            ], 400);
+        }
+
+        // Crear expediente
+        $expedienteId = DB::table('expedientes_clinicos')->insertGetId([
+            'paciente_id' => $paciente->id,
+            'user_id' => $user->id,
+            'antecedentes_personales' => $params['antecedentes_personales'] ?? null,
+            'antecedentes_familiares' => $params['antecedentes_familiares'] ?? null,
+            'diagnostico_actual' => $params['diagnostico'] ?? null,
+            'tratamiento_actual' => $params['tratamiento'] ?? null,
+            'notas' => $params['notas'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Expediente clínico creado exitosamente para {$paciente->nombre} {$paciente->apellidoPat}",
+            'expediente_id' => $expedienteId
+        ]);
+    }
+
+    private function editarExpediente($user, $params)
+    {
+        if (!isset($params['paciente_nombre'])) {
+            return response()->json(['success' => false, 'error' => 'Nombre del paciente requerido'], 400);
+        }
+
+        // Buscar paciente
+        $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+        
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['paciente_nombre']}'"
+            ], 404);
+        }
+
+        // Buscar expediente
+        $expediente = DB::table('expedientes_clinicos')
+            ->where('paciente_id', $paciente->id)
+            ->first();
+
+        if (!$expediente) {
+            return response()->json([
+                'success' => false,
+                'error' => "El paciente no tiene expediente clínico. Usa 'crear expediente' primero."
+            ], 404);
+        }
+
+        // Preparar campos a actualizar
+        $updates = ['updated_at' => now()];
+        
+        if (isset($params['antecedentes_personales'])) {
+            $updates['antecedentes_personales'] = $params['antecedentes_personales'];
+        }
+        if (isset($params['antecedentes_familiares'])) {
+            $updates['antecedentes_familiares'] = $params['antecedentes_familiares'];
+        }
+        if (isset($params['diagnostico'])) {
+            $updates['diagnostico_actual'] = $params['diagnostico'];
+        }
+        if (isset($params['tratamiento'])) {
+            $updates['tratamiento_actual'] = $params['tratamiento'];
+        }
+        if (isset($params['notas'])) {
+            $updates['notas'] = $params['notas'];
+        }
+
+        // Actualizar expediente
+        DB::table('expedientes_clinicos')
+            ->where('id', $expediente->id)
+            ->update($updates);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Expediente de {$paciente->nombre} {$paciente->apellidoPat} actualizado exitosamente"
+        ]);
+    }
+
+    private function generarReporteClinico($user, $params)
+    {
+        if (!isset($params['paciente_nombre']) || !isset($params['tipo'])) {
+            return response()->json(['success' => false, 'error' => 'Nombre del paciente y tipo de reporte requeridos'], 400);
+        }
+
+        $tipo = $params['tipo']; // nutricional, psicologico, fisioterapia, general
+
+        // Buscar paciente
+        $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+        
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['paciente_nombre']}'"
+            ], 404);
+        }
+
+        // Obtener expediente
+        $expediente = DB::table('expedientes_clinicos')
+            ->where('paciente_id', $paciente->id)
+            ->first();
+
+        // Construir contexto para IA
+        $contexto = "Genera un reporte clínico profesional de tipo '{$tipo}' para:\n\n";
+        $contexto .= "PACIENTE: {$paciente->nombre} {$paciente->apellidoPat}\n";
+        $contexto .= "EDAD: " . ($paciente->edad ?? 'N/A') . " años\n";
+        $contexto .= "GÉNERO: " . ($paciente->genero == 1 ? 'Masculino' : 'Femenino') . "\n\n";
+
+        if ($expediente) {
+            $contexto .= "ANTECEDENTES PERSONALES: " . ($expediente->antecedentes_personales ?? 'Sin información') . "\n";
+            $contexto .= "ANTECEDENTES FAMILIARES: " . ($expediente->antecedentes_familiares ?? 'Sin información') . "\n";
+            $contexto .= "DIAGNÓSTICO: " . ($expediente->diagnostico_actual ?? 'Sin información') . "\n";
+            $contexto .= "TRATAMIENTO ACTUAL: " . ($expediente->tratamiento_actual ?? 'Sin información') . "\n\n";
+        }
+
+        // Historial de citas recientes
+        $citasRecientes = DB::table('citas')
+            ->where('paciente_id', $paciente->id)
+            ->where('estado', 'completada')
+            ->orderBy('fecha', 'desc')
+            ->limit(5)
+            ->get();
+
+        if ($citasRecientes->count() > 0) {
+            $contexto .= "HISTORIAL DE CITAS (últimas 5):\n";
+            foreach ($citasRecientes as $cita) {
+                $contexto .= "- {$cita->fecha}: " . ($cita->notas ?? 'Sin notas') . "\n";
+            }
+        }
+
+        // Solicitar reporte a IA
+        $result = $this->aiService->generarReporteClinico($contexto, $tipo);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al generar el reporte'
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'reporte' => $result['reporte'],
+            'tipo' => $tipo,
+            'paciente' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+            'generado_en' => now()->format('Y-m-d H:i:s')
+        ]);
+    }
+
+    private function buscarEnExpedientes($user, $params)
+    {
+        if (!isset($params['termino'])) {
+            return response()->json(['success' => false, 'error' => 'Término de búsqueda requerido'], 400);
+        }
+
+        $termino = $params['termino'];
+        $clinicaId = $user->clinica_id;
+
+        $resultados = DB::table('expedientes_clinicos')
+            ->join('pacientes', 'expedientes_clinicos.paciente_id', '=', 'pacientes.id')
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->where(function($query) use ($termino) {
+                $query->where('expedientes_clinicos.antecedentes_personales', 'LIKE', "%{$termino}%")
+                      ->orWhere('expedientes_clinicos.antecedentes_familiares', 'LIKE', "%{$termino}%")
+                      ->orWhere('expedientes_clinicos.diagnostico_actual', 'LIKE', "%{$termino}%")
+                      ->orWhere('expedientes_clinicos.tratamiento_actual', 'LIKE', "%{$termino}%")
+                      ->orWhere('expedientes_clinicos.notas', 'LIKE', "%{$termino}%");
+            })
+            ->select(
+                'pacientes.id',
+                'pacientes.nombre',
+                'pacientes.apellidoPat',
+                'expedientes_clinicos.diagnostico_actual',
+                'expedientes_clinicos.updated_at'
+            )
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'termino_buscado' => $termino,
+            'resultados' => $resultados->map(function($r) {
+                return [
+                    'paciente' => $r->nombre . ' ' . $r->apellidoPat,
+                    'diagnostico' => $r->diagnostico_actual ?? 'Sin diagnóstico',
+                    'ultima_actualizacion' => $r->updated_at
+                ];
+            })->toArray(),
+            'total_encontrados' => $resultados->count()
+        ]);
+    }
+
+    private function compararExpedientes($user, $params)
+    {
+        if (!isset($params['paciente_nombre']) || !isset($params['fecha_inicio']) || !isset($params['fecha_fin'])) {
+            return response()->json(['success' => false, 'error' => 'Nombre del paciente y fechas requeridas'], 400);
+        }
+
+        // Buscar paciente
+        $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+        
+        if (!$paciente) {
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró al paciente '{$params['paciente_nombre']}'"
+            ], 404);
+        }
+
+        // Obtener expedientes en el rango de fechas
+        $expedientes = DB::table('expedientes_clinicos')
+            ->where('paciente_id', $paciente->id)
+            ->whereBetween('updated_at', [$params['fecha_inicio'], $params['fecha_fin']])
+            ->orderBy('updated_at', 'asc')
+            ->get();
+
+        if ($expedientes->count() < 2) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No hay suficientes versiones del expediente para comparar en ese rango de fechas'
+            ], 404);
+        }
+
+        $primero = $expedientes->first();
+        $ultimo = $expedientes->last();
+
+        $comparacion = [
+            'paciente' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+            'periodo' => [
+                'inicio' => $params['fecha_inicio'],
+                'fin' => $params['fecha_fin']
+            ],
+            'cambios' => [
+                'diagnostico' => [
+                    'antes' => $primero->diagnostico_actual ?? 'Sin información',
+                    'despues' => $ultimo->diagnostico_actual ?? 'Sin información'
+                ],
+                'tratamiento' => [
+                    'antes' => $primero->tratamiento_actual ?? 'Sin información',
+                    'despues' => $ultimo->tratamiento_actual ?? 'Sin información'
+                ]
+            ],
+            'total_actualizaciones' => $expedientes->count()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'comparacion' => $comparacion
+        ]);
+    }
+
+    // Función helper para buscar paciente
+    private function buscarPacientePorNombre($user, $nombreBuscado)
+    {
+        $normalizar = function($texto) {
+            $texto = mb_strtolower($texto, 'UTF-8');
+            $texto = str_replace(
+                ['á', 'é', 'í', 'ó', 'ú', 'ñ'],
+                ['a', 'e', 'i', 'o', 'u', 'n'],
+                $texto
+            );
+            return trim($texto);
+        };
+        
+        $nombreBuscar = $normalizar($nombreBuscado);
+        
+        $pacientes = DB::table('pacientes')
+            ->where('clinica_id', $user->clinica_id)
+            ->get();
+        
+        foreach ($pacientes as $p) {
+            $nombreCompleto = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
+            $nombrePaciente = $normalizar($p->nombre);
+            
+            if ($nombreCompleto === $nombreBuscar || 
+                $nombrePaciente === $nombreBuscar ||
+                str_starts_with($nombreCompleto, $nombreBuscar) ||
+                strpos($nombreCompleto, $nombreBuscar) !== false) {
+                return $p;
+            }
+        }
+        
+        return null;
     }
 }

@@ -2,18 +2,23 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ReporteFisio extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'paciente_id',
         'user_id',
         'fecha',
         'contenido'
+    ];
+
+    protected $casts = [
+        'contenido' => 'encrypted',
     ];
 
     /**

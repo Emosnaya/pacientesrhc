@@ -49,7 +49,8 @@ class ProfileController extends Controller
             'cedula' => 'nullable|string|unique:users,cedula,' . $id,
             'email' => 'nullable|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:8',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
         ]);
 
         if ($validator->fails()) {
@@ -77,6 +78,9 @@ class ProfileController extends Controller
         }
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
+        }
+        if ($request->has('rol')) {
+            $updateData['rol'] = $request->rol ?: null;
         }
 
         \Log::info('📝 Datos a actualizar', ['updateData' => $updateData]);

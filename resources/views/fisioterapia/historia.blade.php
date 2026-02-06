@@ -8,21 +8,21 @@
     <style>
         /* Estilo para el logo */
         .logo-container {
-            height: 60px;
+            height: 36px;
             overflow: hidden;
             display: inline-block;
         }
         .logo-container img {
-            height: 60px;
+            height: 36px;
             width: auto;
         }
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 9px;
             line-height: 1.3;
         }
         .paciente {
-            font-size: 11px;
+            font-size: 10px;
         }
         .f-bold {
             font-weight: bold;
@@ -31,10 +31,10 @@
             font-weight: normal;
         }
         .f-10 {
-            font-size: 10px;
+            font-size: 8.5px;
         }
         .f-15 {
-            font-size: 14px;
+            font-size: 13px;
         }
         .text-center {
             text-align: center;
@@ -55,30 +55,14 @@
             position: absolute;
             right: 0;
         }
-        .contenedor {
-            position: relative;
-            text-align: justify;
-            margin-bottom: 0;
-            margin-top: 1.5rem;
-        }
-        .titulo {
-            display: inline-block;
-            position: relative;
-            z-index: 1;
-            padding-right: 0.5rem;
-            font-size: 13px;
+        .section-title {
             font-weight: bold;
-        }
-        .linea {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0.6rem;
-            border-bottom: 2px solid black;
-            z-index: 0;
-        }
-        .m-t-0 {
-            margin-top: -0.3rem;
+            font-size: 10px;
+            background-color: #DDDEE1;
+            padding: 2px 5px;
+            margin-top: 0.5rem;
+            margin-bottom: 0.3rem;
+            border-left: 3px solid #000;
         }
         .bck-gray {
             background-color: #DDDEE1;
@@ -95,17 +79,23 @@
             border: 1px solid black;
         }
         .signature {
-            margin-top: 2rem;
+            margin-top: 3rem;
             text-align: center;
+        }
+        .signature img {
+            display: block;
+            margin: 0 auto 0.2rem;
+            max-width: 150px;
         }
         .signature-line {
             border-top: 1px solid #000;
             width: 250px;
-            margin: 0 auto 5px;
-            margin-top: 2rem;
+            margin: 0.2rem auto 0.3rem;
         }
         .signature-text {
-            font-size: 9px;
+            font-size: 8px;
+            text-align: center;
+            margin: 0.2rem 0;
         }
         p.f-10 {
             line-height: 1.5;
@@ -117,7 +107,7 @@
         <div class="paciente ma-t-0 mb-0">
             <p class="f-bold f-15 text-center mb-0 mt-0">Historia Clínica de Fisioterapia</p>
             <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-            <div class="medio">
+            <div class="medio mt-2">
                 <p class="text-sm texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y', strtotime($data->fecha)) }}</p>
                 <span class="ml-5 text-right texto-derecha f-bold">Registro: {{ $paciente->registro }}</span>
             </div>
@@ -131,18 +121,12 @@
     </header>
 
     <main class="mt-0">
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Motivo de Consulta y Padecimiento</h2>
-            <div class="linea"></div>
-        </div>
-        <p class="f-bold m-t-0 f-10 mb-1">Motivo de consulta: <span class="f-normal">{{ $data->motivo_consulta ?? 'N/A' }}</span></p>
+        <div class="section-title">MOTIVO DE CONSULTA Y PADECIMIENTO</div>
+        <p class="f-bold f-10 mb-1">Motivo de consulta: <span class="f-normal">{{ $data->motivo_consulta ?? 'N/A' }}</span></p>
         <p class="f-bold f-10 mb-1">Padecimiento actual: <span class="f-normal">{{ $data->padecimiento_actual ?? 'N/A' }}</span></p>
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Antecedentes</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">ANTECEDENTES</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-bold text-lft" width="30%">Heredofamiliares:</td>
@@ -163,11 +147,8 @@
             </tbody>
         </table>
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Exploración Física</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <div class="section-title">EXPLORACIÓN FÍSICA</div>
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 <tr>
                     <td class="f-bold text-lft" width="30%">Signos vitales:</td>
@@ -196,18 +177,12 @@
             </tbody>
         </table>
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Impresión Diagnóstica</h2>
-            <div class="linea"></div>
-        </div>
-        <p class="f-bold m-t-0 f-10 mb-1">Diagnóstico médico: <span class="f-normal">{{ $data->diagnostico_medico ?? 'N/A' }}</span></p>
+        <div class="section-title">IMPRESIÓN DIAGNÓSTICA</div>
+        <p class="f-bold f-10 mb-1">Diagnóstico médico: <span class="f-normal">{{ $data->diagnostico_medico ?? 'N/A' }}</span></p>
         <p class="f-bold f-10 mb-1">Diagnóstico fisioterapéutico: <span class="f-normal">{{ $data->diagnostico_fisioterapeutico ?? 'N/A' }}</span></p>
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Plan Terapéutico</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">PLAN TERAPÉUTICO</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-bold text-lft" width="30%">Objetivos del tratamiento:</td>
@@ -230,11 +205,11 @@
 
         <div class="signature">
             @if($firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px;">
+                <img src="{{ $firmaBase64 }}" alt="Firma">
             @endif
             <div class="signature-line"></div>
-            <p class="signature-text"><strong>{{ $user->nombre }} {{ $user->apellidoPat }}</strong></p>
-            <p class="signature-text">Fisioterapeuta</p>
+            <p class="signature-text mb-0"><strong>{{ $user->nombre_con_titulo }}</strong></p>
+            <p class="signature-text mb-0">Fisioterapeuta</p>
         </div>
     </main>
 </body>

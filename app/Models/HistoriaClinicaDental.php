@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HistoriaClinicaDental extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Auditable;
 
     protected $table = 'historia_clinica_dental';
 
@@ -141,6 +142,16 @@ class HistoriaClinicaDental extends Model
         'ao_cepilla_dientes' => 'boolean',
         'ao_trauma_cara' => 'boolean',
         'ao_dolor_masticar' => 'boolean',
+        // Cifrado de campos sensibles
+        'alergias' => 'encrypted',
+        'medicamento_detalle' => 'encrypted',
+        'anestesicos_detalle' => 'encrypted',
+        'medicamentos_alergicos_detalle' => 'encrypted',
+        'historia_enfermedad' => 'encrypted',
+        'motivo_consulta' => 'encrypted',
+        'at_fuma_detalle' => 'encrypted',
+        'at_drogas_detalle' => 'encrypted',
+        'at_toma_detalle' => 'encrypted',
     ];
 
     /**

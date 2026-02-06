@@ -8,21 +8,21 @@
     <style>
         /* Estilo para el logo */
         .logo-container {
-            height: 60px;
+            height: 36px;
             overflow: hidden;
             display: inline-block;
         }
         .logo-container img {
-            height: 60px;
+            height: 36px;
             width: auto;
         }
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
+            font-size: 9px;
             line-height: 1.3;
         }
         .paciente {
-            font-size: 11px;
+            font-size: 10px;
         }
         .f-bold {
             font-weight: bold;
@@ -31,10 +31,10 @@
             font-weight: normal;
         }
         .f-10 {
-            font-size: 10px;
+            font-size: 8.5px;
         }
         .f-15 {
-            font-size: 14px;
+            font-size: 13px;
         }
         .text-center {
             text-align: center;
@@ -55,30 +55,14 @@
             position: absolute;
             right: 0;
         }
-        .contenedor {
-            position: relative;
-            text-align: justify;
-            margin-bottom: 0;
-            margin-top: 1.5rem;
-        }
-        .titulo {
-            display: inline-block;
-            position: relative;
-            z-index: 1;
-            padding-right: 0.5rem;
-            font-size: 13px;
+        .section-title {
             font-weight: bold;
-        }
-        .linea {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0.6rem;
-            border-bottom: 2px solid black;
-            z-index: 0;
-        }
-        .m-t-0 {
-            margin-top: -0.3rem;
+            font-size: 10px;
+            background-color: #DDDEE1;
+            padding: 2px 5px;
+            margin-top: 0.5rem;
+            margin-bottom: 0.3rem;
+            border-left: 3px solid #000;
         }
         .bck-gray {
             background-color: #DDDEE1;
@@ -95,17 +79,23 @@
             border: 1px solid black;
         }
         .signature {
-            margin-top: 2rem;
+            margin-top: 3rem;
             text-align: center;
+        }
+        .signature img {
+            display: block;
+            margin: 0 auto 0.2rem;
+            max-width: 150px;
         }
         .signature-line {
             border-top: 1px solid #000;
             width: 250px;
-            margin: 0 auto 5px;
-            margin-top: 2rem;
+            margin: 0.2rem auto 0.3rem;
         }
         .signature-text {
-            font-size: 9px;
+            font-size: 8px;
+            text-align: center;
+            margin: 0.2rem 0;
         }
         .motivo-alta {
             background-color: #fff3cd;
@@ -114,11 +104,6 @@
             font-weight: bold;
             text-align: center;
             margin: 15px 0;
-            font-size: 12px;
-        }
-            font-weight: bold;
-            text-align: center;
-            margin: 10px 0;
             font-size: 12px;
         }
         .highlight-box {
@@ -148,11 +133,8 @@
 
     <main class="mt-0">
         @if($data->diagnostico_medico || $data->diagnostico_fisioterapeutico_inicial)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Diagnósticos</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">DIAGNÓSTICOS</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 @if($data->diagnostico_medico)
                 <tr>
@@ -170,11 +152,8 @@
         </table>
         @endif
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Periodo de Atención</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">PERÍODO DE ATENCIÓN</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 @if($data->fecha_inicio_atencion)
                 <tr>
@@ -198,11 +177,8 @@
         </table>
 
         @if($data->tratamiento_otorgado)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Tratamiento Otorgado</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <div class="section-title">TRATAMIENTO OTORGADO</div>
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->tratamiento_otorgado }}</td>
@@ -211,11 +187,8 @@
         </table>
         @endif
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Evolución y Resultados</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">EVOLUCIÓN Y RESULTADOS</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 @if($data->evolucion_resultados)
                 <tr>
@@ -239,11 +212,8 @@
         </table>
 
         @if($data->objetivos_alcanzados)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Objetivos Alcanzados</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <div class="section-title">OBJETIVOS ALCANZADOS</div>
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->objetivos_alcanzados }}</td>
@@ -253,11 +223,8 @@
         @endif
 
         @if($data->estado_funcional_alta)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Estado Funcional al Alta</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped bck-gray">
+        <div class="section-title">ESTADO FUNCIONAL AL ALTA</div>
+        <table class="tabla text-lft border-t text-center table-striped bck-gray">
             <tbody>
                 <tr>
                     <td class="f-normal text-lft">{{ $data->estado_funcional_alta }}</td>
@@ -266,11 +233,8 @@
         </table>
         @endif
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Recomendaciones y Pronóstico</h2>
-            <div class="linea"></div>
-        </div>
-        <table class="tabla text-lft border-t text-center m-t-0 table-striped">
+        <div class="section-title">RECOMENDACIONES Y PRONÓSTICO</div>
+        <table class="tabla text-lft border-t text-center table-striped">
             <tbody>
                 @if($data->recomendaciones_seguimiento)
                 <tr>
@@ -289,11 +253,11 @@
 
         <div class="signature">
             @if($firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px;">
+                <img src="{{ $firmaBase64 }}" alt="Firma">
             @endif
             <div class="signature-line"></div>
-            <p class="signature-text"><strong>{{ $user->nombre }} {{ $user->apellidoPat }}</strong></p>
-            <p class="signature-text">Fisioterapeuta</p>
+            <p class="signature-text mb-0"><strong>{{ $user->nombre_con_titulo }}</strong></p>
+            <p class="signature-text mb-0">Fisioterapeuta</p>
         </div>
     </main>
 </body>

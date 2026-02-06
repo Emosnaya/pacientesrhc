@@ -30,6 +30,7 @@ use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
+use App\Http\Controllers\RecetaController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -87,7 +88,16 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/odontogramas', OdontogramaController::class);
     Route::get('/odontogramas/paciente/{pacienteId}', [OdontogramaController::class, 'getByPaciente']);
     Route::get('/odontogramas/paciente/{pacienteId}/latest', [OdontogramaController::class, 'getLatestByPaciente']);
-    
+
+    // Recetas médicas
+    Route::get('/recetas', [RecetaController::class, 'index']);
+    Route::get('/recetas/paciente/{pacienteId}', [RecetaController::class, 'getByPaciente']);
+    Route::get('/recetas/imprimir/{id}', [PDFController::class, 'recetaPdf']);
+    Route::get('/recetas/config/pdf', [RecetaController::class, 'getPdfConfig']);
+    Route::put('/recetas/config/pdf', [RecetaController::class, 'updatePdfConfig']);
+    Route::get('/recetas/{id}', [RecetaController::class, 'show']);
+    Route::post('/recetas', [RecetaController::class, 'store']);
+
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);

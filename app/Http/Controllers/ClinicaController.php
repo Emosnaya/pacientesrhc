@@ -69,6 +69,7 @@ class ClinicaController extends Controller
             'admin_email' => 'required|email|unique:users,email',
             'admin_password' => 'required|string|min:8',
             'admin_cedula' => 'nullable|string|max:20',
+            'admin_rol' => 'nullable|string|in:' . config('roles.validacion_in'),
         ]);
 
         if ($validator->fails()) {
@@ -131,6 +132,7 @@ class ClinicaController extends Controller
                 'email' => $request->admin_email,
                 'password' => Hash::make($request->admin_password),
                 'cedula' => $request->admin_cedula,
+                'rol' => $request->admin_rol ?: null,
                 'isAdmin' => true,
                 'isSuperAdmin' => true, // Super admin de la clínica
                 'clinica_id' => $clinica->id,

@@ -6,29 +6,64 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Prueba de Esfuerzo Naughton Modificada</title>
     <style>
+        /* Estilo para el logo */
+        .logo-container {
+            height: 36px;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .logo-container img {
+            height: 36px;
+            width: auto;
+        }
         body {
             font-family: Arial, sans-serif;
             font-size: 9px;
             margin: 0;
             line-height: 1.3;
         }
+        .paciente {
+            font-size: 10px;
+        }
         .f-bold {
             font-weight: bold;
         }
+        .f-normal {
+            font-weight: normal;
+        }
         .f-9 {
-            font-size: 9px;
+            font-size: 8.5px;
         }
         .f-10 {
-            font-size: 10px;
+            font-size: 8.5px;
         }
         .f-11 {
-            font-size: 11px;
+            font-size: 10px;
         }
         .f-12 {
-            font-size: 12px;
+            font-size: 11px;
+        }
+        .f-15 {
+            font-size: 13px;
         }
         .text-center {
             text-align: center;
+        }
+        .text-lft {
+            text-align: left;
+        }
+        .medio {
+            position: relative;
+        }
+        .texto-izquierda {
+            text-align: left;
+            position: absolute;
+            left: 0;
+        }
+        .texto-derecha {
+            text-align: right;
+            position: absolute;
+            right: 0;
         }
         .mb-1 {
             margin-bottom: 0.25rem;
@@ -47,12 +82,15 @@
         }
         .section-title {
             font-weight: bold;
-            font-size: 11px;
-            background-color: #E8E8E8;
-            padding: 3px 6px;
+            font-size: 10px;
+            background-color: #DDDEE1;
+            padding: 2px 5px;
             margin-top: 0.5rem;
             margin-bottom: 0.3rem;
-            border-left: 3px solid #4A90E2;
+            border-left: 3px solid #000;
+        }
+        .bck-gray {
+            background-color: #DDDEE1;
         }
         .tabla {
             width: 100%;
@@ -80,22 +118,19 @@
     </style>
 </head>
 <body>
-    <header class="text-center mb-2">
-        <img src="img/logo.png" alt="cercap logo" style="height: 70px">
-        <h1 class="f-12 f-bold mb-1">PRUEBA DE ESFUERZO NAUGHTON MODIFICADA</h1>
-        <p class="f-10 mb-1">Rehabilitación Pulmonar</p>
-    </header>
-
-    <main>
-        <!-- Datos del paciente -->
-        <div class="info-row f-10">
-            <span class="inline-label">Fecha de Realización:</span>
-            <span>{{ $data->fecha_realizacion ? date('d/m/Y', strtotime($data->fecha_realizacion)) : 'N/A' }}</span>
-        </div>
-        <div class="info-row f-10">
-            <span class="inline-label">Nombre:</span>
-            <span>{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre }}</span>
-        </div>
+    <header class="mb-0">
+        <div class="paciente ma-t-0 mb-0">
+            <p class="f-bold f-15 text-center mb-0 mt-0">PRUEBA DE ESFUERZO NAUGHTON MODIFICADA</p>
+            <p class="f-10 text-center mb-1 mt-0">Rehabilitación Pulmonar</p>
+            @if(isset($clinicaLogo))
+            <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
+            @endif
+            <div class="medio">
+                <p class="texto-izquierda mb-0 f-bold">Fecha de Realización: {{ $data->fecha_realizacion ? date('d/m/Y', strtotime($data->fecha_realizacion)) : 'N/A' }}</p> 
+                <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro ?? 'N/A'}}</span>
+            </div>
+            <br>
+            <p class="f-bold mb-0 mt-1">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre }}</span></p>
         <div class="info-row f-10">
             <span class="inline-label">Fecha de nacimiento:</span>
             <span>{{ $paciente->fechaNacimiento ? date('d/m/Y', strtotime($paciente->fechaNacimiento)) : 'N/A' }}</span>
@@ -389,38 +424,20 @@
         <div class="f-9" style="text-align: justify; margin-left: 10px;">{!! nl2br(e($data->plan_manejo_complementario)) !!}</div>
         @endif
 
+        @if(isset($firmaBase64) && $firmaBase64)
         <!-- Firma -->
         <div style="margin-top: 30px; text-align: center;">
-            @if(isset($firmaBase64) && $firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px; height: auto">
-            @endif
+            <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px; height: auto">
             @if(isset($userParaFirma) && $userParaFirma)
             <div style="border-top: 2px solid #000; width: 300px; margin: 5px auto 5px auto;"></div>
-            <p class="f-10 f-bold mb-1">Dr. {{ trim($userParaFirma->nombre . ' ' . ($userParaFirma->apellidoPat ?? '')) }}</p>
+            <p class="f-10 f-bold mb-1">{{ $userParaFirma->nombre_con_titulo }}</p>
             <p class="f-9 mb-1">Médico Especialista en Medicina de Rehabilitación</p>
             @if(!empty($userParaFirma->cedula))
             <p class="f-9">Cédula Profesional: {{ $userParaFirma->cedula }}</p>
             @endif
             @endif
         </div>
+        @endif
     </main>
-
-    <footer style="margin-top: 3rem; padding-top: 0.3rem; border-top: 1px solid #000;">
-        <div style="display: table; width: 100%;">
-            <div style="display: table-cell; width: 50%; vertical-align: top;">
-                <p class="f-9 mb-1"><strong>Torre Médica II</strong></p>
-                <p class="f-9 mb-1">Real Mayorazgo 130, local 3</p>
-                <p class="f-9 mb-1">Col. Xoco, Benito Juárez</p>
-                <p class="f-9 mb-1">C.P. 03330 CDMX</p>
-            </div>
-            <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
-                <p class="f-9 mb-1"><strong>Informes y citas:</strong></p>
-                <p class="f-9 mb-1"> 55 2625 5547 / 55 2625 5548</p>
-                <p class="f-9 mb-1"> 56 3034 8666</p>
-                <p class="f-9 mb-1"> cercap.cardiopulmonar@gmail.com</p>
-                <p class="f-9 mb-1"><strong>www.cercap.mx</strong></p>
-            </div>
-        </div>
-    </footer>
 </body>
 </html>

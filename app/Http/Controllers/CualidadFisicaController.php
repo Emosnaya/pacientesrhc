@@ -149,18 +149,18 @@ class CualidadFisicaController extends Controller
             }
         }
 
-        // Obtener la firma del doctor
+        // Obtener la firma del doctor (User usa firma_digital, ruta en public/storage)
         $firmaBase64 = null;
-        if ($selectedUser->firma_path) {
-            $firmaPath = storage_path('app/public/' . $selectedUser->firma_path);
+        if ($selectedUser->firma_digital) {
+            $firmaPath = public_path('storage/' . $selectedUser->firma_digital);
             if (file_exists($firmaPath)) {
-                $firmaData = base64_encode(file_get_contents($firmaPath));
-                $firmaExtension = pathinfo($firmaPath, PATHINFO_EXTENSION);
-                $firmaBase64 = 'data:image/' . $firmaExtension . ';base64,' . $firmaData;
+                $imageData = file_get_contents($firmaPath);
+                $imageType = mime_content_type($firmaPath);
+                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
             }
         }
 
-        $pdf = PDF::loadView('cualidadesfisicas', [
+        $pdf = PDF::loadView('cardiaca.cualidadesfisicas', [
             'data' => $cualidadFisica,
             'paciente' => $paciente,
             'user' => $selectedUser,
@@ -198,18 +198,18 @@ class CualidadFisicaController extends Controller
             }
         }
 
-        // Obtener la firma del doctor
+        // Obtener la firma del doctor (User usa firma_digital, ruta en public/storage)
         $firmaBase64 = null;
-        if ($selectedUser->firma_path) {
-            $firmaPath = storage_path('app/public/' . $selectedUser->firma_path);
+        if ($selectedUser->firma_digital) {
+            $firmaPath = public_path('storage/' . $selectedUser->firma_digital);
             if (file_exists($firmaPath)) {
-                $firmaData = base64_encode(file_get_contents($firmaPath));
-                $firmaExtension = pathinfo($firmaPath, PATHINFO_EXTENSION);
-                $firmaBase64 = 'data:image/' . $firmaExtension . ';base64,' . $firmaData;
+                $imageData = file_get_contents($firmaPath);
+                $imageType = mime_content_type($firmaPath);
+                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
             }
         }
 
-        $pdf = PDF::loadView('cualidadesfisicas', [
+        $pdf = PDF::loadView('cardiaca.cualidadesfisicas', [
             'data' => $cualidadFisica,
             'paciente' => $paciente,
             'user' => $selectedUser,
