@@ -117,6 +117,14 @@ ALTER TABLE clinicos MODIFY COLUMN plan TEXT;
 -- ReporteFinal - Solo tiene datos numéricos estructurados (no necesita modificación)
 
 -- ============================================
+-- PAGOS - Motor Financiero
+-- ============================================
+ALTER TABLE pagos MODIFY COLUMN monto TEXT;
+ALTER TABLE pagos MODIFY COLUMN referencia TEXT;
+ALTER TABLE pagos MODIFY COLUMN concepto TEXT;
+ALTER TABLE pagos MODIFY COLUMN notas TEXT;
+
+-- ============================================
 -- VERIFICACION
 -- ============================================
 SELECT 'Modificación completada. Ahora ejecuta: php artisan data:encrypt-existing' AS mensaje;

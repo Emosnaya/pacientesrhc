@@ -164,6 +164,51 @@ class Paciente extends Model
     }
 
     /**
+     * Relación con los pagos del paciente
+     */
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class);
+    }
+
+    /**
+     * Obtener el total de pagos realizados por el paciente
+     */
+    public function getTotalPagosAttribute()
+    {
+        return $this->pagos->sum(function($pago) {
+            return (float) $pago->monto;
+        });
+    }
+
+    /**
+     * Obtener el saldo pendiente del paciente
+     * Por ahora retorna 0, pero puede calcularse basado en tratamientos/servicios
+     */
+    public function getSaldoPendienteAttribute()
+    {
+        // TODO: Implementar lógica cuando se tenga sistema de costos de tratamientos
+        // Por ahora solo retornamos el total pagado como referencia
+        return 0;
+    }
+
+    /**
+     * Obtener el último pago realizado
+     */
+    public function getUltimoPagoAttribute()
+    {
+        return $this->pagos()->latest()->first();
+    }
+
+    /**
+     * Verificar si el paciente tiene pagos registrados
+     */
+    public function tienePagos(): bool
+    {
+        return $this->pagos()->exists();
+    }
+
+    /**
      * Verificar si el paciente es de tipo cardíaco
      */
     public function isCardiaco(): bool

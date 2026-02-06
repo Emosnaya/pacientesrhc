@@ -99,9 +99,19 @@ return new class extends Migration
         DB::statement('ALTER TABLE nota_alta_fisioterapia MODIFY COLUMN recomendaciones_seguimiento TEXT');
         DB::statement('ALTER TABLE nota_alta_fisioterapia MODIFY COLUMN pronostico_funcional TEXT');
 
-        // Prueba Esfuerzo Pulmonar
-        DB::statement('ALTER TABLE prueba_esfuerzo_pulmonar MODIFY COLUMN interpretacion TEXT');
-        DB::statement('ALTER TABLE prueba_esfuerzo_pulmonar MODIFY COLUMN plan_manejo_complementario TEXT');
+        // Prueba Esfuerzo Pulmonar (tabla con 's' al final)
+        if (DB::getSchemaBuilder()->hasTable('prueba_esfuerzo_pulmonars')) {
+            DB::statement('ALTER TABLE prueba_esfuerzo_pulmonars MODIFY COLUMN interpretacion TEXT');
+            DB::statement('ALTER TABLE prueba_esfuerzo_pulmonars MODIFY COLUMN plan_manejo_complementario TEXT');
+        }
+
+        // Pagos (Motor Financiero)
+        if (DB::getSchemaBuilder()->hasTable('pagos')) {
+            DB::statement('ALTER TABLE pagos MODIFY COLUMN monto TEXT');
+            DB::statement('ALTER TABLE pagos MODIFY COLUMN referencia TEXT');
+            DB::statement('ALTER TABLE pagos MODIFY COLUMN concepto TEXT');
+            DB::statement('ALTER TABLE pagos MODIFY COLUMN notas TEXT');
+        }
     }
 
     /**

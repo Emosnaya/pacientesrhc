@@ -95,6 +95,7 @@ class ExpedientePulmonarController extends Controller
         // Asignar el user_id del dueño del paciente
         $data['user_id'] = $paciente->user_id;
         $data['clinica_id'] = $user->clinica_id;
+        $data['sucursal_id'] = $user->sucursal_id;
 
         // Procesar campos JSON
         if ($request->has('enfermedades_cronicas')) {
