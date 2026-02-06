@@ -15,6 +15,7 @@ return [
         'nutriologo',
         'psicologo',
         'fisioterapeuta',
+        'rehabilitador',
     ],
 
     /*
@@ -45,6 +46,7 @@ return [
         'nutriologo'      => 'Nutriólogo(a)',
         'psicologo'       => 'Psicólogo(a)',
         'fisioterapeuta'  => 'Fisioterapeuta',
+        'rehabilitador'   => 'Rehabilitador',
         'recepcionista'   => 'Recepcionista',
         'administrativo'  => 'Administrativo(a)',
         'laboratorista'   => 'Laboratorista',
@@ -67,6 +69,7 @@ return [
         'nutriologo'      => 'Lic.',
         'psicologo'       => 'Lic.',
         'fisioterapeuta'  => 'Lic.',
+        'rehabilitador'   => 'Lic.',
         'recepcionista'   => '',
         'administrativo'  => '',
         'laboratorista'   => '',
@@ -81,5 +84,5 @@ return [
     | Validación: string permitido para rol (para reglas Rule::in)
     |--------------------------------------------------------------------------
     */
-    'validacion_in' => 'doctor,doctora,licenciado,director_medico,nutriologo,psicologo,fisioterapeuta,recepcionista,administrativo,laboratorista,enfermera,enfermero,coordinador,asistente_medico',
+    'validacion_in' => 'doctor,doctora,licenciado,director_medico,nutriologo,psicologo,fisioterapeuta,rehabilitador,recepcionista,administrativo,laboratorista,enfermera,enfermero,coordinador,asistente_medico',
 ];
