@@ -597,7 +597,9 @@ class AnalyticsController extends Controller
      */
     private function getTasaTermino($clinicaId, $sucursalId = null)
     {
-        $query = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca');
+        // Solo pacientes cardíacos o cardiopulmonares (ambos)
+        $query = Paciente::where('clinica_id', $clinicaId)
+            ->whereIn('tipo_paciente', ['cardiaca', 'ambos']);
         if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         $totalPacientes = $query->count();
         
@@ -606,26 +608,26 @@ class AnalyticsController extends Controller
         }
 
         $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId, $sucursalId);
-        $pacientesSinExpFinal = $totalPacientes-$pacientesConExpFinal;
         
-        return round(($pacientesConExpFinal / $pacientesSinExpFinal) * 100, 1);
+        // Cálculo correcto: (pacientes que terminaron / total de pacientes) * 100
+        return round(($pacientesConExpFinal / $totalPacientes) * 100, 1);
     }
 
     /**
      * Obtener cantidad de pacientes con reporte final (terminaron el programa)
-     * Solo cuenta pacientes cardíacos que tienen reporte final
+     * Solo cuenta pacientes cardíacos o cardiopulmonares que tienen expediente final
      */
     private function getPacientesConExpedienteFinal($clinicaId, $sucursalId = null)
     {
-        // Obtener IDs de pacientes cardíacos de la clínica
+        // Obtener IDs de pacientes cardíacos o cardiopulmonares de la clínica
         $query = Paciente::where('clinica_id', $clinicaId)
-            ->where('tipo_paciente', 'cardiaca');
+            ->whereIn('tipo_paciente', ['cardiaca', 'ambos']);
         if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        $pacientesCardiacos = $query->pluck('id');
+        $pacientesIds = $query->pluck('id');
         
-        // Contar pacientes cardíacos que tienen reporte final
+        // Contar pacientes que tienen reporte final (expediente final)
         return ReporteFinal::where('clinica_id', $clinicaId)
-            ->whereIn('paciente_id', $pacientesCardiacos)
+            ->whereIn('paciente_id', $pacientesIds)
             ->select('paciente_id')
             ->distinct()
             ->count();
