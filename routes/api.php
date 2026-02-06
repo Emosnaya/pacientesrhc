@@ -31,6 +31,7 @@ use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Http\Controllers\RecetaController;
+use App\Http\Controllers\FinanzasController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -98,6 +99,28 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/recetas/{id}', [RecetaController::class, 'show']);
     Route::post('/recetas', [RecetaController::class, 'store']);
 
+    // ==========================================
+    // MÓDULO DE FINANZAS - Motor Financiero
+    // ==========================================
+    Route::prefix('finanzas')->group(function() {
+        // Gestión de pagos
+        Route::post('/pagos', [FinanzasController::class, 'registrarPago']);
+        Route::get('/pagos', [FinanzasController::class, 'index']);
+        Route::get('/pagos/{id}', [FinanzasController::class, 'show']);
+        Route::delete('/pagos/{id}', [FinanzasController::class, 'destroy']);
+        
+        // Historial de pagos por paciente
+        Route::get('/pacientes/{pacienteId}/pagos', [FinanzasController::class, 'historialPaciente']);
+        // Enviar recibo por correo
+        Route::post('/recibo/send-email', [FinanzasController::class, 'sendReciboByEmail']);
+        
+        // Corte de caja
+        Route::get('/corte-caja', [FinanzasController::class, 'corteCajaDiario']);
+        
+        // Estadísticas financieras
+        Route::get('/estadisticas', [FinanzasController::class, 'estadisticas']);
+    });
+
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
@@ -139,6 +162,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/ai/autocomplete', [AIController::class, 'autocomplete']);
     Route::post('/ai/summarize', [AIController::class, 'summarize']);
     Route::post('/ai/chat', [AIController::class, 'chat']); // Asistente médico virtual
+    Route::get('/ai/context', [AIController::class, 'getContext']); // Contexto proactivo del día
     Route::post('/ai/action', [AIController::class, 'executeAction']); // Ejecutar acciones del asistente
     
     // Rutas de Dashboard Insights con IA

@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\Models\Paciente;
+use App\Models\Pago;
 use App\Models\Receta;
 use App\Models\ExpedientePulmonar;
 use App\Models\Odontograma;
@@ -115,6 +116,9 @@ class EncryptExistingData extends Command
             Paciente::class => [
                 'nombre', 'apellidoPat', 'apellidoMat', 'telefono', 
                 'email', 'domicilio', 'diagnostico', 'medicamentos'
+            ],
+            Pago::class => [
+                'monto', 'referencia', 'concepto', 'notas'
             ],
             Receta::class => [
                 'diagnostico_principal', 'indicaciones_generales'

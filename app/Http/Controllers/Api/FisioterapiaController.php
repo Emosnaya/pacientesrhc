@@ -38,8 +38,11 @@ class FisioterapiaController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = auth()->user();
         $data = $request->all();
-        $data['user_id'] = auth()->id();
+        $data['user_id'] = $user->id;
+        $data['clinica_id'] = $user->clinica_id;
+        $data['sucursal_id'] = $user->sucursal_id;
 
         $historia = HistoriaClinicaFisioterapia::create($data);
 
@@ -183,8 +186,11 @@ class FisioterapiaController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = auth()->user();
         $data = $request->all();
-        $data['user_id'] = auth()->id();
+        $data['user_id'] = $user->id;
+        $data['clinica_id'] = $user->clinica_id;
+        $data['sucursal_id'] = $user->sucursal_id;
 
         $nota = NotaAltaFisioterapia::create($data);
 

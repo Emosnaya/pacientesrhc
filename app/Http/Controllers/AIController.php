@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use App\Models\User;
 
 class AIController extends Controller
@@ -265,6 +266,149 @@ class AIController extends Controller
     }
 
     /**
+     * Obtener contexto proactivo para el asistente (citas del día, alertas, etc.)
+     */
+    public function getContext(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $clinicaId = $user->clinica_id;
+            $tipoClinica = $user->clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
+            
+            // Citas de hoy - obtener IDs primero
+            $hoy = now()->toDateString();
+            $citasHoyIds = DB::table('citas')
+                ->where('citas.clinica_id', $clinicaId)
+                ->where('citas.fecha', $hoy)
+                ->where('citas.estado', '!=', 'cancelada')
+                ->pluck('id');
+            
+            $countCitasHoy = $citasHoyIds->count();
+            
+            // Próxima cita (más cercana) - obtener ID
+            $ahora = now();
+            $proximaCitaId = DB::table('citas')
+                ->where('citas.clinica_id', $clinicaId)
+                ->where('citas.estado', '!=', 'cancelada')
+                ->where(function($query) use ($hoy, $ahora) {
+                    $query->where('citas.fecha', '>', $hoy)
+                        ->orWhere(function($q) use ($hoy, $ahora) {
+                            $q->where('citas.fecha', $hoy)
+                              ->where('citas.hora', '>=', $ahora->format('H:i:s'));
+                        });
+                })
+                ->orderBy('citas.fecha')
+                ->orderBy('citas.hora')
+                ->value('id');
+            
+            // Obtener próxima cita con relación para desencriptar
+            $proximaCita = null;
+            if ($proximaCitaId) {
+                $citaModel = \App\Models\Cita::with('paciente')->find($proximaCitaId);
+                if ($citaModel && $citaModel->paciente) {
+                    $proximaCita = (object)[
+                        'hora' => substr($citaModel->hora, 0, 5),
+                        'nombre' => $citaModel->paciente->nombre,
+                        'apellidoPat' => $citaModel->paciente->apellidoPat
+                    ];
+                }
+            }
+            
+            // Generar alertas proactivas específicas según tipo de clínica
+            $alertas = [];
+            
+            // Alertas comunes a todas las clínicas
+            if ($countCitasHoy === 0) {
+                $alertas[] = "No tienes citas programadas hoy. ¿Quieres revisar tu agenda de la semana?";
+            }
+            
+            // Pacientes sin visita reciente (alertas específicas por tipo de clínica)
+            $diasSinVisita = match($tipoClinica) {
+                'dental' => 180, // 6 meses
+                'rehabilitacion_cardiopulmonar' => 21, // 3 semanas
+                'fisioterapia' => 14, // 2 semanas
+                'psicologia' => 14, // 2 semanas
+                'nutricion' => 21, // 3 semanas
+                default => 30
+            };
+            
+            // Obtener IDs de pacientes sin visita reciente
+            $pacientesIds = DB::table('pacientes')
+                ->leftJoin('citas', function($join) use ($clinicaId) {
+                    $join->on('pacientes.id', '=', 'citas.paciente_id')
+                         ->where('citas.clinica_id', $clinicaId)
+                         ->where('citas.estado', 'completada');
+                })
+                ->where('pacientes.clinica_id', $clinicaId)
+                ->select('pacientes.id', DB::raw('MAX(citas.fecha) as ultima_cita'))
+                ->groupBy('pacientes.id')
+                ->havingRaw("MAX(citas.fecha) IS NULL OR MAX(citas.fecha) < DATE_SUB(NOW(), INTERVAL ? DAY)", [$diasSinVisita])
+                ->limit(3)
+                ->pluck('id');
+            
+            if ($pacientesIds->count() > 0) {
+                // Usar el modelo Paciente para desencriptar automáticamente
+                $pacientesSinVisita = \App\Models\Paciente::whereIn('id', $pacientesIds)->get();
+                
+                $nombreClinica = match($tipoClinica) {
+                    'dental' => 'limpieza dental',
+                    'rehabilitacion_cardiopulmonar' => 'sesión de rehabilitación',
+                    'fisioterapia' => 'sesión de fisioterapia',
+                    'psicologia' => 'sesión de terapia',
+                    'nutricion' => 'consulta nutricional',
+                    default => 'consulta'
+                };
+                
+                $paciente = $pacientesSinVisita->first();
+                $nombreCompleto = $paciente->nombre . ' ' . $paciente->apellidoPat;
+                $diasTexto = $diasSinVisita >= 30 ? round($diasSinVisita/30) . ' meses' : $diasSinVisita . ' días';
+                
+                $alertas[] = "{$nombreCompleto} lleva más de {$diasTexto} sin {$nombreClinica}. ¿Quieres contactarle?";
+            }
+            
+            // Citas pendientes de confirmar (próximos 3 días)
+            $citasPendientes = DB::table('citas')
+                ->where('clinica_id', $clinicaId)
+                ->where('estado', 'pendiente')
+                ->where('fecha', '>=', $hoy)
+                ->where('fecha', '<=', now()->addDays(3)->toDateString())
+                ->count();
+            
+            if ($citasPendientes > 0) {
+                $alertas[] = "Tienes {$citasPendientes} cita" . ($citasPendientes > 1 ? 's' : '') . " pendiente" . ($citasPendientes > 1 ? 's' : '') . " de confirmar en los próximos 3 días.";
+            }
+            
+            // Formatear próxima cita
+            $proximaCitaFormatted = null;
+            if ($proximaCita) {
+                $hora = substr($proximaCita->hora, 0, 5); // HH:MM
+                $pacienteNombre = $proximaCita->nombre . ' ' . $proximaCita->apellidoPat;
+                $proximaCitaFormatted = [
+                    'hora' => $hora,
+                    'paciente' => $pacienteNombre
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'context' => [
+                    'citas_hoy' => $countCitasHoy,
+                    'proxima_cita' => $proximaCitaFormatted,
+                    'alertas' => $alertas,
+                    'tipo_clinica' => $tipoClinica
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo contexto proactivo: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener contexto'
+            ], 500);
+        }
+    }
+
+    /**
      * Ejecutar acción solicitada por el asistente
      */
     public function executeAction(Request $request)
@@ -354,6 +498,19 @@ class AIController extends Controller
                 
                 case 'obtener_expediente':
                     return $this->obtenerExpediente($user, $params);
+                
+                // ===== GESTIÓN FINANCIERA =====
+                case 'obtener_corte_caja':
+                    return $this->obtenerCorteCaja($user, $params);
+                
+                case 'consultar_adeudos':
+                    return $this->consultarAdeudos($user, $params);
+                
+                case 'resumen_ingresos_mensual':
+                    return $this->resumenIngresosMensual($user, $params);
+                
+                case 'verificar_pago_firmado':
+                    return $this->verificarPagoFirmado($user, $params);
                 
                 default:
                     return response()->json([
@@ -478,32 +635,48 @@ class AIController extends Controller
             
             $nombreBuscar = $normalizar($params['paciente_nombre']);
             
-            // Obtener todos los pacientes de la clínica
-            $pacientes = DB::table('pacientes')
-                ->where('clinica_id', $user->clinica_id)
-                ->get();
+            // Obtener todos los pacientes usando Eloquent para desencriptar nombres
+            $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
             
-            // Buscar paciente normalizando nombres
+            Log::info('🔍 Buscando paciente para eliminar citas', [
+                'nombre_buscado' => $params['paciente_nombre'],
+                'total_pacientes' => $pacientes->count()
+            ]);
+            
+            // Buscar paciente con similitud
             $pacienteEncontrado = null;
+            $mejorSimilitud = 0;
+            
             foreach ($pacientes as $p) {
                 $nombreCompletoPaciente = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
                 $nombrePaciente = $normalizar($p->nombre);
                 
-                if ($nombreCompletoPaciente === $nombreBuscar || 
-                    $nombrePaciente === $nombreBuscar ||
-                    str_starts_with($nombreCompletoPaciente, $nombreBuscar) ||
-                    strpos($nombreCompletoPaciente, $nombreBuscar) !== false) {
+                $similitud = 0;
+                similar_text($nombreCompletoPaciente, $nombreBuscar, $similitud);
+                
+                Log::info("  👤 Comparando: {$p->nombre} {$p->apellidoPat}", [
+                    'similitud' => round($similitud, 2)
+                ]);
+                
+                // Aceptar similitud >= 70%
+                if ($similitud >= 70 && $similitud > $mejorSimilitud) {
+                    $mejorSimilitud = $similitud;
                     $pacienteEncontrado = $p;
-                    break;
                 }
             }
 
             if (!$pacienteEncontrado) {
+                Log::warning("❌ Paciente no encontrado: {$params['paciente_nombre']}");
                 return response()->json([
                     'success' => false,
-                    'error' => "No se encontró al paciente '{$params['paciente_nombre']}' en tu clínica."
+                    'error' => "No se encontró ningún paciente similar a '{$params['paciente_nombre']}' en tu clínica. Verifica el nombre."
                 ], 404);
             }
+            
+            Log::info("✅ Paciente encontrado para eliminar citas", [
+                'nombre' => $pacienteEncontrado->nombre . ' ' . $pacienteEncontrado->apellidoPat,
+                'similitud' => round($mejorSimilitud, 2) . '%'
+            ]);
 
             $query->where('paciente_id', $pacienteEncontrado->id);
             $filtrosAplicados[] = "paciente '{$pacienteEncontrado->nombre} {$pacienteEncontrado->apellidoPat}'";
@@ -644,33 +817,110 @@ class AIController extends Controller
         
         $nombreBuscar = $normalizar($nombreCompleto);
         
-        // Obtener todos los pacientes de la clínica
-        $pacientes = DB::table('pacientes')
-            ->where('clinica_id', $user->clinica_id)
-            ->get();
+        // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
         
-        // Buscar paciente normalizando nombres
+        Log::info('🔍 Buscando paciente', [
+            'nombre_buscado' => $nombreCompleto,
+            'nombre_normalizado' => $nombreBuscar,
+            'total_pacientes' => $pacientes->count()
+        ]);
+        
+        // Buscar paciente normalizando nombres con lógica mejorada
         $paciente = null;
+        $coincidencias = [];
+        
         foreach ($pacientes as $p) {
             $nombreCompletoPaciente = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
             $nombreApellidoPat = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat));
+            $soloNombre = $normalizar(trim($p->nombre));
             
-            // Comparación flexible (contiene o coincide parcialmente)
-            if (
-                strpos($nombreCompletoPaciente, $nombreBuscar) !== false ||
-                strpos($nombreBuscar, $nombreCompletoPaciente) !== false ||
-                strpos($nombreCompletoPaciente, $nombreBuscar) !== false ||
-                similar_text($nombreCompletoPaciente, $nombreBuscar) > (strlen($nombreBuscar) * 0.7)
-            ) {
-                $paciente = $p;
-                break;
+            // Calcular porcentajes de similitud
+            $similaridadCompleta = 0;
+            $similaridadApellido = 0;
+            $similaridadNombre = 0;
+            
+            similar_text($nombreCompletoPaciente, $nombreBuscar, $similaridadCompleta);
+            similar_text($nombreApellidoPat, $nombreBuscar, $similaridadApellido);
+            similar_text($soloNombre, $nombreBuscar, $similaridadNombre);
+            
+            $mejorSimilaridad = max($similaridadCompleta, $similaridadApellido, $similaridadNombre);
+            
+            Log::info("  👤 Comparando: {$p->nombre} {$p->apellidoPat}", [
+                'nombre_completo' => $nombreCompletoPaciente,
+                'similitud_completa' => round($similaridadCompleta, 2),
+                'similitud_apellido' => round($similaridadApellido, 2),
+                'similitud_nombre' => round($similaridadNombre, 2),
+                'mejor_similitud' => round($mejorSimilaridad, 2)
+            ]);
+            
+            // Guardar coincidencias con >= 70% de similitud
+            if ($mejorSimilaridad >= 70) {
+                $coincidencias[] = [
+                    'paciente' => $p,
+                    'similitud' => $mejorSimilaridad
+                ];
             }
+        }
+        
+        // Ordenar por similitud descendente
+        usort($coincidencias, function($a, $b) {
+            return $b['similitud'] <=> $a['similitud'];
+        });
+        
+        Log::info("📋 Coincidencias encontradas: " . count($coincidencias));
+        
+        // Si no hay coincidencias
+        if (empty($coincidencias)) {
+            Log::warning("❌ No se encontró paciente con nombre: {$nombreCompleto}");
+            return response()->json([
+                'success' => false,
+                'error' => "No se encontró ningún paciente con el nombre '{$nombreCompleto}' en tu clínica. Por favor verifica el nombre completo."
+            ], 404);
+        }
+        
+        // Si hay exactamente 1 coincidencia con alta similitud (>= 90%), usar automáticamente
+        if (count($coincidencias) === 1 && $coincidencias[0]['similitud'] >= 90) {
+            $paciente = $coincidencias[0]['paciente'];
+            Log::info("✅ Paciente único encontrado automáticamente", [
+                'nombre' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+                'similitud' => round($coincidencias[0]['similitud'], 2) . '%'
+            ]);
+        }
+        // Si hay múltiples coincidencias o una con similitud media, mostrar opciones
+        else {
+            $listaOpciones = "Encontré varios pacientes con nombres similares. Por favor, especifica cuál:\n\n";
+            foreach ($coincidencias as $index => $match) {
+                $p = $match['paciente'];
+                $num = $index + 1;
+                $listaOpciones .= "{$num}. {$p->nombre} {$p->apellidoPat} {$p->apellidoMat}\n";
+            }
+            $listaOpciones .= "\nPor favor responde con el número o el nombre completo del paciente.";
+            
+            Log::info("📋 Mostrando múltiples opciones al usuario", [
+                'total_opciones' => count($coincidencias)
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => $listaOpciones,
+                'requiere_seleccion' => true,
+                'opciones' => array_map(function($match) {
+                    $p = $match['paciente'];
+                    return [
+                        'id' => $p->id,
+                        'nombre_completo' => "{$p->nombre} {$p->apellidoPat} {$p->apellidoMat}",
+                        'similitud' => round($match['similitud'], 2)
+                    ];
+                }, $coincidencias)
+            ]);
         }
 
         if (!$paciente) {
+            Log::warning("❌ No se pudo determinar el paciente");
             return response()->json([
                 'success' => false,
-                'error' => "No se encontró al paciente '{$nombreCompleto}' en tu clínica. Por favor verifica el nombre completo."
+                'error' => "No se pudo determinar el paciente. Por favor especifica el nombre completo."
             ], 404);
         }
 
@@ -678,37 +928,60 @@ class AIController extends Controller
         $citaExistente = DB::table('citas')
             ->where('paciente_id', $paciente->id)
             ->where('fecha', $params['fecha'])
-            ->where('hora', $params['hora'])
+            ->where('hora', $hora)
             ->where('estado', '!=', 'cancelada')
             ->first();
 
         if ($citaExistente) {
+            Log::warning("⚠️ Cita duplicada detectada para paciente ID {$paciente->id}");
             return response()->json([
                 'success' => false,
                 'error' => 'Ya existe una cita para este paciente en la fecha y hora indicadas'
             ], 400);
         }
 
-        // Crear la cita
-        $citaId = DB::table('citas')->insertGetId([
-            'paciente_id' => $paciente->id,
-            'clinica_id' => $user->clinica_id,
-            'user_id' => $user->id,
-            'admin_id' => $user->id, // Agregar admin_id requerido
-            'fecha' => $params['fecha'],
-            'hora' => $hora,
-            'estado' => 'confirmada',
-            'primera_vez' => false,
-            'notas' => $params['motivo'] ?? null,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        try {
+            // Obtener sucursal del usuario actual
+            $sucursalId = $user->sucursal_id;
+            
+            // Crear la cita con todos los campos necesarios
+            $citaId = DB::table('citas')->insertGetId([
+                'paciente_id' => $paciente->id,
+                'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $sucursalId,
+                'admin_id' => $user->id,
+                'user_id' => $user->id,
+                'fecha' => $params['fecha'],
+                'hora' => $hora,
+                'estado' => 'confirmada',
+                'primera_vez' => false,
+                'notas' => $params['motivo'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Cita agendada exitosamente para {$paciente->nombre} {$paciente->apellidoPat} el {$params['fecha']} a las {$params['hora']}",
-            'cita_id' => $citaId
-        ]);
+            Log::info("✅ Cita creada exitosamente", [
+                'cita_id' => $citaId,
+                'paciente' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+                'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $sucursalId,
+                'fecha' => $params['fecha'],
+                'hora' => $hora
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Cita agendada exitosamente para {$paciente->nombre} {$paciente->apellidoPat} el {$params['fecha']} a las {$hora}",
+                'cita_id' => $citaId
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ Error al crear cita: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al crear la cita: ' . $e->getMessage()
+            ], 500);
+        }
     }
     private function buscarPaciente($user, $params)
     {
@@ -732,10 +1005,8 @@ class AIController extends Controller
         
         $nombreBuscar = $normalizar($params['nombre']);
         
-        // Obtener todos los pacientes de la clínica
-        $pacientes = DB::table('pacientes')
-            ->where('clinica_id', $user->clinica_id)
-            ->get();
+        // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
         
         // Buscar pacientes normalizando nombres (recolectar todas las coincidencias)
         $pacientesEncontrados = [];
@@ -2278,5 +2549,348 @@ class AIController extends Controller
         }
         
         return null;
+    }
+
+    // ===== MÉTODOS DE GESTIÓN FINANCIERA =====
+
+    /**
+     * Obtener corte de caja del día o fecha específica
+     */
+    private function obtenerCorteCaja($user, $params)
+    {
+        try {
+            $clinicaId = $user->clinica_id;
+            $sucursalNombre = $params['sucursal'] ?? null;
+            $fecha = $params['fecha'] ?? 'hoy';
+            
+            // Parsear fecha
+            if ($fecha === 'hoy') {
+                $fecha = now()->toDateString();
+            } elseif ($fecha === 'ayer') {
+                $fecha = now()->subDay()->toDateString();
+            }
+            
+            Log::info('🔍 Consultando corte de caja', [
+                'clinica_id' => $clinicaId,
+                'fecha' => $fecha,
+                'sucursal' => $sucursalNombre ?? 'Todas'
+            ]);
+            
+            // Query base - USAR created_at en lugar de fecha_pago
+            $query = DB::table('pagos')
+                ->where('clinica_id', $clinicaId)
+                ->whereDate('created_at', $fecha);
+            
+            // Filtrar por sucursal si se especifica
+            if ($sucursalNombre) {
+                $sucursal = DB::table('sucursales')
+                    ->where('clinica_id', $clinicaId)
+                    ->where('nombre', 'like', "%{$sucursalNombre}%")
+                    ->first();
+                
+                if ($sucursal) {
+                    $query->where('sucursal_id', $sucursal->id);
+                }
+            }
+            
+            $pagos = $query->get();
+            
+            Log::info('📊 Pagos encontrados: ' . $pagos->count());
+            
+            if ($pagos->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No hay pagos registrados para esta fecha.',
+                    'corte' => [
+                        'fecha' => $fecha,
+                        'total' => 0,
+                        'cantidad_pagos' => 0,
+                        'por_metodo' => []
+                    ]
+                ]);
+            }
+            
+            // Calcular totales
+            $total = 0;
+            $porMetodo = [
+                'efectivo' => 0,
+                'tarjeta' => 0,
+                'transferencia' => 0
+            ];
+            $pagosExitosos = 0;
+            
+            foreach ($pagos as $pago) {
+                try {
+                    // Desencriptar monto con manejo de errores
+                    $montoEncriptado = $pago->monto;
+                    Log::info('💰 Procesando pago ID ' . $pago->id, [
+                        'metodo' => $pago->metodo_pago,
+                        'monto_encriptado_length' => strlen($montoEncriptado)
+                    ]);
+                    
+                    // Usar Crypt::decryptString() para strings simples sin serialización
+                    $monto = \Illuminate\Support\Facades\Crypt::decryptString($montoEncriptado);
+                    $montoFloat = floatval($monto);
+                    
+                    Log::info('✅ Pago ID ' . $pago->id . ' desencriptado: $' . $montoFloat);
+                    
+                    $total += $montoFloat;
+                    
+                    $metodo = $pago->metodo_pago;
+                    if (isset($porMetodo[$metodo])) {
+                        $porMetodo[$metodo] += $montoFloat;
+                    }
+                    
+                    $pagosExitosos++;
+                } catch (\Exception $e) {
+                    Log::error('❌ Error desencriptando pago ID ' . $pago->id . ': ' . $e->getMessage());
+                    Log::error('Monto encriptado: ' . substr($pago->monto, 0, 50) . '...');
+                    continue; // Saltar este pago si hay error de desencriptación
+                }
+            }
+            
+            Log::info('💵 Resumen corte de caja', [
+                'total_pagos' => $pagos->count(),
+                'pagos_procesados' => $pagosExitosos,
+                'total' => $total,
+                'efectivo' => $porMetodo['efectivo'],
+                'tarjeta' => $porMetodo['tarjeta'],
+                'transferencia' => $porMetodo['transferencia']
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'corte' => [
+                    'fecha' => $fecha,
+                    'total' => number_format($total, 2),
+                    'cantidad_pagos' => $pagos->count(),
+                    'pagos_procesados' => $pagosExitosos,
+                    'por_metodo' => [
+                        'efectivo' => number_format($porMetodo['efectivo'], 2),
+                        'tarjeta' => number_format($porMetodo['tarjeta'], 2),
+                        'transferencia' => number_format($porMetodo['transferencia'], 2)
+                    ],
+                    'sucursal' => $sucursalNombre ?? 'Todas'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo corte de caja: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener corte de caja: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Consultar adeudos de un paciente
+     */
+    private function consultarAdeudos($user, $params)
+    {
+        try {
+            if (!isset($params['paciente_nombre'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Nombre del paciente requerido'
+                ], 400);
+            }
+            
+            $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+            
+            if (!$paciente) {
+                return response()->json([
+                    'success' => false,
+                    'encontrado' => false,
+                    'message' => 'Paciente no encontrado'
+                ]);
+            }
+            
+            // Obtener pagos del paciente
+            $pagos = DB::table('pagos')
+                ->where('clinica_id', $user->clinica_id)
+                ->where('paciente_id', $paciente->id)
+                ->orderBy('fecha_pago', 'desc')
+                ->get();
+            
+            $totalPagado = 0;
+            foreach ($pagos as $pago) {
+                $totalPagado += decrypt($pago->monto);
+            }
+            
+            // Por ahora, si no hay información de deuda total, solo mostrar pagos
+            return response()->json([
+                'success' => true,
+                'paciente' => [
+                    'nombre' => $paciente->nombre . ' ' . $paciente->apellidoPat,
+                    'expediente' => $paciente->expediente
+                ],
+                'total_pagado' => number_format($totalPagado, 2),
+                'cantidad_pagos' => $pagos->count(),
+                'ultimo_pago' => $pagos->isNotEmpty() ? [
+                    'fecha' => $pagos->first()->fecha_pago,
+                    'monto' => number_format(decrypt($pagos->first()->monto), 2),
+                    'metodo' => $pagos->first()->metodo_pago
+                ] : null
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error consultando adeudos: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al consultar adeudos'
+            ], 500);
+        }
+    }
+
+    /**
+     * Resumen de ingresos mensual
+     */
+    private function resumenIngresosMensual($user, $params)
+    {
+        try {
+            $mes = $params['mes'] ?? now()->format('m');
+            $anio = $params['anio'] ?? now()->format('Y');
+            
+            // Convertir nombre de mes a número si es necesario
+            $meses = [
+                'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
+                'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
+                'septiembre' => 9, 'octubre' => 10, 'noviembre' => 11, 'diciembre' => 12
+            ];
+            
+            if (isset($meses[strtolower($mes)])) {
+                $mes = $meses[strtolower($mes)];
+            }
+            
+            $pagos = DB::table('pagos')
+                ->where('clinica_id', $user->clinica_id)
+                ->whereYear('fecha_pago', $anio)
+                ->whereMonth('fecha_pago', $mes)
+                ->get();
+            
+            if ($pagos->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No hay ingresos registrados para este mes.',
+                    'resumen' => [
+                        'mes' => $mes,
+                        'anio' => $anio,
+                        'total' => 0,
+                        'cantidad_pagos' => 0
+                    ]
+                ]);
+            }
+            
+            $total = 0;
+            $porMetodo = ['efectivo' => 0, 'tarjeta' => 0, 'transferencia' => 0];
+            
+            foreach ($pagos as $pago) {
+                $monto = decrypt($pago->monto);
+                $total += $monto;
+                
+                if (isset($porMetodo[$pago->metodo_pago])) {
+                    $porMetodo[$pago->metodo_pago] += $monto;
+                }
+            }
+            
+            $nombreMes = array_search((int)$mes, $meses) ?: $mes;
+            
+            return response()->json([
+                'success' => true,
+                'resumen' => [
+                    'mes' => ucfirst($nombreMes),
+                    'anio' => $anio,
+                    'total' => number_format($total, 2),
+                    'cantidad_pagos' => $pagos->count(),
+                    'promedio_diario' => number_format($total / now()->daysInMonth, 2),
+                    'por_metodo' => [
+                        'efectivo' => number_format($porMetodo['efectivo'], 2),
+                        'tarjeta' => number_format($porMetodo['tarjeta'], 2),
+                        'transferencia' => number_format($porMetodo['transferencia'], 2)
+                    ]
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error obteniendo resumen mensual: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener resumen de ingresos'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar si existe un pago firmado de un paciente
+     */
+    private function verificarPagoFirmado($user, $params)
+    {
+        try {
+            if (!isset($params['paciente_nombre']) || !isset($params['monto'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Nombre del paciente y monto requeridos'
+                ], 400);
+            }
+            
+            $paciente = $this->buscarPacientePorNombre($user, $params['paciente_nombre']);
+            
+            if (!$paciente) {
+                return response()->json([
+                    'success' => false,
+                    'encontrado' => false,
+                    'message' => 'Paciente no encontrado'
+                ]);
+            }
+            
+            $montoBuscado = (float)$params['monto'];
+            
+            // Buscar pagos del paciente con monto similar
+            $pagos = DB::table('pagos')
+                ->where('clinica_id', $user->clinica_id)
+                ->where('paciente_id', $paciente->id)
+                ->whereNotNull('firma_paciente')
+                ->orderBy('fecha_pago', 'desc')
+                ->get();
+            
+            $pagoEncontrado = null;
+            foreach ($pagos as $pago) {
+                $montoPago = (float)decrypt($pago->monto);
+                // Comparar con tolerancia de $0.01
+                if (abs($montoPago - $montoBuscado) < 0.01) {
+                    $pagoEncontrado = $pago;
+                    break;
+                }
+            }
+            
+            if ($pagoEncontrado) {
+                return response()->json([
+                    'success' => true,
+                    'pagado' => true,
+                    'pago' => [
+                        'fecha' => $pagoEncontrado->fecha_pago,
+                        'monto' => number_format(decrypt($pagoEncontrado->monto), 2),
+                        'metodo' => $pagoEncontrado->metodo_pago,
+                        'concepto' => decrypt($pagoEncontrado->concepto),
+                        'firmado' => !empty($pagoEncontrado->firma_paciente)
+                    ]
+                ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'pagado' => false,
+                'message' => "No se encontró un pago firmado de $" . number_format($montoBuscado, 2)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error verificando pago: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al verificar pago'
+            ], 500);
+        }
     }
 }

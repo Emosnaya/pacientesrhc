@@ -143,6 +143,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
 
         $validated['user_id'] = $user->id;
         $validated['clinica_id'] = $user->clinica_id;
+        $validated['sucursal_id'] = $user->sucursal_id;
         $validated['tipo_exp'] = 16;
 
         // Obtener paciente para cálculos automáticos
