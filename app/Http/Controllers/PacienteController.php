@@ -65,7 +65,14 @@ class PacienteController extends Controller
             $paciente->genero = 0;
         }
 
-        $paciente->registro = $request->registro;
+        $user = Auth::user();
+        
+        // Si no es la clínica original y no viene registro, asignar temporal
+        if ($user->clinica_id != 1 && !$request->registro) {
+            $paciente->registro = 'temp'; // Se actualizará después con el ID
+        } else {
+            $paciente->registro = $request->registro;
+        }
         $paciente->nombre = $request->nombre;
         $paciente->apellidoPat = $request->apellidoPat;
         $paciente->apellidoMat = $request->apellidoMat ?? null;
@@ -85,8 +92,6 @@ class PacienteController extends Controller
         $paciente->email = $request->email;
         $paciente->tipo_paciente = $request->tipo_paciente ?? 'cardiaca';
         $paciente->color = $request->color ?? null;
-
-        $user = Auth::user();
         
         // Determinar el dueño del paciente (simplificado)
         // Si envían user_id específico, validar que sea de la misma clínica
