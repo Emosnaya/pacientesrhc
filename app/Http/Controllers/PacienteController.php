@@ -113,6 +113,12 @@ class PacienteController extends Controller
 
         $paciente->save();
 
+        // Si la clínica no es la original (clinica_id != 1), usar el id como registro
+        if ($user->clinica_id != 1) {
+            $paciente->registro = (string)$paciente->id;
+            $paciente->save();
+        }
+
         return [
             'message' => 'Paciente Guardado',
             'paciente' => $paciente
