@@ -680,18 +680,26 @@ class PDFController extends Controller
         }
 
         $paciente = Paciente::find($data->paciente_id);
-        $user = $this->getDoctorParaFirma($request, $data->user_id);
+        
+        // Usar el método resolveUsuarioPdf para obtener el usuario correcto
+        [$userFirma, $user] = $this->resolveUsuarioPdf($request, $data->user_id);
+        
+        // Si no hay usuario autenticado, usar el creador del odontograma
+        if (!$user) {
+            $user = User::with('sucursal')->find($data->user_id);
+        }
+        
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
         
         // Obtener firma base64 usando el método centralizado
-        $firmaBase64 = $this->getFirmaBase64($user);
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
 
         // Decodificar los dientes (están guardados como JSON)
         $dientes = is_string($data->dientes) ? json_decode($data->dientes, true) : $data->dientes;
 
         $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64', 'dientes'));
-        return $pdf->stream('Odontograma_' . $paciente->nombre . '_' . $paciente->apellidoPat . '.pdf');
+        return $pdf->stream('Odontograma_' . ($paciente->nombre ?? 'Paciente') . '_' . ($paciente->apellidoPat ?? '') . '.pdf');
     }
 
     /**

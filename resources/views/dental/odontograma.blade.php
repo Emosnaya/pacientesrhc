@@ -297,11 +297,11 @@
         <div class="section-title">DATOS DEL PACIENTE</div>
         <table class="no-border">
             <tr>
-                <td colspan="3"><span class="f-bold">Nombre:</span> {{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</td>
+                <td colspan="3"><span class="f-bold">Nombre:</span> {{ $paciente->nombre ?? 'N/A' }} {{ $paciente->apellidoPat ?? '' }} {{ $paciente->apellidoMat ?? '' }}</td>
             </tr>
             <tr>
                 <td><span class="f-bold">Edad:</span> {{ $paciente->edad ?? 'N/A' }}</td>
-                <td><span class="f-bold">Género:</span> {{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</td>
+                <td><span class="f-bold">Género:</span> {{ isset($paciente->genero) ? ($paciente->genero == 1 ? 'Masculino' : 'Femenino') : 'N/A' }}</td>
                 <td><span class="f-bold">Teléfono:</span> {{ $paciente->telefono ?? 'N/A' }}</td>
             </tr>
         </table>
@@ -833,12 +833,19 @@
                 <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
             @endif
             <hr>
-            <p class="mb-0 f-10">
-                <span class="f-bold">{{ $user->nombre }} {{ $user->apellidoPat }} {{ $user->apellidoMat }}</span><br>
-                @if($user->cedula)
-                    Cédula Profesional: {{ $user->cedula }}
-                @endif
-            </p>
+            @if($user)
+                <p class="mb-0 f-10">
+                    <span class="f-bold">{{ $user->nombre }} {{ $user->apellidoPat }} {{ $user->apellidoMat }}</span><br>
+                    @if($user->cedula)
+                        Cédula Profesional: {{ $user->cedula }}
+                    @endif
+                </p>
+            @else
+                <p class="mb-0 f-10">
+                    <span class="f-bold">Médico</span><br>
+                    Cédula Profesional: N/A
+                </p>
+            @endif
         </div>
     </div>
 </body>
