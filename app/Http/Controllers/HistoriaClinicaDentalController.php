@@ -38,9 +38,9 @@ class HistoriaClinicaDentalController extends Controller
         $validator = Validator::make($request->all(), [
             'paciente_id' => 'required|exists:pacientes,id',
             'fecha' => 'nullable|date',
-            'lugar' => 'nullable|string|max:255',
             'nombre_doctor' => 'nullable|string|max:255',
             'cedula_profesional' => 'nullable|string|max:100',
+            'medicamentos_actuales' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -58,13 +58,11 @@ class HistoriaClinicaDentalController extends Controller
                 'paciente_id' => $request->paciente_id,
                 'sucursal_id' => $sucursalId,
                 'user_id' => $user->id,
-                'lugar' => $request->lugar,
                 'fecha' => $request->fecha ?? now(),
                 'nombre_doctor' => $request->nombre_doctor ?? $user->nombre . ' ' . $user->apellidoPat,
                 'cedula_profesional' => $request->cedula_profesional ?? $user->cedula,
                 'alergias' => $request->alergias,
-                'toma_medicamento' => $request->toma_medicamento ?? false,
-                'medicamento_detalle' => $request->medicamento_detalle,
+                'medicamentos_actuales' => $request->medicamentos_actuales ?? [],
                 'alergico_anestesicos' => $request->alergico_anestesicos ?? false,
                 'anestesicos_detalle' => $request->anestesicos_detalle,
                 'alergico_medicamentos' => $request->alergico_medicamentos ?? false,

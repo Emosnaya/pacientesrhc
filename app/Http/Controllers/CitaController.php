@@ -223,31 +223,10 @@ class CitaController extends Controller
                 $userId = $paciente->user_id; // usar doctor del paciente por defecto
             }
 
-            // Verificar si ya existe una cita con el mismo paciente, fecha y hora
-            $citaQuery = Cita::where('paciente_id', $paciente->id)
-                ->where('fecha', $request->fecha)
-                ->where('hora', $request->hora)
-                ->where('clinica_id', $user->clinica_id)
-                ->whereIn('estado', ['pendiente', 'confirmada']); // Solo verificar citas activas
-            
-            // Si el usuario tiene sucursal, validar solo en esa sucursal
-            if ($user->sucursal_id) {
-                $citaQuery->where('sucursal_id', $user->sucursal_id);
-            }
-            
-            $citaExistente = $citaQuery->first();
-
-            if ($citaExistente) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ya existe una cita para este paciente en la misma fecha y hora'
-                ], 422);
-            }
-
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
-            // Crear la cita (se permiten múltiples citas al mismo tiempo)
+            // Crear la cita (se permiten múltiples citas al mismo tiempo en la misma sucursal)
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
@@ -633,23 +612,7 @@ class CitaController extends Controller
             $primeraVez = true; // Solo la primera cita es "primera vez"
 
             foreach ($request->citas as $citaData) {
-                // Verificar si ya existe una cita con el mismo paciente, fecha y hora
-                $citaExistente = Cita::where('paciente_id', $paciente->id)
-                    ->where('fecha', $citaData['fecha'])
-                    ->where('hora', $citaData['hora'])
-                    ->where('clinica_id', $user->clinica_id)
-                    ->whereIn('estado', ['pendiente', 'confirmada'])
-                    ->first();
-
-                if ($citaExistente) {
-                    // Saltar esta cita porque ya existe
-                    $citasSkipped[] = [
-                        'fecha' => $citaData['fecha'],
-                        'hora' => $citaData['hora']
-                    ];
-                    continue;
-                }
-
+                // Crear cita (se permiten múltiples citas al mismo tiempo)
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,

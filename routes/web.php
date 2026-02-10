@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RadiografiaDentalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Ruta pública para ver radiografías (con autenticación por token)
+Route::get('/ver-radiografia/{id}', [RadiografiaDentalController::class, 'showPublic']);
 
 // Rutas para Expediente Pulmonar
 Route::resource('expediente-pulmonar', \App\Http\Controllers\ExpedientePulmonarController::class);

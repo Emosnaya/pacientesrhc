@@ -22,20 +22,39 @@
         }
         .logo-cell {
             display: table-cell;
-            width: 80px;
+            width: 70px;
             vertical-align: middle;
         }
         .logo-cell img {
             height: 44px;
             width: auto;
-            max-width: 80px;
+            max-width: 70px;
             object-fit: contain;
         }
         .clinica-cell {
             display: table-cell;
             vertical-align: middle;
             padding-left: 12px;
+            padding-right: 12px;
             text-align: left;
+        }
+        .universidad-cell {
+            display: table-cell;
+            vertical-align: middle;
+            padding-right: 12px;
+            text-align: right;
+        }
+        .logo-uni-cell {
+            display: table-cell;
+            width: 70px;
+            vertical-align: middle;
+            text-align: right;
+        }
+        .logo-uni-cell img {
+            height: 44px;
+            width: auto;
+            max-width: 70px;
+            object-fit: contain;
         }
         .clinica-name {
             font-size: 16px;
@@ -178,6 +197,48 @@
             letter-spacing: 0.06em;
             color: #64748b;
         }
+        .sello-seguridad {
+            margin-top: 30px;
+            padding: 15px;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                #f1f5f9 10px,
+                #f1f5f9 11px
+            );
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .sello-seguridad p {
+            font-size: 8px;
+            color: #94a3b8;
+            margin: 3px 0;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .lineas-seguridad {
+            margin-top: 20px;
+            height: 80px;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 18px,
+                #e2e8f0 18px,
+                #e2e8f0 19px
+            );
+        }
+        .pie-receta {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 7px;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
@@ -195,6 +256,9 @@
         </div>
         <div class="clinica-cell">
             <p class="clinica-name">{{ $clinica->nombre ?? 'Clínica' }}</p>
+            @if(!empty($sucursal))
+                <p class="clinica-meta" style="font-weight: 600; color: #0c4a6e;">Sucursal: {{ $sucursal->nombre }}</p>
+            @endif
             @if(!empty($clinica->direccion))
                 <p class="clinica-meta">{{ $clinica->direccion }}</p>
             @endif
@@ -204,6 +268,22 @@
                     @if(!empty($clinica->telefono) && !empty($clinica->email)) · @endif
                     @if(!empty($clinica->email)){{ $clinica->email }}@endif
                 </p>
+            @endif
+        </div>
+        <div class="universidad-cell">
+            @if(!empty($user->cedula) || !empty($user->universidad))
+                <p class="clinica-name" style="margin-bottom: 4px;">{{ $user->nombre_con_titulo ?? '' }}</p>
+                @if(!empty($user->cedula))
+                    <p class="clinica-meta"><strong>Cédula:</strong> {{ $user->cedula }}</p>
+                @endif
+                @if(!empty($user->universidad))
+                    <p class="clinica-meta">{{ $user->universidad }}</p>
+                @endif
+            @endif
+        </div>
+        <div class="logo-uni-cell">
+            @if(isset($universidadLogo) && $universidadLogo)
+                <img src="{{ $universidadLogo }}" alt="Logo Universidad">
             @endif
         </div>
     </div>
@@ -286,15 +366,25 @@
     <div class="firma-section">
         <div class="firma-box">
             <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
-            <p class="firma-name">{{ $user->nombre_con_titulo }}</p>
-            @if(!empty($user->cedula))
-                <p class="firma-cedula">Cédula Profesional: {{ $user->cedula }}</p>
-            @endif
             <div class="firma-line"></div>
             <p class="firma-label">Firma del médico</p>
         </div>
     </div>
+    
+    <!-- Espacio de seguridad después de la firma -->
+    <div class="lineas-seguridad"></div>
+    
+    <div class="sello-seguridad">
+        <p>✓ Receta médica validada</p>
+        <p>No se acepta si presenta tachaduras o enmendaduras</p>
+        <p>{{ $clinica->nombre ?? 'Clínica' }} · {{ date('d/m/Y H:i') }}</p>
+    </div>
     @endif
 @endforeach
+
+<div class="pie-receta">
+    <p>Este documento es válido únicamente con firma y sello del médico tratante · No se aceptan fotocopias</p>
+</div>
+
 </body>
 </html>

@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProfileController extends Controller
 {
@@ -72,6 +74,9 @@ class ProfileController extends Controller
         }
         if ($request->filled('cedula')) {
             $updateData['cedula'] = $request->cedula;
+        }
+        if ($request->has('universidad')) {
+            $updateData['universidad'] = $request->universidad;
         }
         if ($request->filled('email')) {
             $updateData['email'] = $request->email;
@@ -198,6 +203,70 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error al subir la firma digital: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Subir logo de universidad
+     */
+    public function uploadUniversidadLogo(Request $request, $id): JsonResponse
+    {
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'logo_universidad' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            // Eliminar logo anterior si existe
+            if ($user->logo_universidad) {
+                Storage::disk('public')->delete($user->logo_universidad);
+            }
+
+            $logo = $request->file('logo_universidad');
+            
+            // Usar Intervention Image para procesar la imagen con alta calidad
+            $image = ImageManager::gd()->read($logo->getRealPath());
+            
+            // Redimensionar manteniendo aspect ratio (máximo 800px de ancho)
+            if ($image->width() > 800) {
+                $image->scale(width: 800);
+            }
+            
+            // Determinar formato y calidad
+            $extension = strtolower($logo->getClientOriginalExtension());
+            if ($extension === 'png') {
+                $encodedImage = $image->toPng();
+            } else {
+                // JPEG con 95% de calidad
+                $encodedImage = $image->toJpeg(quality: 95);
+                $extension = 'jpg';
+            }
+            
+            // Guardar imagen procesada
+            $nombreLogo = 'logo_uni_' . $user->id . '_' . time() . '.' . $extension;
+            $rutaLogo = 'universidades/' . $nombreLogo;
+            Storage::disk('public')->put($rutaLogo, $encodedImage);
+            
+            $user->update(['logo_universidad' => $rutaLogo]);
+
+            return response()->json([
+                'message' => 'Logo de universidad actualizado exitosamente',
+                'user' => $user->fresh(),
+                'logo_url' => asset('storage/' . $rutaLogo)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al subir el logo de universidad: ' . $e->getMessage()
             ], 500);
         }
     }

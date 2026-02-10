@@ -34,6 +34,8 @@ class Paciente extends Model
         'imc',
         'diagnostico',
         'medicamentos',
+        'motivo_consulta',
+        'alergias',
         'envio',
         'tipo_paciente',
         'color',
@@ -56,6 +58,8 @@ class Paciente extends Model
         'domicilio' => 'encrypted',
         'diagnostico' => 'encrypted',
         'medicamentos' => 'encrypted',
+        'motivo_consulta' => 'encrypted',
+        'alergias' => 'encrypted',
         'fechaNacimiento' => 'date',
     ];
 

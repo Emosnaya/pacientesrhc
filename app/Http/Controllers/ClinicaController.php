@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ClinicaController extends Controller
 {
@@ -454,7 +456,7 @@ class ClinicaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:5120', // Aumentado a 5MB
         ]);
 
         if ($validator->fails()) {
@@ -476,8 +478,42 @@ class ClinicaController extends Controller
                 Storage::disk('public')->delete($clinica->logo);
             }
 
-            // Subir nuevo logo
-            $logoPath = $request->file('logo')->store('clinicas/logos', 'public');
+            $file = $request->file('logo');
+            $extension = $file->getClientOriginalExtension();
+            
+            // Si es SVG, guardarlo directamente sin procesamiento
+            if (strtolower($extension) === 'svg') {
+                $logoPath = $file->store('clinicas/logos', 'public');
+            } else {
+                // Crear instancia de ImageManager con GD driver
+                $manager = new ImageManager(new Driver());
+                
+                // Procesar imagen con alta calidad
+                $image = $manager->read($file->getRealPath());
+                
+                // Mantener el aspect ratio y establecer un ancho máximo de 800px
+                // (suficientemente grande para PDFs de alta calidad)
+                if ($image->width() > 800) {
+                    $image->scale(width: 800);
+                }
+                
+                // Generar nombre único
+                $filename = 'logo_' . $clinica->id . '_' . time() . '.' . $extension;
+                $fullPath = $directory . '/' . $filename;
+                
+                // Guardar con calidad alta
+                if (in_array(strtolower($extension), ['jpg', 'jpeg'])) {
+                    $image->toJpeg(95)->save($fullPath);
+                } else if (strtolower($extension) === 'png') {
+                    $image->toPng()->save($fullPath);
+                } else {
+                    // Formato genérico
+                    $image->save($fullPath);
+                }
+                
+                $logoPath = 'clinicas/logos/' . $filename;
+            }
+
             $clinica->update(['logo' => $logoPath]);
 
             return response()->json([

@@ -14,12 +14,12 @@
             overflow: visible !important;
         }
         .logo-container {
-            height: 60px;
+            height: 30px;
             overflow: hidden;
             display: inline-block;
         }
         .logo-container img {
-            height: 60px;
+            height: 30px;
             width: auto;
         }
         body {
@@ -76,50 +76,82 @@
             font-size: 10px;
         }
         .odontograma-container {
-            margin: 8px 0;
-            padding: 6px;
+            margin: 10px 0;
+            padding: 10px;
             border: 1px solid #ddd;
             background-color: #f9f9f9;
         }
         .odontograma-row {
             text-align: center;
-            margin: 3px 0;
+            margin: 5px 0;
             line-height: 0;
         }
         .diente {
             display: inline-block;
-            width: 24px;
-            height: 36px;
+            width: 32px;
+            height: 46px;
             border: 2px solid #333;
             margin: 0 1px;
             text-align: center;
-            padding: 3px 1px;
+            padding: 3px 1px 2px 1px;
+            font-size: 6px;
             vertical-align: top;
             background-color: #f0f8ff;
             position: relative;
         }
         .diente-numero {
             font-weight: bold;
-            font-size: 8px;
-            line-height: 1.2;
+            font-size: 9px;
+            margin: 0 0 1px 0;
+            line-height: 1;
             color: #000;
         }
-        .diente-multiple {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            font-size: 7px;
-            color: #3b82f6;
-            font-weight: bold;
-        }
         .diente-estado {
-            font-size: 7px;
+            font-size: 6px;
+            margin-top: 1px;
             line-height: 1.1;
+            color: #000;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .diente-caras {
+            font-size: 5px;
+            margin-top: 1px;
+            color: #666;
+            font-weight: normal;
+            line-height: 1;
+        }        .diente-contador {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            background-color: #3b82f6;
+            color: white;
             font-size: 6px;
-            line-height: 1.1;
-            color: #dc2626;
+            font-weight: bold;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }        .diente-contador {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            background-color: #3b82f6;
+            color: white;
+            font-size: 6px;
+            font-weight: bold;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
         .diente.caries {
             background-color: #ffcccc;
@@ -148,7 +180,7 @@
         }
         .diente.extraccion_indicada {
             background-color: #ff9999;
-            border: 2px solid #cc0000;
+            border: 3px solid #cc0000;
         }
         .diente.calculo_supragingival {
             background-color: #e6f7cc;
@@ -191,19 +223,19 @@
             border-color: #a855f7;
         }
         .leyenda {
-            margin: 5px 0;
-            font-size: 6px;
+            margin: 8px 0;
+            font-size: 7px;
             text-align: center;
             line-height: 0;
         }
         .leyenda-item {
             display: inline-block;
-            margin: 0 5px 2px 0;
-            padding: 2px 5px;
-            border: 1px solid #333;
+            margin: 0 8px 3px 0;
+            padding: 3px 8px;
+            border: 2px solid #333;
             line-height: 1.2;
             font-weight: bold;
-            font-size: 7px;
+            font-size: 8px;
         }
         .leyenda-item.sano {
             background-color: #f0f8ff;
@@ -288,7 +320,7 @@
                 <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
                 <div class="medio">
                     <p class="texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y', strtotime($data->fecha)) }}</p>
-                    <p class="texto-derecha mb-0 f-bold">Registro: {{ $paciente->registro ?? 'N/A' }}</p>
+                    <p class="texto-derecha mb-0 f-bold">Paciente: {{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</p>
                 </div>
             </div>
         </header>
@@ -302,7 +334,7 @@
             <tr>
                 <td><span class="f-bold">Edad:</span> {{ $paciente->edad ?? 'N/A' }}</td>
                 <td><span class="f-bold">Género:</span> {{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</td>
-                <td><span class="f-bold">Teléfono:</span> {{ $paciente->telefono ?? 'N/A' }}</td>
+                <td><span class="f-bold">Registro:</span> {{ $paciente->registro ?? 'N/A' }}</td>
             </tr>
         </table>
 
@@ -351,6 +383,9 @@
                         $estadosMostrar = array_slice($textoEstados, 0, 2); // Máximo 2 diagnósticos
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
+                        @if($totalEstados > 2)
+                            <div class="diente-contador">{{ $totalEstados }}</div>
+                        @endif
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -360,7 +395,7 @@
                         @endif
                     </div>
                 @endforeach
-                <span style="display: inline-block; width: 10px;"></span>
+                <span style="display: inline-block; width: 15px;"></span>
                 @foreach([21, 22, 23, 24, 25, 26, 27, 28] as $numero)
                     @php
                         $diente = collect($dientes)->firstWhere('numero', $numero);
@@ -382,13 +417,11 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
@@ -398,7 +431,7 @@
             </div>
 
             <!-- Deciduos Superiores -->
-            <div class="odontograma-row" style="margin-top: 3px;">
+            <div class="odontograma-row" style="margin-top: 5px;">
                 <span style="display: inline-block; width: 0px;"></span>
                 @foreach([55, 54, 53, 52, 51] as $numero)
                     @php
@@ -421,20 +454,18 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
                         @endif
                     </div>
                 @endforeach
-                <span style="display: inline-block; width: 10px;"></span>
+                <span style="display: inline-block; width: 15px;"></span>
                 @foreach([61, 62, 63, 64, 65] as $numero)
                     @php
                         $diente = collect($dientes)->firstWhere('numero', $numero);
@@ -456,13 +487,11 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
@@ -472,7 +501,7 @@
             </div>
 
             <!-- Separador -->
-            <div style="height: 8px; border-top: 2px solid #666; margin: 8px 40px;"></div>
+            <div style="height: 10px; border-top: 2px solid #666; margin: 10px 50px;"></div>
 
             <!-- Arcada Inferior -->
             <div class="arcada-label">ARCADA INFERIOR</div>
@@ -500,20 +529,18 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
                         @endif
                     </div>
                 @endforeach
-                <span style="display: inline-block; width: 10px;"></span>
+                <span style="display: inline-block; width: 15px;"></span>
                 @foreach([31, 32, 33, 34, 35, 36, 37, 38] as $numero)
                     @php
                         $diente = collect($dientes)->firstWhere('numero', $numero);
@@ -535,13 +562,11 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
@@ -551,7 +576,7 @@
             </div>
 
             <!-- Deciduos Inferiores -->
-            <div class="odontograma-row" style="margin-top: 3px;">
+            <div class="odontograma-row" style="margin-top: 5px;">
                 <span style="display: inline-block; width: 0px;"></span>
                 @foreach([85, 84, 83, 82, 81] as $numero)
                     @php
@@ -574,20 +599,18 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
                         @endif
                     </div>
                 @endforeach
-                <span style="display: inline-block; width: 10px;"></span>
+                <span style="display: inline-block; width: 15px;"></span>
                 @foreach([71, 72, 73, 74, 75] as $numero)
                     @php
                         $diente = collect($dientes)->firstWhere('numero', $numero);
@@ -609,13 +632,11 @@
                                 $textoEstados[] = $estadoTexto[$est];
                             }
                         }
-                        $totalEstados = count($textoEstados);
-                        $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
                     <div class="diente {{ $estadoPrincipal }}">
                         <div class="diente-numero">{{ $numero }}</div>
-                        @if(count($estadosMostrar) > 0)
-                            <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
+                        @if(count($textoEstados) > 0)
+                            <div class="diente-estado">{{ implode(' ', $textoEstados) }}</div>
                         @endif
                         @if(count($caras) > 0)
                             <div class="diente-caras">{{ implode(',', array_map(function($c) { return substr($c, 0, 1); }, $caras)) }}</div>
@@ -635,7 +656,7 @@
                 <span class="leyenda-item implante">I=Implante</span>
                 <span class="leyenda-item extraccion">E=Extracción</span>
             </div>
-            <div class="leyenda" style="margin-top: 3px;">
+            <div class="leyenda" style="margin-top: 5px;">
                 <div style="font-size: 8px; font-weight: bold; margin-bottom: 3px; text-align: left;">Análisis Periodontal:</div>
                 <span class="leyenda-item" style="background-color: #e6f7cc; border-color: #84cc16;">CS=Cálc.Suprag.</span>
                 <span class="leyenda-item" style="background-color: #d4ebcc; border-color: #65a30d;">CI=Cálc.Infrag.</span>
@@ -644,7 +665,7 @@
                 <span class="leyenda-item" style="background-color: #fed7aa; border-color: #fb923c;">PB=Pseudobolsas</span>
                 <span class="leyenda-item" style="background-color: #fef3c7; border-color: #fbbf24;">IP=Índ.Placa</span>
             </div>
-            <div class="leyenda" style="margin-top: 3px;">
+            <div class="leyenda" style="margin-top: 5px;">
                 <div style="font-size: 8px; font-weight: bold; margin-bottom: 3px; text-align: left;">Análisis Endodóntico:</div>
                 <span class="leyenda-item" style="background-color: #fce7f3; border-color: #ec4899;">ED=Endo Defect.</span>
                 <span class="leyenda-item" style="background-color: #fce7f3; border-color: #db2777;">NP=Necros.Pulp.</span>
@@ -652,79 +673,6 @@
                 <span class="leyenda-item" style="background-color: #f3e8ff; border-color: #a855f7;">LP=Les.Periap.</span>
             </div>
         </div>
-
-        <!-- Detalle de Diagnósticos por Diente -->
-        @php
-            // Recopilar todos los dientes con diagnósticos
-            $dientesConDiagnosticos = [];
-            $estadoNombres = [
-                'caries' => 'Caries',
-                'obturado' => 'Obturado',
-                'ausente' => 'Ausente',
-                'corona' => 'Corona',
-                'fracturado' => 'Fracturado',
-                'implante' => 'Implante',
-                'extraccion_indicada' => 'Extracción Indicada',
-                'calculo_supragingival' => 'Cálculo Supragingival',
-                'calculo_infragingival' => 'Cálculo Infragingival',
-                'movilidad_dental' => 'Movilidad Dental',
-                'bolsas_periodontales' => 'Bolsas Periodontales',
-                'pseudobolsas' => 'Pseudobolsas',
-                'indice_placa' => 'Índice de Placa',
-                'endo_defectuosa' => 'Endodoncia Defectuosa',
-                'necrosis_pulpar' => 'Necrosis Pulpar',
-                'pulpitis_irreversible' => 'Pulpitis Irreversible',
-                'lesiones_periapicales' => 'Lesiones Periapicales'
-            ];
-
-            foreach($dientes as $diente) {
-                $estados = $diente['estados'] ?? (isset($diente['estado']) ? [$diente['estado']] : ['sano']);
-                $diagnosticos = [];
-                foreach($estados as $est) {
-                    if($est !== 'sano' && isset($estadoNombres[$est])) {
-                        $diagnosticos[] = $estadoNombres[$est];
-                    }
-                }
-                if(count($diagnosticos) > 0) {
-                    $carasAfectadas = $diente['caras_afectadas'] ?? [];
-                    $notas = $diente['notas'] ?? '';
-                    $dientesConDiagnosticos[] = [
-                        'numero' => $diente['numero'],
-                        'diagnosticos' => $diagnosticos,
-                        'caras' => $carasAfectadas,
-                        'notas' => $notas
-                    ];
-                }
-            }
-        @endphp
-
-        @if(count($dientesConDiagnosticos) > 0)
-        <div class="section-title">DETALLE DE DIAGNÓSTICOS</div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 8px; margin-bottom: 10px;">
-            <thead>
-                <tr style="background-color: #e8f4f8;">
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; width: 50px;">Diente</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold;">Diagnóstico(s)</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; width: 80px;">Caras</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold;">Observaciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($dientesConDiagnosticos as $d)
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold;">{{ $d['numero'] }}</td>
-                    <td style="border: 1px solid #ddd; padding: 4px;">{{ implode(', ', $d['diagnosticos']) }}</td>
-                    <td style="border: 1px solid #ddd; padding: 4px; text-align: center; font-size: 7px;">
-                        {{ count($d['caras']) > 0 ? implode(', ', $d['caras']) : '-' }}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 4px; font-size: 7px;">
-                        {{ $d['notas'] ?: '-' }}
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @endif
 
         <!-- Análisis Periodontal -->
         @php
