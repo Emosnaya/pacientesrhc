@@ -125,6 +125,10 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         // Corte de caja
         Route::get('/corte-caja', [FinanzasController::class, 'corteCajaDiario']);
         
+        // Corte del día/mes/año
+        Route::get('/corte', [FinanzasController::class, 'corte']);
+        Route::get('/corte/exportar', [FinanzasController::class, 'exportarCorte']);
+        
         // Estadísticas financieras
         Route::get('/estadisticas', [FinanzasController::class, 'estadisticas']);
     });

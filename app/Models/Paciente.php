@@ -38,6 +38,8 @@ class Paciente extends Model
         'alergias',
         'envio',
         'tipo_paciente',
+        'categoria_pago',
+        'aseguradora',
         'color',
         'user_id',
         'clinica_id',

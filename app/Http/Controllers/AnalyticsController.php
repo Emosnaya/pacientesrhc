@@ -124,6 +124,12 @@ class AnalyticsController extends Controller
             // Pacientes con expediente clínico por año
             $pacientesConExpedientePorAnio = $this->getPacientesConExpedientePorAnio($clinicaId, $sucursalId);
 
+            // Pacientes por categoría de pago (particular / aseguradora)
+            $pacientesPorCategoriaPago = $this->getPacientesPorCategoriaPago($clinicaId, $sucursalId);
+
+            // Pacientes por aseguradora (lista de aseguradoras con cantidad)
+            $pacientesPorAseguradora = $this->getPacientesPorAseguradora($clinicaId, $sucursalId);
+
             $analytics = [
                 'total_citas' => $totalCitas,
                 'total_pacientes' => $totalPacientes,
@@ -150,6 +156,8 @@ class AnalyticsController extends Controller
                 'medicamentos' => $medicamentos,
                 'pacientes_por_anio' => $pacientesPorAnio,
                 'pacientes_con_expediente_por_anio' => $pacientesConExpedientePorAnio,
+                'pacientes_por_categoria_pago' => $pacientesPorCategoriaPago,
+                'pacientes_por_aseguradora' => $pacientesPorAseguradora,
             ];
 
             return response()->json([
@@ -861,6 +869,66 @@ class AnalyticsController extends Controller
         foreach ($expedientes as $expediente) {
             $labels[] = (string) $expediente->anio;
             $data[] = (int) $expediente->total;
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'total' => array_sum($data)
+        ];
+    }
+
+    /**
+     * Pacientes por categoría de pago: particular / aseguradora
+     */
+    private function getPacientesPorCategoriaPago($clinicaId, $sucursalId = null)
+    {
+        $queryParticular = Paciente::where('clinica_id', $clinicaId)
+            ->where(function ($q) {
+                $q->where('categoria_pago', 'particular')->orWhereNull('categoria_pago');
+            });
+        if ($sucursalId) {
+            $queryParticular->where('sucursal_id', $sucursalId);
+        }
+        $particular = $queryParticular->count();
+
+        $queryAseguradora = Paciente::where('clinica_id', $clinicaId)->where('categoria_pago', 'aseguradora');
+        if ($sucursalId) {
+            $queryAseguradora->where('sucursal_id', $sucursalId);
+        }
+        $aseguradora = $queryAseguradora->count();
+
+        return [
+            'labels' => ['Particular', 'Aseguradora'],
+            'data' => [$particular, $aseguradora],
+            'total' => $particular + $aseguradora
+        ];
+    }
+
+    /**
+     * Listado de aseguradoras con cantidad de pacientes (solo pacientes con categoria_pago = aseguradora)
+     */
+    private function getPacientesPorAseguradora($clinicaId, $sucursalId = null)
+    {
+        $query = Paciente::select('aseguradora', DB::raw('COUNT(*) as total'))
+            ->where('clinica_id', $clinicaId)
+            ->where('categoria_pago', 'aseguradora')
+            ->whereNotNull('aseguradora')
+            ->where('aseguradora', '!=', '');
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        $rows = $query->groupBy('aseguradora')
+            ->orderBy('total', 'desc')
+            ->get();
+
+        $labels = [];
+        $data = [];
+        foreach ($rows as $row) {
+            $labels[] = $row->aseguradora;
+            $data[] = (int) $row->total;
         }
 
         return [

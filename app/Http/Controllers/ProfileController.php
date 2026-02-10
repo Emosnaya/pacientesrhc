@@ -49,6 +49,7 @@ class ProfileController extends Controller
             'apellidoPat' => 'nullable|string|max:255',
             'apellidoMat' => 'nullable|string|max:255',
             'cedula' => 'nullable|string|unique:users,cedula,' . $id,
+            'cedula_especialista' => 'nullable|string',
             'email' => 'nullable|email|unique:users,email,' . $id,
             'password' => 'nullable|string|min:8',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -74,6 +75,9 @@ class ProfileController extends Controller
         }
         if ($request->filled('cedula')) {
             $updateData['cedula'] = $request->cedula;
+        }
+        if ($request->filled('cedula_especialista')) {
+            $updateData['cedula_especialista'] = $request->cedula_especialista;
         }
         if ($request->has('universidad')) {
             $updateData['universidad'] = $request->universidad;

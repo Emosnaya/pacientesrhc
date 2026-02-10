@@ -40,6 +40,7 @@
                 <div class="adjunto">
                     <strong>Archivo adjunto:</strong> encontrará el comprobante de pago en PDF en los archivos adjuntos de este correo.
                 </div>
+                <p style="text-align: center; margin-top: 16px; font-size: 12px; color: #dc2626; font-weight: 600;">⚠️ NO ES COMPROBANTE FISCAL</p>
             </div>
         </div>
         <p class="footer">Este es un correo automático. No responder.</p>

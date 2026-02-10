@@ -11,6 +11,7 @@ class Receta extends Model
     use HasFactory, Auditable;
 
     protected $fillable = [
+        'folio',
         'paciente_id',
         'user_id',
         'sucursal_id',

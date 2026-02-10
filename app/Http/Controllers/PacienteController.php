@@ -120,6 +120,8 @@ class PacienteController extends Controller
         $paciente->imc = $imc;
         $paciente->email = $request->email;
         $paciente->tipo_paciente = $request->tipo_paciente ?? 'cardiaca';
+        $paciente->categoria_pago = $request->categoria_pago ?? null;
+        $paciente->aseguradora = $request->categoria_pago === 'aseguradora' ? ($request->aseguradora ?? null) : null;
         $paciente->color = $request->color ?? null;
         
         // Determinar el dueño del paciente (simplificado)
@@ -219,6 +221,8 @@ class PacienteController extends Controller
             'email' => $request->email,
             'genero' => ($request->genero == 1 || $request->genero === '1') ? 1 : 0,
             'tipo_paciente' => $request->tipo_paciente ?? $paciente->tipo_paciente,
+            'categoria_pago' => $request->categoria_pago ?? $paciente->categoria_pago,
+            'aseguradora' => $request->categoria_pago === 'aseguradora' ? ($request->aseguradora ?? $paciente->aseguradora) : null,
             'color' => $request->color ?? $paciente->color
         ]);
 
