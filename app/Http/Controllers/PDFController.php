@@ -103,6 +103,17 @@ class PDFController extends Controller
     private function getClinicaLogoBase64($user, $targetHeight = 36)
     {
         try {
+            // Validar que el usuario exista
+            if (!$user) {
+                $logoPath = public_path('img/logo.png');
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $mimeType = mime_content_type($logoPath);
+                    return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                }
+                return null;
+            }
+            
             $clinica = $user->clinica;
             $logoPath = null;
             
@@ -370,6 +381,18 @@ class PDFController extends Controller
      */
     private function getClinicaInfo($user)
     {
+        // Validar que el usuario exista
+        if (!$user) {
+            return (object)[
+                'nombre' => 'Clínica Médica',
+                'telefono' => '',
+                'email' => '',
+                'direccion' => '',
+                'logo' => null,
+                'logo_url' => asset('img/logo.png')
+            ];
+        }
+        
         $clinica = $user->clinica;
         
         if (!$clinica) {
