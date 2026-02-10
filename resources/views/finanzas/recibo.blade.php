@@ -13,15 +13,64 @@
             margin: 0;
             padding: 12px;
         }
+        .clinic-header {
+            display: table;
+            width: 100%;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #6B21A8;
+        }
+        .clinic-logo {
+            display: table-cell;
+            width: 80px;
+            vertical-align: middle;
+            text-align: left;
+        }
+        .clinic-logo img {
+            height: 50px;
+            width: auto;
+            max-width: 80px;
+            object-fit: contain;
+        }
+        .clinic-info {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 14px;
+        }
+        .clinic-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #4c1d95;
+            margin: 0 0 4px 0;
+            letter-spacing: 0.02em;
+        }
+        .clinic-details {
+            font-size: 9px;
+            color: #64748b;
+            line-height: 1.4;
+            margin: 0;
+        }
+        .clinic-details strong {
+            color: #475569;
+        }
         .page-header {
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #6B21A8;
         }
         .page-header h1 { font-size: 16px; font-weight: 700; color: #4c1d95; margin: 0 0 2px 0; }
         .recibo-num { font-size: 10px; color: #64748b; margin: 0; }
         .recibo-fecha { font-size: 8px; color: #94a3b8; margin-top: 2px; }
+        .fiscal-notice {
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #dc2626;
+            margin-top: 10px;
+            padding: 6px;
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+        }
         .two-cols { display: table; width: 100%; margin-bottom: 8px; }
         .col { display: table-cell; width: 50%; vertical-align: top; padding-right: 10px; }
         .col:last-child { padding-right: 0; padding-left: 10px; }
@@ -62,6 +111,32 @@
     </style>
 </head>
 <body>
+    <!-- Header con Logo y Datos de la Clínica -->
+    <div class="clinic-header">
+        <div class="clinic-logo">
+            @if(isset($clinicaLogo) && !empty($clinicaLogo))
+                <img src="{{ $clinicaLogo }}" alt="Logo">
+            @endif
+        </div>
+        <div class="clinic-info">
+            <p class="clinic-name">{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
+            <p class="clinic-details">
+                @if(isset($sucursal) && !empty($sucursal))
+                    <strong>Sucursal:</strong> {{ $sucursal->nombre }}<br>
+                @endif
+                @if(!empty($clinica->direccion))
+                    {{ $clinica->direccion }}<br>
+                @endif
+                @if(!empty($clinica->telefono))
+                    <strong>Tel:</strong> {{ $clinica->telefono }}
+                @endif
+                @if(!empty($clinica->email))
+                     @if(!empty($clinica->telefono))·@endif <strong>Email:</strong> {{ $clinica->email }}
+                @endif
+            </p>
+        </div>
+    </div>
+
     <div class="page-header">
         <h1>RECIBO DE PAGO</h1>
         <p class="recibo-num">No. {{ str_pad($pago->id, 6, '0', STR_PAD_LEFT) }}</p>
@@ -110,8 +185,14 @@
     </div>
     @endif
 
+    <!-- Aviso Fiscal -->
+    <div class="fiscal-notice">
+        ⚠️ NO ES COMPROBANTE FISCAL
+    </div>
+
     <div class="footer-doc">
         <p>Este documento es un comprobante válido de pago. {{ $clinica->nombre ?? 'Clínica' }}</p>
+        <p style="margin-top: 2px;">Para cualquier aclaración, favor de comunicarse a {{ $clinica->telefono ?? 'N/A' }}</p>
     </div>
 </body>
 </html>
