@@ -437,36 +437,36 @@ class ClinicaController extends Controller
      */
     public function uploadLogo(Request $request)
     {
-        $user = $request->user();
-        
-        if (!$user->clinica_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Usuario no tiene clínica asignada'
-            ], 404);
-        }
-
-        $clinica = Clinica::find($user->clinica_id);
-        
-        if (!$clinica) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Clínica no encontrada'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:5120', // Aumentado a 5MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
+            $user = $request->user();
+            
+            if (!$user->clinica_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no tiene clínica asignada'
+                ], 404);
+            }
+
+            $clinica = Clinica::find($user->clinica_id);
+            
+            if (!$clinica) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Clínica no encontrada'
+                ], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'logo' => 'required|image|mimes:jpeg,png,jpg,svg|max:5120', // 5MB
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             // Asegurar que la carpeta existe con permisos correctos
             $directory = storage_path('app/public/clinicas/logos');
             if (!file_exists($directory)) {
@@ -475,43 +475,57 @@ class ClinicaController extends Controller
             
             // Eliminar logo anterior si existe
             if ($clinica->logo) {
-                Storage::disk('public')->delete($clinica->logo);
+                try {
+                    Storage::disk('public')->delete($clinica->logo);
+                } catch (\Exception $e) {
+                    \Log::warning('No se pudo eliminar el logo anterior: ' . $e->getMessage());
+                }
             }
 
             $file = $request->file('logo');
             $extension = $file->getClientOriginalExtension();
             
-            // Si es SVG, guardarlo directamente sin procesamiento
-            if (strtolower($extension) === 'svg') {
+            // Verificar si Intervention Image está disponible
+            $interventionAvailable = class_exists(\Intervention\Image\ImageManager::class);
+            
+            // Si es SVG o Intervention no está disponible, guardar directamente
+            if (strtolower($extension) === 'svg' || !$interventionAvailable) {
+                if (!$interventionAvailable) {
+                    \Log::info('Intervention Image no disponible, guardando archivo directamente');
+                }
                 $logoPath = $file->store('clinicas/logos', 'public');
             } else {
-                // Crear instancia de ImageManager con GD driver
-                $manager = new ImageManager(new Driver());
-                
-                // Procesar imagen con alta calidad
-                $image = $manager->read($file->getRealPath());
-                
-                // Mantener el aspect ratio y establecer un ancho máximo de 800px
-                // (suficientemente grande para PDFs de alta calidad)
-                if ($image->width() > 800) {
-                    $image->scale(width: 800);
+                try {
+                    // Intentar usar Intervention Image para optimizar
+                    $manager = new ImageManager(new Driver());
+                    
+                    // Procesar imagen con alta calidad
+                    $image = $manager->read($file->getRealPath());
+                    
+                    // Mantener el aspect ratio y establecer un ancho máximo de 800px
+                    if ($image->width() > 800) {
+                        $image->scale(width: 800);
+                    }
+                    
+                    // Generar nombre único
+                    $filename = 'logo_' . $clinica->id . '_' . time() . '.' . $extension;
+                    $fullPath = $directory . '/' . $filename;
+                    
+                    // Guardar con calidad alta
+                    if (in_array(strtolower($extension), ['jpg', 'jpeg'])) {
+                        $image->toJpeg(95)->save($fullPath);
+                    } else if (strtolower($extension) === 'png') {
+                        $image->toPng()->save($fullPath);
+                    } else {
+                        $image->save($fullPath);
+                    }
+                    
+                    $logoPath = 'clinicas/logos/' . $filename;
+                } catch (\Exception $e) {
+                    // Si falla el procesamiento de imagen, guardar el archivo directamente
+                    \Log::warning('Error procesando imagen, guardando directamente: ' . $e->getMessage());
+                    $logoPath = $file->store('clinicas/logos', 'public');
                 }
-                
-                // Generar nombre único
-                $filename = 'logo_' . $clinica->id . '_' . time() . '.' . $extension;
-                $fullPath = $directory . '/' . $filename;
-                
-                // Guardar con calidad alta
-                if (in_array(strtolower($extension), ['jpg', 'jpeg'])) {
-                    $image->toJpeg(95)->save($fullPath);
-                } else if (strtolower($extension) === 'png') {
-                    $image->toPng()->save($fullPath);
-                } else {
-                    // Formato genérico
-                    $image->save($fullPath);
-                }
-                
-                $logoPath = 'clinicas/logos/' . $filename;
             }
 
             $clinica->update(['logo' => $logoPath]);
@@ -523,6 +537,9 @@ class ClinicaController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Error al subir logo: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error al subir el logo: ' . $e->getMessage()
