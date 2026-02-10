@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pago;
 use App\Models\Paciente;
+use App\Models\Clinica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,11 @@ class FinanzasController extends Controller
      */
     public function registrarPago(Request $request)
     {
+        $user = Auth::user();
+        $clinica = Clinica::find($user->clinica_id);
+        // Para rehabilitación cardiopulmonar la firma del paciente no es obligatoria en el recibo de pago
+        $firmaObligatoria = !$clinica || $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar';
+
         $request->validate([
             'paciente_id' => 'required|exists:pacientes,id',
             'monto' => 'required|numeric|min:0.01',
@@ -26,11 +32,9 @@ class FinanzasController extends Controller
             'referencia' => 'nullable|string|max:255',
             'concepto' => 'nullable|string|max:500',
             'notas' => 'nullable|string',
-            'firma_paciente' => 'required|string',
+            'firma_paciente' => [$firmaObligatoria ? 'required' : 'nullable', 'string'],
             'cita_id' => 'nullable|exists:citas,id',
         ]);
-
-        $user = Auth::user();
 
         // Verificar que el paciente pertenece a la misma clínica
         $paciente = Paciente::findOrFail($request->paciente_id);
@@ -62,7 +66,7 @@ class FinanzasController extends Controller
             'referencia' => $request->referencia,
             'concepto' => $request->concepto,
             'notas' => $request->notas,
-            'firma_paciente' => $request->firma_paciente,
+            'firma_paciente' => $request->firma_paciente ?: null,
         ]);
 
         // Cargar relaciones
@@ -377,5 +381,202 @@ class FinanzasController extends Controller
         return response()->json([
             'message' => 'Pago eliminado exitosamente'
         ]);
+    }
+
+    /**
+     * Corte del día/mes/año
+     */
+    public function corte(Request $request)
+    {
+        $request->validate([
+            'tipo' => 'required|in:dia,mes,año',
+            'fecha' => 'required|date',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+        ]);
+
+        $user = Auth::user();
+        $tipo = $request->tipo;
+        $fecha = Carbon::parse($request->fecha);
+        $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
+
+        // Construir la consulta base
+        $query = Pago::where('clinica_id', $user->clinica_id)
+            ->with(['paciente', 'usuario', 'sucursal']);
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        // Filtrar por rango de fechas según el tipo de corte
+        switch ($tipo) {
+            case 'dia':
+                // Solo el día específico seleccionado
+                $query->whereDate('created_at', $fecha->toDateString());
+                break;
+            case 'mes':
+                // Desde el día 1 del mes seleccionado hasta el último día de ese mes
+                $inicioMes = $fecha->copy()->startOfMonth();
+                $finMes = $fecha->copy()->endOfMonth();
+                
+                // Si es el mes actual, limitar hasta hoy
+                if ($fecha->month === now()->month && $fecha->year === now()->year) {
+                    $finMes = now();
+                }
+                
+                $query->whereBetween('created_at', [$inicioMes, $finMes]);
+                break;
+            case 'año':
+                // Todo el año seleccionado
+                $inicioAño = $fecha->copy()->startOfYear();
+                $finAño = $fecha->copy()->endOfYear();
+                
+                // Si es el año actual, limitar hasta hoy
+                if ($fecha->year === now()->year) {
+                    $finAño = now();
+                }
+                
+                $query->whereBetween('created_at', [$inicioAño, $finAño]);
+                break;
+        }
+
+        $pagos = $query->orderBy('created_at', 'asc')->get();
+
+        // Calcular totales por método de pago
+        $totales = [
+            'efectivo' => $pagos->where('metodo_pago', 'efectivo')->sum('monto'),
+            'tarjeta' => $pagos->where('metodo_pago', 'tarjeta')->sum('monto'),
+            'transferencia' => $pagos->where('metodo_pago', 'transferencia')->sum('monto'),
+            'total' => $pagos->sum('monto'),
+            'cantidad_pagos' => $pagos->count(),
+        ];
+
+        return response()->json([
+            'tipo_corte' => $tipo,
+            'fecha' => $fecha->toDateString(),
+            'sucursal_id' => $sucursalId,
+            'pagos' => $pagos,
+            'totales' => $totales,
+        ]);
+    }
+
+    /**
+     * Exportar corte a Excel (CSV)
+     */
+    public function exportarCorte(Request $request)
+    {
+        $request->validate([
+            'tipo' => 'required|in:dia,mes,año',
+            'fecha' => 'required|date',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+        ]);
+
+        $user = Auth::user();
+        $tipo = $request->tipo;
+        $fecha = Carbon::parse($request->fecha);
+        $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
+
+        // Construir la consulta base
+        $query = Pago::where('clinica_id', $user->clinica_id)
+            ->with(['paciente', 'usuario', 'sucursal']);
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        // Filtrar por rango de fechas según el tipo de corte
+        switch ($tipo) {
+            case 'dia':
+                // Solo el día específico seleccionado
+                $query->whereDate('created_at', $fecha->toDateString());
+                break;
+            case 'mes':
+                // Desde el día 1 del mes seleccionado hasta el último día de ese mes
+                $inicioMes = $fecha->copy()->startOfMonth();
+                $finMes = $fecha->copy()->endOfMonth();
+                
+                // Si es el mes actual, limitar hasta hoy
+                if ($fecha->month === now()->month && $fecha->year === now()->year) {
+                    $finMes = now();
+                }
+                
+                $query->whereBetween('created_at', [$inicioMes, $finMes]);
+                break;
+            case 'año':
+                // Todo el año seleccionado
+                $inicioAño = $fecha->copy()->startOfYear();
+                $finAño = $fecha->copy()->endOfYear();
+                
+                // Si es el año actual, limitar hasta hoy
+                if ($fecha->year === now()->year) {
+                    $finAño = now();
+                }
+                
+                $query->whereBetween('created_at', [$inicioAño, $finAño]);
+                break;
+        }
+
+        $pagos = $query->orderBy('created_at', 'asc')->get();
+
+        // Generar CSV
+        $filename = "corte_{$tipo}_{$fecha->format('Y-m-d')}.csv";
+        
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function() use ($pagos, $tipo, $fecha) {
+            $file = fopen('php://output', 'w');
+            
+            // BOM para UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Encabezados
+            fputcsv($file, [
+                'No. Recibo',
+                'Fecha',
+                'Hora',
+                'Paciente',
+                'Registro Paciente',
+                'Concepto',
+                'Método de Pago',
+                'Referencia',
+                'Monto',
+                'Recibió',
+                'Sucursal',
+                'Notas'
+            ]);
+
+            // Datos
+            foreach ($pagos as $pago) {
+                fputcsv($file, [
+                    str_pad($pago->id, 6, '0', STR_PAD_LEFT),
+                    Carbon::parse($pago->created_at)->format('Y-m-d'),
+                    Carbon::parse($pago->created_at)->format('H:i:s'),
+                    $pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A',
+                    $pago->paciente->registro ?? 'N/A',
+                    $pago->concepto ?? '',
+                    ucfirst($pago->metodo_pago),
+                    $pago->referencia ?? '',
+                    number_format($pago->monto, 2, '.', ''),
+                    $pago->usuario ? "{$pago->usuario->nombre} {$pago->usuario->apellidoPat}" : 'N/A',
+                    $pago->sucursal->nombre ?? 'N/A',
+                    $pago->notas ?? ''
+                ]);
+            }
+
+            // Totales
+            fputcsv($file, []);
+            fputcsv($file, ['TOTALES']);
+            fputcsv($file, ['Efectivo', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'efectivo')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Tarjeta', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'tarjeta')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Transferencia', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'transferencia')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['TOTAL GENERAL', '', '', '', '', '', '', '', number_format($pagos->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Cantidad de pagos', '', '', '', '', '', '', '', $pagos->count()]);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

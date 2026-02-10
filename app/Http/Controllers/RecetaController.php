@@ -101,11 +101,16 @@ class RecetaController extends Controller
         $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
         $paciente = \App\Models\Paciente::findOrFail($request->paciente_id);
 
+        // Generar folio automáticamente por clínica/sucursal
+        $clinicaId = $user->clinica_id ?? $paciente->clinica_id;
+        $folio = $this->generarFolio($clinicaId, $sucursalId);
+
         $receta = Receta::create([
+            'folio' => $folio,
             'paciente_id' => $request->paciente_id,
             'user_id' => $user->id,
             'sucursal_id' => $sucursalId,
-            'clinica_id' => $user->clinica_id ?? $paciente->clinica_id,
+            'clinica_id' => $clinicaId,
             'fecha' => $request->fecha,
             'diagnostico_principal' => $request->diagnostico_principal,
             'indicaciones_generales' => $request->indicaciones_generales,
@@ -188,5 +193,19 @@ class RecetaController extends Controller
             'message' => 'Diseño del PDF actualizado',
             'orden_secciones' => $orden
         ]);
+    }
+
+    /**
+     * Generar folio secuencial por clínica y sucursal.
+     */
+    private function generarFolio($clinicaId, $sucursalId)
+    {
+        // Obtener el último folio de la combinación clínica/sucursal
+        $ultimoFolio = Receta::where('clinica_id', $clinicaId)
+            ->where('sucursal_id', $sucursalId)
+            ->max('folio');
+
+        // Incrementar el folio, similar al registro de pacientes
+        return $ultimoFolio ? ((int)$ultimoFolio + 1) : 1;
     }
 }

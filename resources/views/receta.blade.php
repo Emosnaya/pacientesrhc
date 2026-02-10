@@ -271,10 +271,13 @@
             @endif
         </div>
         <div class="universidad-cell">
-            @if(!empty($user->cedula) || !empty($user->universidad))
+            @if(!empty($user->cedula) || !empty($user->cedula_especialista) || !empty($user->universidad))
                 <p class="clinica-name" style="margin-bottom: 4px;">{{ $user->nombre_con_titulo ?? '' }}</p>
                 @if(!empty($user->cedula))
-                    <p class="clinica-meta"><strong>Cédula:</strong> {{ $user->cedula }}</p>
+                    <p class="clinica-meta"><strong>Cédula Profesional:</strong> {{ $user->cedula }}</p>
+                @endif
+                @if(!empty($user->cedula_especialista))
+                    <p class="clinica-meta"><strong>Cédula de Especialista:</strong> {{ $user->cedula_especialista }}</p>
                 @endif
                 @if(!empty($user->universidad))
                     <p class="clinica-meta">{{ $user->universidad }}</p>
@@ -286,6 +289,15 @@
                 <img src="{{ $universidadLogo }}" alt="Logo Universidad">
             @endif
         </div>
+    </div>
+    @endif
+
+    @if($seccion === 'titulo')
+    <div class="titulo-doc">
+        @if(!empty($data->folio))
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #0c4a6e; font-weight: 600;">FOLIO: {{ str_pad($data->folio, 4, '0', STR_PAD_LEFT) }}</p>
+        @endif
+        <p class="fecha">{{ $data->fecha ? \Carbon\Carbon::parse($data->fecha)->format('d/m/Y') : date('d/m/Y') }}</p>
     </div>
     @endif
 
