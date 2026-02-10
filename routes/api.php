@@ -29,6 +29,7 @@ use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
+use App\Http\Controllers\RadiografiaDentalController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\FinanzasController;
@@ -59,6 +60,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::put('/profile/{id}', [ProfileController::class, 'update']);
     Route::post('/profile/{id}/upload-image', [ProfileController::class, 'uploadImage']);
     Route::post('/profile/{id}/upload-signature', [ProfileController::class, 'uploadSignature']);
+    Route::post('/profile/{id}/upload-universidad-logo', [ProfileController::class, 'uploadUniversidadLogo']);
     Route::delete('/profile/{id}/delete-image', [ProfileController::class, 'deleteImage']);
     Route::delete('/profile/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
 
@@ -89,6 +91,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/odontogramas', OdontogramaController::class);
     Route::get('/odontogramas/paciente/{pacienteId}', [OdontogramaController::class, 'getByPaciente']);
     Route::get('/odontogramas/paciente/{pacienteId}/latest', [OdontogramaController::class, 'getLatestByPaciente']);
+
+    // Rutas de Radiografías Dentales
+    Route::get('/radiografias-dentales/paciente/{pacienteId}', [RadiografiaDentalController::class, 'getByPaciente']);
+    Route::post('/radiografias-dentales', [RadiografiaDentalController::class, 'store']);
+    Route::get('/radiografias-dentales/{id}', [RadiografiaDentalController::class, 'show']);
+    Route::delete('/radiografias-dentales/{id}', [RadiografiaDentalController::class, 'destroy']);
 
     // Recetas médicas
     Route::get('/recetas', [RecetaController::class, 'index']);

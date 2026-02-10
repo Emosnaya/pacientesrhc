@@ -22,6 +22,8 @@ class User extends Authenticatable
         'apellidoPat',
         'apellidoMat',
         'cedula',
+        'universidad',
+        'logo_universidad',
         'email',
         'password',
         'isAdmin',

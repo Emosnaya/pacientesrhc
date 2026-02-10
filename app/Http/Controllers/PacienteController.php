@@ -67,12 +67,39 @@ class PacienteController extends Controller
 
         $user = Auth::user();
         
-        // Si no es la clínica original y no viene registro, asignar temporal
-        if ($user->clinica_id != 1 && !$request->registro) {
-            $paciente->registro = 'temp'; // Se actualizará después con el ID
+        // Determinar sucursal_id
+        if ($user->isSuperAdmin && $request->has('sucursal_id') && $request->sucursal_id) {
+            // SuperAdmin puede asignar a cualquier sucursal de su clínica
+            $sucursal = \App\Models\Sucursal::where('id', $request->sucursal_id)
+                ->where('clinica_id', $user->clinica_id)
+                ->first();
+            
+            if (!$sucursal) {
+                return response()->json(['error' => 'La sucursal seleccionada no es válida'], 400);
+            }
+            
+            $sucursalId = $sucursal->id;
         } else {
-            $paciente->registro = $request->registro;
+            // Usuarios normales y cuando no viene sucursal_id
+            $sucursalId = $user->sucursal_id;
         }
+
+        // Calcular el siguiente registro según la clínica
+        if ($user->clinica_id == 1) {
+            // Clínica original: mantener comportamiento actual (recibe registro del request)
+            $paciente->registro = $request->registro;
+        } else {
+            // Otras clínicas: registro secuencial por sucursal
+            if (!$request->registro) {
+                $ultimoRegistro = Paciente::where('clinica_id', $user->clinica_id)
+                    ->where('sucursal_id', $sucursalId)
+                    ->max('registro');
+                $paciente->registro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
+            } else {
+                $paciente->registro = $request->registro;
+            }
+        }
+        
         $paciente->nombre = $request->nombre;
         $paciente->apellidoPat = $request->apellidoPat;
         $paciente->apellidoMat = $request->apellidoMat ?? null;
@@ -83,9 +110,11 @@ class PacienteController extends Controller
         $paciente->estadoCivil = $request->estadoCivil ?? null;
         $paciente->diagnostico = $request->diagnostico ?? null;
         $paciente->medicamentos = $request->medicamentos ?? null;
-        $paciente->envio = $request->envio;
-        $paciente->talla = $request->talla;
-        $paciente->peso = $request->peso;
+        $paciente->motivo_consulta = $request->motivo_consulta ?? null;
+        $paciente->alergias = $request->alergias ?? null;
+        $paciente->envio = $request->envio ?? null;
+        $paciente->talla = $request->talla ?? 0;
+        $paciente->peso = $request->peso ?? 0;
         $paciente->fechaNacimiento = $fechaNacimiento;
         $paciente->edad = $edad;
         $paciente->imc = $imc;
@@ -110,19 +139,10 @@ class PacienteController extends Controller
             $paciente->user_id = $user->id;
         }
 
-        // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-
         $paciente->clinica_id = $user->clinica_id;
         $paciente->sucursal_id = $sucursalId;
 
         $paciente->save();
-
-        // Si la clínica no es la original (clinica_id != 1), usar el id como registro
-        if ($user->clinica_id != 1) {
-            $paciente->registro = (string)$paciente->id;
-            $paciente->save();
-        }
 
         return [
             'message' => 'Paciente Guardado',
@@ -188,6 +208,8 @@ class PacienteController extends Controller
             'estadoCivil' => $request->estadoCivil,
             'diagnostico' => $request->diagnostico,
             'medicamentos' => $request->medicamentos,
+            'motivo_consulta' => $request->motivo_consulta,
+            'alergias' => $request->alergias,
             'envio' => $request->envio,
             'talla' => $talla,
             'peso' => $peso,

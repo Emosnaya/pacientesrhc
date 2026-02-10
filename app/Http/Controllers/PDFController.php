@@ -41,7 +41,7 @@ class PDFController extends Controller
     {
         $usuarioActual = Auth::user();
         if (!$usuarioActual) {
-            return User::find($creadorUserId);
+            return User::with('sucursal')->find($creadorUserId);
         }
 
         // Si el usuario actual tiene firma digital cargada, firmar con su propia firma (sin depender del rol)
@@ -58,7 +58,20 @@ class PDFController extends Controller
     private function resolveUsuarioPdf(Request $request, $creadorUserId): array
     {
         $userFirma = $this->getDoctorParaFirma($request, $creadorUserId);
-        $user = $userFirma ?? User::find($creadorUserId) ?? Auth::user();
+        
+        // Usar SIEMPRE el usuario actual si está autenticado, para mostrar sus datos (sucursal, universidad, etc)
+        $usuarioActual = Auth::user();
+        if ($usuarioActual) {
+            $user = $usuarioActual;
+            // Asegurar que sucursal esté cargada
+            if (!$user->relationLoaded('sucursal') && $user->sucursal_id) {
+                $user->load('sucursal');
+            }
+        } else {
+            // Si no hay usuario autenticado, usar el creador
+            $user = User::with('sucursal')->find($creadorUserId);
+        }
+        
         return [$user, $userFirma];
     }
 
@@ -225,6 +238,134 @@ class PDFController extends Controller
     }
 
     /**
+     * Obtener logo de universidad en base64
+     */
+    private function getUniversidadLogoBase64($user, $targetHeight = 36)
+    {
+        try {
+            if (!$user || !$user->logo_universidad) {
+                return null;
+            }
+            
+            $logoPath = storage_path('app/public/' . $user->logo_universidad);
+            
+            // Si no existe el logo, retornar null
+            if (!file_exists($logoPath)) {
+                \Log::warning('Logo de universidad no encontrado: ' . $logoPath);
+                return null;
+            }
+            
+            // Verificar si GD está disponible
+            if (!function_exists('imagecreatefrompng')) {
+                \Log::warning('GD no está disponible, usando imagen original');
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Redimensionar la imagen para que dompdf respete el tamaño
+            $imageInfo = @getimagesize($logoPath);
+            if (!$imageInfo) {
+                \Log::error('No se pudo obtener información de la imagen: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            $originalWidth = $imageInfo[0];
+            $originalHeight = $imageInfo[1];
+            $mimeType = $imageInfo['mime'];
+            
+            // Calcular nuevo ancho manteniendo proporción
+            $ratio = $targetHeight / $originalHeight;
+            $newWidth = (int)($originalWidth * $ratio);
+            $newHeight = (int)$targetHeight;
+            
+            // Crear imagen desde el archivo original
+            $sourceImage = null;
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    $sourceImage = @imagecreatefromjpeg($logoPath);
+                    break;
+                case 'image/png':
+                    $sourceImage = @imagecreatefrompng($logoPath);
+                    break;
+                case 'image/gif':
+                    $sourceImage = @imagecreatefromgif($logoPath);
+                    break;
+                case 'image/webp':
+                    if (function_exists('imagecreatefromwebp')) {
+                        $sourceImage = @imagecreatefromwebp($logoPath);
+                    }
+                    break;
+            }
+            
+            if (!$sourceImage) {
+                \Log::warning('No se pudo crear imagen desde: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Crear nueva imagen redimensionada
+            $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Preservar transparencia para PNG y GIF
+            if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+                imagealphablending($resizedImage, false);
+                imagesavealpha($resizedImage, true);
+                $transparent = imagecolorallocatealpha($resizedImage, 0, 0, 0, 127);
+                imagefilledrectangle($resizedImage, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+            
+            // Redimensionar
+            imagecopyresampled(
+                $resizedImage, $sourceImage,
+                0, 0, 0, 0,
+                $newWidth, $newHeight,
+                $originalWidth, $originalHeight
+            );
+            
+            // Capturar output en buffer
+            ob_start();
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    imagejpeg($resizedImage, null, 90);
+                    break;
+                case 'image/png':
+                    imagepng($resizedImage, null, 9);
+                    break;
+                case 'image/gif':
+                    imagegif($resizedImage);
+                    break;
+                case 'image/webp':
+                    if (function_exists('imagewebp')) {
+                        imagewebp($resizedImage);
+                    }
+                    break;
+                default:
+                    imagepng($resizedImage);
+                    $mimeType = 'image/png';
+            }
+            $imageData = ob_get_clean();
+            
+            // Liberar memoria
+            imagedestroy($sourceImage);
+            imagedestroy($resizedImage);
+            
+            \Log::info('Logo de universidad redimensionado exitosamente', [
+                'original' => $originalWidth . 'x' . $originalHeight,
+                'nuevo' => $newWidth . 'x' . $newHeight
+            ]);
+            
+            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar logo de universidad: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Obtener la información completa de la clínica para las vistas
      */
     private function getClinicaInfo($user)
@@ -240,6 +381,20 @@ class PDFController extends Controller
                 'direccion' => '',
                 'logo' => null,
                 'logo_url' => asset('img/logo.png')
+            ];
+        }
+        
+        // Si el usuario tiene una sucursal asignada, usar los datos de la sucursal
+        if ($user->sucursal_id && $user->sucursal) {
+            $sucursal = $user->sucursal;
+            
+            return (object)[
+                'nombre' => $clinica->nombre,
+                'telefono' => $sucursal->telefono ?? $clinica->telefono,
+                'email' => $sucursal->email ?? $clinica->email,
+                'direccion' => $sucursal->direccion ?? $clinica->direccion,
+                'logo' => $clinica->logo,
+                'logo_url' => $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png')
             ];
         }
         
@@ -468,18 +623,28 @@ class PDFController extends Controller
         if (!$paciente) {
             abort(404, 'Paciente no encontrado');
         }
-        $userFirma = $this->getDoctorParaFirma($request, $data->user_id);
-        $user = $userFirma ?? User::find($data->user_id) ?? Auth::user();
+        
+        // Usar la misma lógica que los expedientes: usuario actual para firma y datos
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
         if (!$user) {
-            abort(404, 'No se pudo determinar el médico para la firma');
+            abort(404, 'No se pudo determinar el médico');
+        }
+        
+        // Asegurar que la relación sucursal esté cargada
+        if (!$user->relationLoaded('sucursal') && $user->sucursal_id) {
+            $user->load('sucursal');
         }
 
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
+        $universidadLogo = $this->getUniversidadLogoBase64($user, 44);
+        
+        // Obtener sucursal del usuario
+        $sucursal = $user->sucursal;
 
         $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
+        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica', 'universidadLogo', 'sucursal'));
         return $pdf->stream('Receta_Medica.pdf');
     }
 
@@ -496,20 +661,14 @@ class PDFController extends Controller
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
         
-        // Obtener firma base64
-        $firmaBase64 = null;
-        if ($user->firma) {
-            $firmaPath = storage_path('app/public/' . $user->firma);
-            if (file_exists($firmaPath)) {
-                $firmaBase64 = $this->getFirmaBase64($user);
-            }
-        }
+        // Obtener firma base64 usando el método centralizado
+        $firmaBase64 = $this->getFirmaBase64($user);
 
         // Decodificar los dientes (están guardados como JSON)
         $dientes = is_string($data->dientes) ? json_decode($data->dientes, true) : $data->dientes;
 
         $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64', 'dientes'));
-        return $pdf->stream('Odontograma_' . $paciente->nombre . '_' . $paciente->apellido_paterno . '.pdf');
+        return $pdf->stream('Odontograma_' . $paciente->nombre . '_' . $paciente->apellidoPat . '.pdf');
     }
 
     /**
@@ -619,7 +778,7 @@ class PDFController extends Controller
             }
 
             if (!$data || !$paciente || !$user) {
-                return response()->json(['error' => 'Expediente no encontrado', 'debug' => $debugInfo], 404);
+                return response()->json(['error' => 'Expediente no encontrado'], 404);
             }
 
             // Generar asunto automático con tipo de expediente y nombre del paciente
@@ -633,7 +792,9 @@ class PDFController extends Controller
                 'reporte_fisio' => 'Reporte de Fisioterapia',
                 'expediente_pulmonar' => 'Expediente Pulmonar',
                 'cualidad_fisica' => 'Cualidades Físicas No Aeróbicas',
-                'reporte_final_pulmonar' => 'Reporte Final Pulmonar'
+                'reporte_final_pulmonar' => 'Reporte Final Pulmonar',
+                'historia_dental' => 'Historia Clínica Dental',
+                'odontograma' => 'Odontograma'
             ];
 
             $tipoExpedienteNombre = $tipoExpedienteNombres[$expedienteType] ?? 'Expediente Médico';
@@ -707,6 +868,17 @@ class PDFController extends Controller
                 case 'reporte_final_pulmonar':
                     $firmaBase64 = $this->getFirmaBase64($userFirma);
                     $pdf = Pdf::loadView('pulmonar.reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    break;
+                case 'historia_dental':
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+                    $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
+                    $pdf = Pdf::loadView('dental.historia-clinica-dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+                    break;
+                case 'odontograma':
+                    $firmaBase64 = $this->getFirmaBase64($userFirma);
+                    $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
+                    $dientes = $data->dientes;
+                    $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'dientes'));
                     break;
             }
 

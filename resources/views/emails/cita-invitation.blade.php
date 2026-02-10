@@ -221,7 +221,7 @@
         <div class="email-container">
             <!-- Header con logo -->
             <div class="header">
-                <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo" class="logo">
+                <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo" class="logo">
                 <h1>{{ $subject }}</h1>
             </div>
 

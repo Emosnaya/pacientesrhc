@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación de Correo - {{ $clinica->nombre ?? 'Sistema Médico' }}</title>
+    <title>Verificación de Correo - {{ $clinica->nombre }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -83,9 +83,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
+            <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo">
             <h1>Verificación de Correo Electrónico</h1>
-            <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
+            <p>{{ $clinica->nombre }}</p>
         </div>
         
         <div class="content">

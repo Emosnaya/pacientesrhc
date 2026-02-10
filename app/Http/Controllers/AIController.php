@@ -389,11 +389,37 @@ class AIController extends Controller
                 ];
             }
             
+            // Obtener próximas 5 citas para notificaciones
+            $citasProximas = \App\Models\Cita::with('paciente')
+                ->where('clinica_id', $clinicaId)
+                ->where('estado', '!=', 'cancelada')
+                ->where(function($query) use ($hoy, $ahora) {
+                    $query->where('fecha', '>', $hoy)
+                        ->orWhere(function($q) use ($hoy, $ahora) {
+                            $q->where('fecha', $hoy)
+                              ->where('hora', '>=', $ahora->format('H:i:s'));
+                        });
+                })
+                ->orderBy('fecha')
+                ->orderBy('hora')
+                ->limit(5)
+                ->get()
+                ->map(function($cita) {
+                    return [
+                        'id' => $cita->id,
+                        'fecha' => $cita->fecha,
+                        'hora' => $cita->hora,
+                        'paciente' => $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat,
+                        'estado' => $cita->estado
+                    ];
+                });
+            
             return response()->json([
                 'success' => true,
                 'context' => [
                     'citas_hoy' => $countCitasHoy,
                     'proxima_cita' => $proximaCitaFormatted,
+                    'citas_proximas' => $citasProximas,
                     'alertas' => $alertas,
                     'tipo_clinica' => $tipoClinica
                 ]

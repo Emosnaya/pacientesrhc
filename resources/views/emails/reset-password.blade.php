@@ -91,9 +91,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ $clinica->logo_url ?? 'https://pacientesrhc.com/img/logo.png' }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
+            <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo">
             <h1>Restablecer Contraseña</h1>
-            <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
+            <p>{{ $clinica->nombre }}</p>
         </div>
         
         <div class="content">

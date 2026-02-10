@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Recibo de pago - {{ $clinica->nombre ?? 'CERCAP' }}</title>
+    <title>Recibo de pago - {{ $clinica->nombre }}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; margin: 0; padding: 0; background: #f3f4f6; }
         .wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px; }
@@ -26,11 +26,11 @@
         <div class="card">
             <div class="card-head">
                 <h1>Recibo de pago</h1>
-                <p>{{ $clinica->nombre ?? 'Clínica' }}</p>
+                <p>{{ $clinica->nombre}}</p>
             </div>
             <div class="card-body">
                 <div class="resumen">
-                    <p><strong>Paciente:</strong> {{ $nombrePaciente ?? 'N/A' }}</p>
+                    <p><strong>Paciente:</strong> {{ $nombrePaciente }}</p>
                     <p><strong>Monto:</strong> <span class="monto">${{ number_format((float) $pago->monto, 2) }} MXN</span></p>
                     <p><strong>No. recibo:</strong> {{ str_pad($pago->id, 6, '0', STR_PAD_LEFT) }}</p>
                 </div>

@@ -41,12 +41,12 @@
         }
         /* Estilo para el logo */
         .logo-container {
-            height: 30px;
+            height: 60px;
             overflow: hidden;
             display: inline-block;
         }
         .logo-container img {
-            height: 30px;
+            height: 60px;
             width: auto;
         }
         body {
@@ -188,27 +188,39 @@
 
         <!-- Información Médica General -->
         <div class="section-title">INFORMACIÓN MÉDICA GENERAL</div>
+        
+        @if($data->medicamentos_actuales && count($data->medicamentos_actuales) > 0)
         <table class="no-border">
             <tr>
-                <td><span class="f-bold">¿Toma algún medicamento?</span> {{ $data->toma_medicamento ? 'Sí' : 'No' }}</td>
+                <th colspan="2" style="background-color: #f0f0f0; padding: 8px; text-align: left;">Medicamentos Actuales</th>
+            </tr>
+            @foreach($data->medicamentos_actuales as $index => $medicamento)
+            <tr>
+                <td><span class="f-bold">Medicamento {{ $index + 1 }}:</span> {{ $medicamento['medicamento'] ?? 'N/A' }}</td>
+                <td><span class="f-bold">Dosis:</span> {{ $medicamento['dosis'] ?? 'N/A' }}</td>
+            </tr>
+            @endforeach
+        </table>
+        @endif
+        
+        <table class="no-border">
+            <tr>
                 <td><span class="f-bold">¿Alérgico a anestésicos?</span> {{ $data->alergico_anestesicos ? 'Sí' : 'No' }}</td>
+                <td><span class="f-bold">¿Alérgico a medicamentos?</span> {{ $data->alergico_medicamentos ? 'Sí' : 'No' }}</td>
             </tr>
             @if($data->alergico_anestesicos && $data->anestesicos_detalle)
             <tr>
-                <td colspan="2"><span class="f-bold">Detalles:</span> {{ $data->anestesicos_detalle }}</td>
+                <td colspan="2"><span class="f-bold">Detalles anestésicos:</span> {{ $data->anestesicos_detalle }}</td>
             </tr>
             @endif
-            <tr>
-                <td><span class="f-bold">¿Alérgico a medicamentos?</span> {{ $data->alergico_medicamentos ? 'Sí' : 'No' }}</td>
-                <td><span class="f-bold">¿Embarazada?</span> {{ $data->embarazada ? 'Sí' : 'No' }}</td>
-            </tr>
             @if($data->alergico_medicamentos && $data->medicamentos_alergicos_detalle)
             <tr>
-                <td colspan="2"><span class="f-bold">Medicamentos:</span> {{ $data->medicamentos_alergicos_detalle }}</td>
+                <td colspan="2"><span class="f-bold">Medicamentos alérgicos:</span> {{ $data->medicamentos_alergicos_detalle }}</td>
             </tr>
             @endif
             <tr>
-                <td colspan="2"><span class="f-bold">¿Toma anticonceptivos?</span> {{ $data->toma_anticonceptivos ? 'Sí' : 'No' }}</td>
+                <td><span class="f-bold">¿Embarazada?</span> {{ $data->embarazada ? 'Sí' : 'No' }}</td>
+                <td><span class="f-bold">¿Toma anticonceptivos?</span> {{ $data->toma_anticonceptivos ? 'Sí' : 'No' }}</td>
             </tr>
         </table>
 
