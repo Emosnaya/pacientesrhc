@@ -188,7 +188,7 @@ class FinanzasController extends Controller
         $cantidadTotal = $todosPagos->count();
 
         // Últimos pagos del día
-        $ultimosPagos = Pago::with(['paciente', 'usuario'])
+        $ultimosPagos = Pago::with(['paciente', 'usuario', 'clinica', 'sucursal'])
             ->where('clinica_id', $user->clinica_id)
             ->byDate($fecha)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -329,12 +329,24 @@ class FinanzasController extends Controller
             ->findOrFail($request->pago_id);
 
         $clinica = $pago->clinica ?? $user->clinica;
+        $sucursal = $pago->sucursal ?? $user->sucursal;
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+        
+        // Log para debugging
+        \Log::info('Recibo PDF Data:', [
+            'clinica_id' => $clinica?->id,
+            'clinica_nombre' => $clinica?->nombre,
+            'sucursal_id' => $sucursal?->id,
+            'sucursal_nombre' => $sucursal?->nombre,
+            'logo_existe' => !empty($clinicaLogo)
+        ]);
+        
         $nombrePaciente = trim(($pago->paciente->nombre ?? '') . ' ' . ($pago->paciente->apellidoPat ?? '') . ' ' . ($pago->paciente->apellidoMat ?? ''));
         $subject = $request->subject ?: ('Recibo de pago #' . str_pad($pago->id, 6, '0', STR_PAD_LEFT) . ' - ' . $nombrePaciente . ' - ' . ($clinica->nombre ?? 'CERCAP'));
         $mensaje = $request->message ?: 'Se adjunta el recibo de pago en PDF.';
 
         try {
-            $pdf = Pdf::loadView('finanzas.recibo', compact('pago', 'clinica'));
+            $pdf = Pdf::loadView('finanzas.recibo', compact('pago', 'clinica', 'sucursal', 'clinicaLogo'));
             $pdfFileName = 'Recibo_' . str_pad($pago->id, 6, '0', STR_PAD_LEFT) . '_' . \Str::slug($nombrePaciente) . '.pdf';
 
             Mail::send('emails.recibo-pago', [
@@ -356,6 +368,148 @@ class FinanzasController extends Controller
             return response()->json([
                 'message' => 'Error al enviar el correo: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Ver el recibo en PDF directamente
+     */
+    public function verReciboPdf($id)
+    {
+        $user = Auth::user();
+        $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
+            ->where('clinica_id', $user->clinica_id)
+            ->findOrFail($id);
+
+        $clinica = $pago->clinica ?? $user->clinica;
+        $sucursal = $pago->sucursal ?? $user->sucursal;
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+        
+        // Log para debugging
+        \Log::info('Ver Recibo PDF:', [
+            'clinica' => $clinica?->nombre,
+            'sucursal' => $sucursal?->nombre,
+            'logo' => substr($clinicaLogo ?? 'null', 0, 50) . '...'
+        ]);
+
+        $pdf = Pdf::loadView('finanzas.recibo', compact('pago', 'clinica', 'sucursal', 'clinicaLogo'));
+        return $pdf->stream('Recibo_' . str_pad($pago->id, 6, '0', STR_PAD_LEFT) . '.pdf');
+    }
+
+    /**
+     * Obtener el logo de la clínica en formato base64
+     */
+    private function getClinicaLogoBase64($user, $targetHeight = 36)
+    {
+        try {
+            // Validar que el usuario exista
+            if (!$user) {
+                $logoPath = public_path('img/logo.png');
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $mimeType = mime_content_type($logoPath);
+                    return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                }
+                return null;
+            }
+            
+            $clinica = $user->clinica;
+            $logoPath = null;
+            
+            if ($clinica && $clinica->logo) {
+                $logoPath = storage_path('app/public/' . $clinica->logo);
+            }
+            
+            // Si no existe el logo de la clínica, usar el logo por defecto
+            if (!$logoPath || !file_exists($logoPath)) {
+                $logoPath = public_path('img/logo.png');
+            }
+            
+            // Si tampoco existe el logo por defecto, retornar null
+            if (!file_exists($logoPath)) {
+                \Log::error('Logo no encontrado: ' . $logoPath);
+                return null;
+            }
+            
+            // Verificar si GD está disponible
+            if (!function_exists('imagecreatefrompng')) {
+                \Log::warning('GD no está disponible, usando imagen original');
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+            
+            // Redimensionar la imagen para que dompdf respete el tamaño
+            $imageInfo = @getimagesize($logoPath);
+            if (!$imageInfo) {
+                \Log::error('No se pudo obtener información de la imagen: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                $mimeType = mime_content_type($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+
+            list($width, $height) = $imageInfo;
+            $aspectRatio = $width / $height;
+            $newHeight = $targetHeight;
+            $newWidth = (int)($newHeight * $aspectRatio);
+
+            // Determinar el tipo de imagen y crear el recurso correspondiente
+            $mimeType = $imageInfo['mime'];
+            $source = null;
+
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    $source = @imagecreatefromjpeg($logoPath);
+                    break;
+                case 'image/png':
+                    $source = @imagecreatefrompng($logoPath);
+                    break;
+                case 'image/gif':
+                    $source = @imagecreatefromgif($logoPath);
+                    break;
+                default:
+                    \Log::error('Tipo de imagen no soportado: ' . $mimeType);
+                    $imageData = file_get_contents($logoPath);
+                    return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+
+            if (!$source) {
+                \Log::error('No se pudo crear imagen desde: ' . $logoPath);
+                $imageData = file_get_contents($logoPath);
+                return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+            }
+
+            // Crear nueva imagen redimensionada
+            $newImage = imagecreatetruecolor($newWidth, $newHeight);
+
+            // Preservar transparencia para PNG
+            if ($mimeType === 'image/png') {
+                imagealphablending($newImage, false);
+                imagesavealpha($newImage, true);
+                $transparent = imagecolorallocatealpha($newImage, 255, 255, 255, 127);
+                imagefilledrectangle($newImage, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+
+            // Redimensionar
+            imagecopyresampled($newImage, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+            // Guardar en buffer
+            ob_start();
+            if ($mimeType === 'image/png') {
+                imagepng($newImage, null, 9);
+            } else {
+                imagejpeg($newImage, null, 90);
+            }
+            $imageData = ob_get_clean();
+
+            // Liberar memoria
+            imagedestroy($source);
+            imagedestroy($newImage);
+
+            return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener logo de clínica: ' . $e->getMessage());
+            return null;
         }
     }
 

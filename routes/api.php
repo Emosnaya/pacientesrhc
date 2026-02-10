@@ -121,6 +121,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::get('/pacientes/{pacienteId}/pagos', [FinanzasController::class, 'historialPaciente']);
         // Enviar recibo por correo
         Route::post('/recibo/send-email', [FinanzasController::class, 'sendReciboByEmail']);
+        // Ver recibo en PDF
+        Route::get('/recibo/{id}/pdf', [FinanzasController::class, 'verReciboPdf']);
         
         // Corte de caja
         Route::get('/corte-caja', [FinanzasController::class, 'corteCajaDiario']);

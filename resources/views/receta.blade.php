@@ -259,15 +259,15 @@
             @if(!empty($sucursal))
                 <p class="clinica-meta" style="font-weight: 600; color: #0c4a6e;">Sucursal: {{ $sucursal->nombre }}</p>
             @endif
-            @if(!empty($clinica->direccion))
-                <p class="clinica-meta">{{ $clinica->direccion }}</p>
-            @endif
             @if(!empty($clinica->telefono) || !empty($clinica->email))
                 <p class="clinica-meta">
                     @if(!empty($clinica->telefono)){{ $clinica->telefono }}@endif
                     @if(!empty($clinica->telefono) && !empty($clinica->email)) · @endif
                     @if(!empty($clinica->email)){{ $clinica->email }}@endif
                 </p>
+            @endif
+             @if(!empty($clinica->direccion))
+                <p class="clinica-meta">{{ $clinica->direccion }}</p>
             @endif
         </div>
         <div class="universidad-cell">
