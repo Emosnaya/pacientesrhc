@@ -108,7 +108,8 @@ class UserManagementController extends Controller
     public function listAllUsers(Request $request): JsonResponse
     {
         $user = $request->user();
-        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'isAdmin', 'sucursal_id', 'created_at')
+        $users = User::with('sucursal:id,nombre,es_principal')
+            ->select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'isAdmin', 'sucursal_id', 'created_at')
             ->where('clinica_id', $user->clinica_id)
             ->orderBy('created_at', 'desc')
             ->get();
