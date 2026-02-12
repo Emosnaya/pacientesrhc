@@ -35,10 +35,18 @@ class CitaInvitationMail extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $this->cita->load(['paciente', 'user.clinica']);
+        $this->cita->load(['paciente', 'user.clinica', 'sucursal']);
 
         $paciente = $this->cita->paciente;
         $clinica  = optional($this->cita->user)->clinica;
+        $sucursal = $this->cita->sucursal;
+        $tipoClinica = $clinica->tipo_clinica
+            ?? ($sucursal && $sucursal->clinica ? $sucursal->clinica->tipo_clinica : null)
+            ?? 'rehabilitacion_cardiopulmonar';
+        $clinicaDisplayName = $sucursal->nombre
+            ?? ($clinica ? $clinica->nombre : null)
+            ?? (config('clinica_tipos.tipos.' . $tipoClinica . '.nombre'))
+            ?? 'Clínica Médica';
 
         $fechaFormateada = Carbon::parse($this->cita->fecha)
             ->locale('es')
@@ -48,7 +56,7 @@ class CitaInvitationMail extends Notification
 
         $isPatient = $notifiable instanceof \App\Models\Paciente;
 
-        $subject = $this->getSubject($fechaFormateada, $horaFormateada, $isPatient);
+        $subject = $this->getSubject($fechaFormateada, $horaFormateada, $isPatient, $clinicaDisplayName);
 
         // Generar ICS correcto
         $icsContent = $this->calendarService->generateIcs($this->cita, $this->action);
@@ -69,6 +77,8 @@ class CitaInvitationMail extends Notification
                 'cita' => $this->cita,
                 'paciente' => $paciente,
                 'clinica' => $clinica,
+                'sucursal' => $sucursal,
+                'clinicaDisplayName' => $clinicaDisplayName,
                 'fechaFormateada' => $fechaFormateada,
                 'horaFormateada' => $horaFormateada,
                 'action' => $this->action,
@@ -102,9 +112,9 @@ class CitaInvitationMail extends Notification
         };
     }
 
-    private function getSubject(string $fecha, string $hora, bool $isPatient): string
+    private function getSubject(string $fecha, string $hora, bool $isPatient, string $displayName = ''): string
     {
-        $prefix = $isPatient ? 'CERCAP - ' : '';
+        $prefix = $displayName ? ($displayName . ' - ') : '';
 
         return match ($this->action) {
             'update' => "{$prefix}🔄 Cita actualizada - {$fecha} {$hora}",

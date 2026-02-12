@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmación de Cita - {{ $clinica->nombre }}</title>
+    <title>Confirmación de Cita - {{ $clinicaDisplayName ?? ($clinica ? $clinica->nombre : 'Clínica Médica') }}</title>
     <style>
         * {
             margin: 0;
@@ -358,9 +358,11 @@
 <body>
     <div class="email-wrapper">
         <div class="header">
-            <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo">
+            @if($clinica && $clinica->logo)
+                <img src="{{ $clinica->logo }}" alt="{{ $clinicaDisplayName ?? $clinica->nombre }} Logo">
+            @endif
             <h1>✅ Confirmación de Cita</h1>
-            <p>{{ $clinica->nombre }}</p>
+            <p>{{ $clinicaDisplayName ?? ($clinica ? $clinica->nombre : 'Clínica Médica') }}</p>
         </div>
         
         <div class="content">
@@ -489,15 +491,20 @@
         
         <div class="footer">
             <p>
-                <strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong>
-                @if($clinica && $clinica->telefono)
-                    Tel: {{ $clinica->telefono }}<br>
+                <strong>{{ $clinicaDisplayName ?? ($clinica->nombre ?? 'Clínica Médica') }}</strong>
+                @php
+                    $footerTelefono = $sucursal->telefono ?? ($clinica->telefono ?? null);
+                    $footerEmail = $sucursal->email ?? ($clinica->email ?? null);
+                    $footerDireccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
+                @endphp
+                @if($footerTelefono)
+                    Tel: {{ $footerTelefono }}<br>
                 @endif
-                @if($clinica && $clinica->email)
-                    Email: {{ $clinica->email }}<br>
+                @if($footerEmail)
+                    Email: {{ $footerEmail }}<br>
                 @endif
-                @if($clinica && $clinica->direccion)
-                    {{ $clinica->direccion }}
+                @if($footerDireccion)
+                    {{ $footerDireccion }}
                 @endif
             </p>
         </div>
