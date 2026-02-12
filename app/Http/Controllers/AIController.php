@@ -184,16 +184,14 @@ class AIController extends Controller
             $clinicaId = $user->clinica_id;
             $clinica = $user->clinica; // Obtener la clínica completa
             
-            // Citas próximas de la clínica (próximos 7 días) - INCLUIR ID
-            $citasProximas = DB::table('citas')
-                ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
-                ->where('citas.clinica_id', $clinicaId)
-                ->where('citas.estado', '!=', 'cancelada')
-                ->where('citas.fecha', '>=', now()->toDateString())
-                ->where('citas.fecha', '<=', now()->addDays(7)->toDateString())
-                ->select('citas.id', 'citas.fecha', 'citas.hora', 'pacientes.nombre', 'pacientes.apellidoPat', 'citas.estado')
-                ->orderBy('citas.fecha')
-                ->orderBy('citas.hora')
+            // Citas próximas de la clínica (próximos 7 días) - Usar modelo Eloquent para desencriptar
+            $citasProximas = \App\Models\Cita::with('paciente:id,nombre,apellidoPat,apellidoMat')
+                ->where('clinica_id', $clinicaId)
+                ->where('estado', '!=', 'cancelada')
+                ->where('fecha', '>=', now()->toDateString())
+                ->where('fecha', '<=', now()->addDays(7)->toDateString())
+                ->orderBy('fecha')
+                ->orderBy('hora')
                 ->limit(20)
                 ->get();
 
@@ -218,7 +216,7 @@ class AIController extends Controller
                         'id' => $cita->id,  // Incluir ID para acciones
                         'fecha' => $cita->fecha,
                         'hora' => $cita->hora,
-                        'paciente' => $cita->nombre . ' ' . $cita->apellidoPat,
+                        'paciente' => $cita->paciente->nombre . ' ' . $cita->paciente->apellidoPat,
                         'estado' => $cita->estado
                     ];
                 })->toArray()
@@ -465,10 +463,14 @@ class AIController extends Controller
                 case 'agendar_cita':
                     return $this->agendarCita($user, $params);
                 
+                case 'crear_paciente':
+                    return $this->crearPaciente($user, $params);
+                
                 case 'buscar_paciente':
                     return $this->buscarPaciente($user, $params);
                 
                 case 'crear_evento':
+                case 'crear_recordatorio':
                     return $this->crearEvento($user, $params);
                 
                 case 'obtener_metricas':
@@ -1009,6 +1011,94 @@ class AIController extends Controller
             ], 500);
         }
     }
+
+    private function crearPaciente($user, $params)
+    {
+        // Validar parámetros mínimos requeridos
+        if (!isset($params['nombre']) || !isset($params['apellidoPat'])) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Nombre y apellido paterno son requeridos'
+            ], 400);
+        }
+
+        try {
+            // Generar color aleatorio para el paciente
+            $colores = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+                '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B195', '#F67280'
+            ];
+            $color = $colores[array_rand($colores)];
+
+            // Preparar datos del paciente
+            $datosPaciente = [
+                'nombre' => $params['nombre'],
+                'apellidoPat' => $params['apellidoPat'],
+                'apellidoMat' => $params['apellidoMat'] ?? '',
+                'telefono' => $params['telefono'] ?? null,
+                'email' => $params['email'] ?? null,
+                'fechaNacimiento' => $params['fecha_nacimiento'] ?? null,
+                'genero' => $params['genero'] ?? 'no_especificado',
+                'domicilio' => $params['domicilio'] ?? null,
+                'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $user->sucursal_id,
+                'color' => $color,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            // Campos específicos según tipo de clínica
+            $tipoClinica = $user->clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
+            
+            if ($tipoClinica === 'dental') {
+                $datosPaciente['tipo_paciente'] = $params['tipo_paciente'] ?? 'general';
+                $datosPaciente['motivo_consulta'] = $params['motivo'] ?? null;
+                $datosPaciente['alergias'] = $params['alergias'] ?? null;
+            } else {
+                $datosPaciente['tipo_paciente'] = $params['tipo_paciente'] ?? 'cardiaca';
+                $datosPaciente['diagnostico'] = $params['diagnostico'] ?? null;
+                $datosPaciente['medicamentos'] = $params['medicamentos'] ?? null;
+                if ($user->clinica_id === 1) {
+                    $datosPaciente['registro'] = $params['registro'] ?? 'AI-' . time();
+                }
+            }
+
+            // Crear paciente
+            $pacienteId = DB::table('pacientes')->insertGetId($datosPaciente);
+
+            Log::info("✅ Paciente creado exitosamente", [
+                'paciente_id' => $pacienteId,
+                'nombre' => $params['nombre'] . ' ' . $params['apellidoPat'],
+                'clinica_id' => $user->clinica_id,
+                'sucursal_id' => $user->sucursal_id
+            ]);
+
+            $nombreCompleto = $params['nombre'] . ' ' . $params['apellidoPat'];
+            if (!empty($params['apellidoMat'])) {
+                $nombreCompleto .= ' ' . $params['apellidoMat'];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Paciente {$nombreCompleto} creado exitosamente",
+                'paciente_id' => $pacienteId,
+                'paciente' => [
+                    'id' => $pacienteId,
+                    'nombre_completo' => $nombreCompleto,
+                    'telefono' => $params['telefono'] ?? 'No especificado',
+                    'email' => $params['email'] ?? 'No especificado'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ Error al crear paciente: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al crear el paciente: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
     private function buscarPaciente($user, $params)
     {
         if (!isset($params['nombre'])) {
@@ -1038,8 +1128,8 @@ class AIController extends Controller
         $pacientesEncontrados = [];
         
         foreach ($pacientes as $p) {
-            $nombreCompletoPaciente = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
-            $nombrePaciente = $normalizar($p->nombre);
+            $nombreCompletoPaciente = $normalizar(trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')));
+            $nombrePaciente = $normalizar($p->nombre ?? '');
             $apellidoPat = $normalizar($p->apellidoPat ?? '');
             $apellidoMat = $normalizar($p->apellidoMat ?? '');
             
@@ -1113,7 +1203,7 @@ class AIController extends Controller
 
             $pacientesInfo[] = [
                 'id' => $p->id,
-                'nombre_completo' => trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat),
+                'nombre_completo' => trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')),
                 'expediente' => $p->numeroExpediente ?? 'N/A',
                 'telefono' => $p->telefono ?? 'N/A',
                 'edad' => $p->edad ?? 'N/A',
@@ -2547,6 +2637,7 @@ class AIController extends Controller
     private function buscarPacientePorNombre($user, $nombreBuscado)
     {
         $normalizar = function($texto) {
+            if (!$texto) return '';
             $texto = mb_strtolower($texto, 'UTF-8');
             $texto = str_replace(
                 ['á', 'é', 'í', 'ó', 'ú', 'ñ'],
@@ -2558,13 +2649,12 @@ class AIController extends Controller
         
         $nombreBuscar = $normalizar($nombreBuscado);
         
-        $pacientes = DB::table('pacientes')
-            ->where('clinica_id', $user->clinica_id)
-            ->get();
+        // Usar Eloquent para descifrar automáticamente
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
         
         foreach ($pacientes as $p) {
-            $nombreCompleto = $normalizar(trim($p->nombre . ' ' . $p->apellidoPat . ' ' . $p->apellidoMat));
-            $nombrePaciente = $normalizar($p->nombre);
+            $nombreCompleto = $normalizar(trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')));
+            $nombrePaciente = $normalizar($p->nombre ?? '');
             
             if ($nombreCompleto === $nombreBuscar || 
                 $nombrePaciente === $nombreBuscar ||
