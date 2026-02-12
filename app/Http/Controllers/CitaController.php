@@ -241,7 +241,7 @@ class CitaController extends Controller
                 'custom_email' => $request->custom_email ?? null
             ]);
 
-            $cita->load(['paciente', 'admin']);
+            $cita->load(['paciente', 'admin', 'user.clinica']);
 
             // Enviar correos de notificación
             $this->sendCitaNotificationEmails($cita, $user);

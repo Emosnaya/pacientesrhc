@@ -221,7 +221,9 @@
         <div class="email-container">
             <!-- Header con logo -->
             <div class="header">
-                <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo" class="logo">
+                @if($clinica && $clinica->logo)
+                    <img src="{{ $clinica->logo }}" alt="{{ $clinicaDisplayName ?? $clinica->nombre }} Logo" class="logo">
+                @endif
                 <h1>{{ $subject }}</h1>
             </div>
 
@@ -290,11 +292,20 @@
                     <div class="info-box">
                         <div class="info-box-title">📍 ¿Cómo llegar?</div>
                         <div class="info-box-content">
-                            <div><strong>Dirección:</strong> Real de Mayorazgo 130, Local 3</div>
-                            <div>Col. Xoco, Benito Juárez, CP 03330, CDMX</div>
-                            @if($clinica->direccion ?? null)<div style="color: #64748b; font-size: 13px;">{{ $clinica->direccion }}</div>@endif
-                            @if($clinica->telefono ?? null)<div style="margin-top: 12px;"><strong>Teléfono:</strong> 📞 {{ $clinica->telefono }}</div>@endif
-                            @if($clinica->email ?? null)<div><strong>Email:</strong> ✉️ {{ $clinica->email }}</div>@endif
+                            @php
+                                $direccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
+                                $telefono = $sucursal->telefono ?? ($clinica->telefono ?? null);
+                                $email = $sucursal->email ?? ($clinica->email ?? null);
+                            @endphp
+                            @if($direccion)
+                                <div><strong>Dirección:</strong> {{ $direccion }}</div>
+                            @endif
+                            @if($telefono)
+                                <div style="margin-top: 12px;"><strong>Teléfono:</strong> 📞 {{ $telefono }}</div>
+                            @endif
+                            @if($email)
+                                <div><strong>Email:</strong> ✉️ {{ $email }}</div>
+                            @endif
                         </div>
                         @if($action !== 'cancel')
                         <div class="recommendations">
@@ -312,7 +323,7 @@
                     </div>
                 @else
                     <!-- Información de contacto del paciente para el doctor -->
-                    @if($paciente->telefono || $paciente->email)
+                    @if($paciente->telefono || $paciente->email || $paciente->domicilio)
                     <div class="info-box">
                         <div class="info-box-title">📋 Información de contacto del paciente:</div>
                         <div class="info-box-content">
@@ -322,6 +333,32 @@
                             @if($paciente->email)
                             <div>✉️ {{ $paciente->email }}</div>
                             @endif
+                            @if($paciente->domicilio)
+                            <div style="margin-top: 8px;">📍 {{ $paciente->domicilio }}</div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- Información de la clínica/sucursal para el doctor -->
+                    @php
+                        $direccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
+                        $telefono = $sucursal->telefono ?? ($clinica->telefono ?? null);
+                        $email = $sucursal->email ?? ($clinica->email ?? null);
+                    @endphp
+                    @if($direccion || $telefono || $email)
+                    <div class="info-box">
+                        <div class="info-box-title">🏥 Ubicación de la cita:</div>
+                        <div class="info-box-content">
+                            @if($direccion)
+                            <div><strong>Dirección:</strong> {{ $direccion }}</div>
+                            @endif
+                            @if($telefono)
+                            <div style="margin-top: 8px;"><strong>Teléfono:</strong> 📞 {{ $telefono }}</div>
+                            @endif
+                            @if($email)
+                            <div><strong>Email:</strong> ✉️ {{ $email }}</div>
+                            @endif
                         </div>
                     </div>
                     @endif
@@ -330,12 +367,16 @@
 
             <!-- Footer -->
             <div class="footer">
-                <div class="clinica-name">🏥 {{ $clinica->nombre ?? 'Clínica Médica' }}</div>
+                <div class="clinica-name">🏥 {{ $clinicaDisplayName ?? ($clinica->nombre ?? 'Clínica Médica') }}</div>
                 <div class="footer-contact">
-                    @if($clinica->telefono ?? null)<div>📞 {{ $clinica->telefono }}</div>@endif
-                    @if($clinica->email ?? null)<div>✉️ {{ $clinica->email }}</div>@endif
-                    @if($clinica->direccion ?? null)<div>📍 {{ $clinica->direccion }}</div>@endif
-                    <div style="font-size: 12px; color: #888; margin-top: 5px;">HSAI Universidad Torre Médica II</div>
+                    @php
+                        $footerTelefono = $sucursal->telefono ?? ($clinica->telefono ?? null);
+                        $footerEmail = $sucursal->email ?? ($clinica->email ?? null);
+                        $footerDireccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
+                    @endphp
+                    @if($footerTelefono)<div>📞 {{ $footerTelefono }}</div>@endif
+                    @if($footerEmail)<div>✉️ {{ $footerEmail }}</div>@endif
+                    @if($footerDireccion)<div>📍 {{ $footerDireccion }}</div>@endif
                 </div>
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #d0d4e0; font-size: 12px; color: #999;">
                     Este es un correo automático, por favor no responder.

@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Suprimir warnings de deprecación de PHP 8.4 en Laravel 9
+        error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
     }
 }
