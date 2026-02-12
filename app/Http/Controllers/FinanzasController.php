@@ -57,8 +57,8 @@ class FinanzasController extends Controller
         // Crear el pago
         $pago = Pago::create([
             'paciente_id' => $request->paciente_id,
-            'clinica_id' => $user->clinica_id,
-            'sucursal_id' => $user->sucursal_id,
+            'clinica_id' => $paciente->clinica_id, // Usar la clínica del paciente
+            'sucursal_id' => $paciente->sucursal_id, // Usar la sucursal del paciente
             'user_id' => $user->id,
             'cita_id' => $request->cita_id,
             'monto' => $request->monto,
@@ -289,7 +289,7 @@ class FinanzasController extends Controller
         $paciente = Paciente::where('clinica_id', $user->clinica_id)
             ->findOrFail($pacienteId);
 
-        $pagos = Pago::with(['usuario', 'cita'])
+        $pagos = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
             ->where('paciente_id', $pacienteId)
             ->where('clinica_id', $user->clinica_id)
             ->orderBy('created_at', 'desc')
