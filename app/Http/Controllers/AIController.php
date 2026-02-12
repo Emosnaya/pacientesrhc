@@ -222,6 +222,52 @@ class AIController extends Controller
                 })->toArray()
             ];
 
+            // Contexto del paciente (si se envía paciente_id: perfil abierto o conversación sobre ese paciente)
+            $pacienteId = $request->input('paciente_id');
+            if ($pacienteId) {
+                $paciente = \App\Models\Paciente::with(['citas' => function ($q) {
+                    $q->where('clinica_id', \Illuminate\Support\Facades\Auth::user()->clinica_id)
+                        ->orderBy('fecha', 'desc')->orderBy('hora', 'desc')->limit(15);
+                }, 'pagos' => function ($q) {
+                    $q->orderBy('created_at', 'desc')->limit(10);
+                }])->where('clinica_id', $clinicaId)->find($pacienteId);
+
+                if ($paciente) {
+                    $edad = $paciente->fechaNacimiento
+                        ? now()->diffInYears($paciente->fechaNacimiento)
+                        : ($paciente->edad ?? null);
+                    $nombreCompleto = trim($paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . ($paciente->apellidoMat ?? ''));
+                    $totalCitas = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaId)->count();
+                    $citasPendientes = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaId)
+                        ->whereIn('estado', ['pendiente', 'confirmada'])->where('fecha', '>=', now()->toDateString())->count();
+                    $ultimasCitas = $paciente->citas->take(5)->map(function ($c) {
+                        return $c->fecha . ' ' . substr($c->hora, 0, 5) . ' - ' . $c->estado;
+                    })->values()->all();
+                    $totalPagos = \App\Models\Pago::where('paciente_id', $paciente->id)->count();
+                    $todosPagos = \App\Models\Pago::where('paciente_id', $paciente->id)->get();
+                    $totalPagado = $todosPagos->sum(fn ($p) => (float) $p->monto);
+                    $ultimosPagos = $paciente->pagos->take(5)->map(function ($p) {
+                        return $p->created_at?->format('Y-m-d') . ' $' . (is_numeric($p->monto) ? number_format((float) $p->monto, 2) : $p->monto) . ' ' . (trim((string) ($p->concepto ?? '')) ?: 'pago');
+                    })->values()->all();
+                    $contextoClinica['contexto_paciente'] = [
+                        'id' => $paciente->id,
+                        'nombre_completo' => $nombreCompleto,
+                        'edad' => $edad,
+                        'genero' => $paciente->genero ?? 'no especificado',
+                        'imc' => $paciente->imc,
+                        'peso' => $paciente->peso,
+                        'talla' => $paciente->talla,
+                        'alergias' => $paciente->alergias ? trim($paciente->alergias) : 'ninguna registrada',
+                        'total_citas' => $totalCitas,
+                        'citas_pendientes' => $citasPendientes,
+                        'ultimas_citas' => $ultimasCitas,
+                        'total_pagos' => $totalPagos,
+                        'total_pagado' => round($totalPagado, 2),
+                        'ultimos_pagos' => $ultimosPagos,
+                    ];
+                }
+            }
+
             Log::info('💬 Chat médico', [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
@@ -445,6 +491,11 @@ class AIController extends Controller
         $user = Auth::user();
         $action = $request->input('action');
         $params = $request->input('params', []);
+
+        // Normalizar parámetros para acciones de citas (cita_id como entero)
+        if (in_array($action, ['cambiar_estado_cita', 'cancelar_cita', 'eliminar_cita'], true) && isset($params['cita_id'])) {
+            $params['cita_id'] = (int) $params['cita_id'];
+        }
 
         try {
             switch ($action) {
@@ -915,8 +966,24 @@ class AIController extends Controller
                 'similitud' => round($coincidencias[0]['similitud'], 2) . '%'
             ]);
         }
-        // Si hay múltiples coincidencias o una con similitud media, mostrar opciones
-        else {
+        // Si hay varias coincidencias pero una es coincidencia exacta (100%), usar esa sin pedir desambiguar
+        elseif (count($coincidencias) > 1) {
+            $exacta = null;
+            foreach ($coincidencias as $c) {
+                if ($c['similitud'] >= 99.9) {
+                    $exacta = $c;
+                    break;
+                }
+            }
+            if ($exacta) {
+                $paciente = $exacta['paciente'];
+                Log::info("✅ Paciente con nombre exacto usado (varios similares)", [
+                    'nombre' => $paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . $paciente->apellidoMat
+                ]);
+            }
+        }
+        // Si aún no hay paciente (múltiples coincidencias sin exacta), mostrar opciones
+        if (!$paciente) {
             $listaOpciones = "Encontré varios pacientes con nombres similares. Por favor, especifica cuál:\n\n";
             foreach ($coincidencias as $index => $match) {
                 $p = $match['paciente'];
@@ -1204,7 +1271,7 @@ class AIController extends Controller
             $pacientesInfo[] = [
                 'id' => $p->id,
                 'nombre_completo' => trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')),
-                'expediente' => $p->numeroExpediente ?? 'N/A',
+                'expediente' => $p->registro ?? 'N/A',
                 'telefono' => $p->telefono ?? 'N/A',
                 'edad' => $p->edad ?? 'N/A',
                 'total_citas' => $totalCitas,
@@ -1668,7 +1735,7 @@ class AIController extends Controller
             'paciente' => [
                 'id' => $paciente->id,
                 'nombre_completo' => trim($paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . $paciente->apellidoMat),
-                'expediente' => $paciente->numeroExpediente ?? 'N/A'
+                'expediente' => $paciente->registro ?? 'N/A'
             ],
             'citas' => [
                 'total' => $totalCitas,
@@ -2686,10 +2753,29 @@ class AIController extends Controller
                 $fecha = now()->subDay()->toDateString();
             }
             
+            // VALIDACIÓN: Solo superadmin puede ver todas las sucursales
+            // Si se especifica una sucursal, verificar que el usuario tenga acceso
+            if ($sucursalNombre && $user->role !== 'superadmin') {
+                // Buscar la sucursal solicitada
+                $sucursalSolicitada = DB::table('sucursales')
+                    ->where('clinica_id', $clinicaId)
+                    ->where('nombre', 'like', "%{$sucursalNombre}%")
+                    ->first();
+                
+                // Verificar que el usuario pertenezca a esa sucursal
+                if ($sucursalSolicitada && $user->sucursal_id != $sucursalSolicitada->id) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'No tienes permisos para ver información de otras sucursales.'
+                    ], 403);
+                }
+            }
+            
             Log::info('🔍 Consultando corte de caja', [
                 'clinica_id' => $clinicaId,
                 'fecha' => $fecha,
-                'sucursal' => $sucursalNombre ?? 'Todas'
+                'sucursal' => $sucursalNombre ?? 'Todas',
+                'user_role' => $user->role
             ]);
             
             // Query base - USAR created_at en lugar de fecha_pago
