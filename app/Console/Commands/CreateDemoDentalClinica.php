@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Models\Paciente;
 use App\Models\Cita;
 use App\Models\Pago;
+use App\Models\HistoriaClinicaDental;
+use App\Models\Odontograma;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 
@@ -161,6 +163,28 @@ class CreateDemoDentalClinica extends Command
 
         $this->info('  ✓ ' . count($pacientes) . ' pacientes creados');
 
+        $fechaDemo = now()->subDays(5)->format('Y-m-d');
+        $nombreDoctor = $doctor->nombre . ' ' . $doctor->apellidoPat . ' ' . $doctor->apellidoMat;
+        foreach ($pacientes as $paciente) {
+            $historia = HistoriaClinicaDental::create([
+                'paciente_id' => $paciente->id,
+                'sucursal_id' => $sucursal->id,
+                'user_id' => $doctor->id,
+                'fecha' => $fechaDemo,
+                'nombre_doctor' => $nombreDoctor,
+                'motivo_consulta' => 'Revisión dental / Limpieza - demo',
+                'alergias' => $paciente->alergias,
+            ]);
+            Odontograma::create([
+                'paciente_id' => $paciente->id,
+                'sucursal_id' => $sucursal->id,
+                'historia_clinica_dental_id' => $historia->id,
+                'fecha' => $fechaDemo,
+                'dientes' => Odontograma::inicializarDientes(),
+            ]);
+        }
+        $this->info('  ✓ Historia clínica dental y odontograma creados para cada paciente');
+
         $estados = ['pendiente', 'confirmada', 'completada', 'cancelada'];
         $horas = ['09:00:00', '10:00:00', '11:00:00', '12:00:00', '16:00:00', '17:00:00', '18:00:00'];
         $citas = [];
@@ -241,6 +265,8 @@ class CreateDemoDentalClinica extends Command
                 ['Doctor (email)', $doctor->email],
                 ['Contraseña', $password],
                 ['Pacientes', count($pacientes)],
+                ['Historias clínicas dentales', count($pacientes)],
+                ['Odontogramas', count($pacientes)],
                 ['Citas', count($citas)],
                 ['Pagos', 12],
             ]
