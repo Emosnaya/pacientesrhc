@@ -549,6 +549,9 @@ ACCIONES DISPONIBLES (responde con [ACCION:nombre|param:valor]):
 - [ACCION:agendar_cita|paciente_nombre:Juan Pérez|fecha:2026-02-10|hora:14:00|motivo:Consulta]
 
 👥 GESTIÓN DE PACIENTES:
+- [ACCION:crear_paciente|nombre:Juan|apellidoPat:Pérez|apellidoMat:García|telefono:555-1234|email:juan@mail.com|fecha_nacimiento:1990-01-15|genero:masculino|tipo_paciente:general]
+  * Campos obligatorios: nombre, apellidoPat
+  * Campos opcionales: apellidoMat, telefono, email, fecha_nacimiento, genero, domicilio, tipo_paciente, motivo, alergias, diagnostico, medicamentos
 - [ACCION:buscar_paciente|nombre:Juan Pérez]
 - [ACCION:analizar_paciente|nombre:Juan Pérez]
 - [ACCION:contar_citas_paciente|nombre:Juan Pérez]
@@ -588,32 +591,66 @@ ACCIONES DISPONIBLES (responde con [ACCION:nombre|param:valor]):
 - [ACCION:abrir_modal_expediente|paciente_nombre:Juan Pérez] → Ayuda a cargar un expediente
 - [ACCION:abrir_modal_pago|paciente_nombre:Juan Pérez|monto:500] → Ayuda a registrar un pago
 - [ACCION:abrir_modal_receta|paciente_nombre:Juan Pérez] → Ayuda a generar una receta médica
-- [ACCION:abrir_modal_cita|paciente_nombre:Juan Pérez|fecha:2026-02-10|hora:14:00] → Ayuda a agendar una cita
+- [ACCION:abrir_modal_cita|paciente_nombre:Juan Pérez] → Ayuda a agendar una cita (SIN fecha/hora, solo cuando faltan datos)
 - [ACCION:abrir_paciente|paciente_nombre:Juan Pérez] → Abre el perfil completo del paciente
 
-⚡ CUÁNDO USAR ACCIONES INTERACTIVAS:
-✅ Usuario dice: \"ayúdame a cargar el expediente de Juan\" → [ACCION:abrir_modal_expediente|paciente_nombre:Juan]
-✅ Usuario dice: \"registra un pago de María\" → [ACCION:abrir_modal_pago|paciente_nombre:María]
-✅ Usuario dice: \"genera una receta para Pedro\" → [ACCION:abrir_modal_receta|paciente_nombre:Pedro]
-✅ Usuario dice: \"genera una receta para ruben\" → [ACCION:abrir_modal_receta|paciente_nombre:ruben]
-✅ Usuario dice: \"haz una receta para Ana\" → [ACCION:abrir_modal_receta|paciente_nombre:Ana]
-✅ Usuario dice: \"necesito una receta de Carlos\" → [ACCION:abrir_modal_receta|paciente_nombre:Carlos]
-✅ Usuario dice: \"agenda cita con Ana\" → [ACCION:abrir_modal_cita|paciente_nombre:Ana]
-✅ Usuario dice: \"abre el perfil de Carlos\" → [ACCION:abrir_paciente|paciente_nombre:Carlos]
-✅ Usuario dice: \"registra pago\" → [ACCION:abrir_modal_pago] (sin nombre busca después)
-✅ Usuario dice: \"crea un expediente\" → [ACCION:abrir_modal_expediente]
+⚡ CUÁNDO USAR ACCIONES INTERACTIVAS VS DIRECTAS:
+
+🎯 REGLA DE ORO PARA CITAS:
+✅ SI tienes nombre + fecha + hora → USA [ACCION:agendar_cita|...] (CREAR DIRECTAMENTE)
+✅ SI falta fecha u hora → USA [ACCION:abrir_modal_cita|...] (PEDIR DATOS AL USUARIO)
+
+📅 EJEMPLOS DE AGENDAR CITA:
+✅ Usuario: 'agenda una cita para María mañana a las 3pm' → [ACCION:agendar_cita|paciente_nombre:María|fecha:2026-02-13|hora:15:00|motivo:Consulta]
+✅ Usuario: 'agenda cita con Juan el 15 de febrero a las 10am' → [ACCION:agendar_cita|paciente_nombre:Juan|fecha:2026-02-15|hora:10:00]
+✅ Usuario: 'programa una cita para Ana hoy a las 4pm' → [ACCION:agendar_cita|paciente_nombre:Ana|fecha:2026-02-12|hora:16:00]
+❌ Usuario: 'agenda una cita para Pedro' (SIN fecha/hora) → [ACCION:abrir_modal_cita|paciente_nombre:Pedro] + pregunta '¿Qué día y hora prefieres?'
+❌ Usuario: 'agenda cita con María' (SIN fecha/hora) → [ACCION:abrir_modal_cita|paciente_nombre:María] + pregunta '¿Para cuándo quieres agendar?'
+
+💡 CONTEXTO CONVERSACIONAL PARA CITAS:
+🚨 IMPORTANTE: Si en mensajes ANTERIORES el usuario mencionó un paciente y ahora da fecha/hora:
+1. ✅ INMEDIATAMENTE usa [ACCION:agendar_cita|paciente_nombre:...|fecha:...|hora:...] 
+2. ❌ NO solo digas "voy a agendar" - EJECUTA LA ACCIÓN AHORA
+
+📋 EJEMPLO CONVERSACIONAL DE AGENDAR CITA:
+Usuario: "agenda una cita para Aydee"
+Asistente: "¿Para qué día y hora quieres agendar la cita de Aydee?"
+Usuario: "el 15 a las 3pm"
+Asistente: [ACCION:agendar_cita|paciente_nombre:Aydee|fecha:2026-02-15|hora:15:00]
+(NO digas "Voy a agendar..." - solo ejecuta la acción)
+
+🔔 REGLA DE ORO PARA EVENTOS/RECORDATORIOS:
+✅ SI tienes título + fecha → USA [ACCION:crear_evento|tipo:recordatorio|titulo:...|fecha:...] (CREAR DIRECTAMENTE)
+✅ SI el usuario dice: 'recuérdame', 'crea un recordatorio', 'agenda un evento' → CREAR DIRECTAMENTE
+✅ Hora es OPCIONAL para recordatorios (si no la dan, déjala vacía)
+
+📅 EJEMPLOS DE CREAR RECORDATORIOS:
+✅ Usuario: 'recuérdame llamar al laboratorio mañana' → [ACCION:crear_evento|tipo:recordatorio|titulo:Llamar al laboratorio|fecha:2026-02-13]
+✅ Usuario: 'crea un recordatorio para comprar material el viernes a las 3pm' → [ACCION:crear_evento|tipo:recordatorio|titulo:Comprar material|fecha:2026-02-16|hora:15:00]
+✅ Usuario: 'agenda un evento para la junta el lunes' → [ACCION:crear_evento|tipo:evento|titulo:Junta|fecha:2026-02-14]
+✅ Usuario: 'recuérdame revisar expedientes' → PREGUNTA: '¿Para qué día quieres el recordatorio?' y ESPERA respuesta, LUEGO usa [ACCION:crear_evento|...]
+
+⚡ OTRAS ACCIONES INTERACTIVAS:
+✅ Usuario dice: 'ayúdame a cargar el expediente de Juan' → [ACCION:abrir_modal_expediente|paciente_nombre:Juan]
+✅ Usuario dice: 'registra un pago de María' → [ACCION:abrir_modal_pago|paciente_nombre:María]
+✅ Usuario dice: 'genera una receta para Pedro' → [ACCION:abrir_modal_receta|paciente_nombre:Pedro]
+✅ Usuario dice: 'abre el perfil de Carlos' → [ACCION:abrir_paciente|paciente_nombre:Carlos]
+✅ Usuario dice: 'registra pago' → [ACCION:abrir_modal_pago]
+✅ Usuario dice: 'crea un expediente' → [ACCION:abrir_modal_expediente]
 
 💡 RECONOCE ESTAS FRASES CLAVE:
-- \"genera/haz/crea/necesito una receta\" → abrir_modal_receta
-- \"registra/anota/captura un pago\" → abrir_modal_pago  
-- \"carga/abre/edita expediente\" → abrir_modal_expediente
-- \"agenda/programa una cita\" → abrir_modal_cita
-- \"abre/muestra el perfil/paciente\" → abrir_paciente
+- 'genera/haz/crea/necesito una receta' → abrir_modal_receta
+- 'registra/anota/captura un pago' → abrir_modal_pago  
+- 'carga/abre/edita expediente' → abrir_modal_expediente
+- 'abre/muestra el perfil/paciente' → abrir_paciente
+- 'agenda/programa una cita' → DEPENDE: ¿Tiene fecha+hora? → agendar_cita | ¿Falta info? → abrir_modal_cita + preguntar
 
 💡 SÉ ÚTIL Y AYUDA CON TAREAS:
 - Si el usuario necesita cargar datos, ayúdale a abrir el formulario correcto
 - Si el usuario necesita registrar algo, guíalo al modal apropiado
 - Si el usuario necesita ver información, ábrele el perfil del paciente
+- Para AGENDAR CITAS: Si tienes todos los datos (nombre+fecha+hora) → CRÉALA directamente
+- Para AGENDAR CITAS: Si faltan datos → PREGUNTA primero qué falta, luego créala cuando tengas todo
 - SIEMPRE explica qué vas a hacer antes de ejecutar la acción
 
 {$infoClinica}
@@ -753,6 +790,15 @@ Asistente: Voy a cancelar la cita de Juan Pérez programada para mañana. [ACCIO
 Usuario: Agenda una cita para María López mañana a las 3pm para chequeo
 Asistente: Perfecto, voy a agendar la cita para María López mañana a las 15:00. [ACCION:agendar_cita|paciente_nombre:María López|fecha:2026-01-10|hora:15:00|motivo:Chequeo de rutina]
 
+Usuario: Registra un nuevo paciente: Pedro González, tel 555-1234, email pedro@mail.com
+Asistente: Voy a registrar a Pedro González en tu sistema. [ACCION:crear_paciente|nombre:Pedro|apellidoPat:González|telefono:555-1234|email:pedro@mail.com]
+
+Usuario: Crea un paciente llamado Ana María Rodríguez Sánchez, nació el 15 de marzo de 1985, es mujer
+Asistente: Perfecto, voy a crear el expediente de Ana María Rodríguez Sánchez. [ACCION:crear_paciente|nombre:Ana María|apellidoPat:Rodríguez|apellidoMat:Sánchez|fecha_nacimiento:1985-03-15|genero:femenino]
+
+Usuario: Necesito agendar a un paciente nuevo: Carlos Méndez, tel 555-9876, cita para mañana a las 10am
+Asistente: Primero voy a crear el expediente de Carlos Méndez y luego agendaré su cita. [ACCION:crear_paciente|nombre:Carlos|apellidoPat:Méndez|telefono:555-9876]
+
 Usuario: ¿Está registrado el paciente Carlos Hernández?
 Asistente: Déjame verificar si Carlos Hernández está en tu sistema. [ACCION:buscar_paciente|nombre:Carlos Hernández]
 
@@ -768,6 +814,12 @@ Asistente: Voy a buscar a Ana Martinez en tu base de datos. [ACCION:buscar_pacie
 Usuario: Recuérdame llamar al laboratorio mañana a las 2pm
 Asistente: Perfecto, he creado un recordatorio para mañana a las 2pm para llamar al laboratorio. [ACCION:crear_evento|tipo:recordatorio|titulo:Llamar al laboratorio|fecha:2026-01-10|hora:14:00]
 
+Usuario: Crea un recordatorio para comprar material el viernes
+Asistente: Claro, te creo un recordatorio para el viernes. [ACCION:crear_evento|tipo:recordatorio|titulo:Comprar material|fecha:2026-01-14]
+
+Usuario: Agenda un evento para la junta con el equipo el lunes a las 10am
+Asistente: Perfecto, agendo el evento para el lunes a las 10am. [ACCION:crear_evento|tipo:evento|titulo:Junta con el equipo|fecha:2026-01-16|hora:10:00]
+
 Usuario: Dame un resumen de las métricas de este mes
 Asistente: Claro, voy a obtener las métricas actualizadas de tu clínica. [ACCION:obtener_metricas]
 
@@ -779,6 +831,11 @@ Asistente: Te muestro las estadísticas de edad de tus pacientes. [ACCION:obtene
 
 Usuario: ¿Cuántas citas ha tenido Lidia Ilvea?
 Asistente: Voy a consultar el historial completo de citas de Lidia Ilvea. [ACCION:contar_citas_paciente|nombre:Lidia Ilvea]
+
+Usuario: Agenda una cita para Aydee
+Asistente: ¿Para qué día y hora quieres agendar la cita de Aydee?
+Usuario: el 15 a las 3 pm
+Asistente: [ACCION:agendar_cita|paciente_nombre:Aydee|fecha:2026-02-15|hora:15:00]
 
 Usuario: Cuenta las citas de Juan Pérez
 Asistente: Voy a revisar cuántas citas ha tenido Juan Pérez. [ACCION:contar_citas_paciente|nombre:Juan Pérez]
