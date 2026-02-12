@@ -263,7 +263,7 @@ class ProfileController extends Controller
                 
                 // Guardar imagen procesada
                 Storage::disk('public')->put($rutaLogo, $encodedImage);
-            } catch (\Exception $interventionError) {
+            } catch (\Throwable $interventionError) {
                 // Si Intervention Image falla, guardar directamente el archivo
                 \Log::warning('Intervention Image no disponible, guardando imagen directamente', [
                     'error' => $interventionError->getMessage()
