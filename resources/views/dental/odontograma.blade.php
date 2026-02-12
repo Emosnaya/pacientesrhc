@@ -835,7 +835,7 @@
             <hr>
             @if($user)
                 <p class="mb-0 f-10">
-                    <span class="f-bold">{{ $user->nombre }} {{ $user->apellidoPat }} {{ $user->apellidoMat }}</span><br>
+                    <span class="f-bold">{{ $user->nombre_con_titulo }}</span><br>
                     @if($user->cedula)
                         Cédula Profesional: {{ $user->cedula }}
                     @endif
