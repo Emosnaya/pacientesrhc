@@ -26,6 +26,7 @@ return [
     'roles_administrativos' => [
         'recepcionista',
         'administrativo',
+        'asistente',
         'laboratorista',
         'enfermera',
         'enfermero',
@@ -49,6 +50,7 @@ return [
         'rehabilitador'   => 'Rehabilitador',
         'recepcionista'   => 'Recepcionista',
         'administrativo'  => 'Administrativo(a)',
+        'asistente'       => 'Asistente',
         'laboratorista'   => 'Laboratorista',
         'enfermera'       => 'Enfermera',
         'enfermero'       => 'Enfermero',
@@ -72,6 +74,7 @@ return [
         'rehabilitador'   => 'Lic.',
         'recepcionista'   => '',
         'administrativo'  => '',
+        'asistente'       => '',
         'laboratorista'   => '',
         'enfermera'       => 'Enf.',
         'enfermero'       => 'Enf.',
@@ -84,5 +87,5 @@ return [
     | Validación: string permitido para rol (para reglas Rule::in)
     |--------------------------------------------------------------------------
     */
-    'validacion_in' => 'doctor,doctora,licenciado,director_medico,nutriologo,psicologo,fisioterapeuta,rehabilitador,recepcionista,administrativo,laboratorista,enfermera,enfermero,coordinador,asistente_medico',
+    'validacion_in' => 'doctor,doctora,licenciado,director_medico,nutriologo,psicologo,fisioterapeuta,rehabilitador,recepcionista,administrativo,asistente,laboratorista,enfermera,enfermero,coordinador,asistente_medico',
 ];

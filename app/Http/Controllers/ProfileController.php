@@ -237,29 +237,39 @@ class ProfileController extends Controller
             }
 
             $logo = $request->file('logo_universidad');
-            
-            // Usar Intervention Image para procesar la imagen con alta calidad
-            $image = ImageManager::gd()->read($logo->getRealPath());
-            
-            // Redimensionar manteniendo aspect ratio (máximo 800px de ancho)
-            if ($image->width() > 800) {
-                $image->scale(width: 800);
-            }
-            
-            // Determinar formato y calidad
             $extension = strtolower($logo->getClientOriginalExtension());
-            if ($extension === 'png') {
-                $encodedImage = $image->toPng();
-            } else {
-                // JPEG con 95% de calidad
-                $encodedImage = $image->toJpeg(quality: 95);
-                $extension = 'jpg';
-            }
-            
-            // Guardar imagen procesada
             $nombreLogo = 'logo_uni_' . $user->id . '_' . time() . '.' . $extension;
             $rutaLogo = 'universidades/' . $nombreLogo;
-            Storage::disk('public')->put($rutaLogo, $encodedImage);
+            
+            try {
+                // Intentar usar Intervention Image para procesar con alta calidad
+                $image = ImageManager::gd()->read($logo->getRealPath());
+                
+                // Redimensionar manteniendo aspect ratio (máximo 800px de ancho)
+                if ($image->width() > 800) {
+                    $image->scale(width: 800);
+                }
+                
+                // Determinar formato y calidad
+                if ($extension === 'png') {
+                    $encodedImage = $image->toPng();
+                } else {
+                    // JPEG con 95% de calidad
+                    $encodedImage = $image->toJpeg(quality: 95);
+                    $extension = 'jpg';
+                    $nombreLogo = 'logo_uni_' . $user->id . '_' . time() . '.jpg';
+                    $rutaLogo = 'universidades/' . $nombreLogo;
+                }
+                
+                // Guardar imagen procesada
+                Storage::disk('public')->put($rutaLogo, $encodedImage);
+            } catch (\Exception $interventionError) {
+                // Si Intervention Image falla, guardar directamente el archivo
+                \Log::warning('Intervention Image no disponible, guardando imagen directamente', [
+                    'error' => $interventionError->getMessage()
+                ]);
+                $rutaLogo = $logo->storeAs('universidades', $nombreLogo, 'public');
+            }
             
             $user->update(['logo_universidad' => $rutaLogo]);
 
