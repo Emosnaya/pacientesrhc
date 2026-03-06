@@ -22,6 +22,7 @@ class Pago extends Model
         'concepto',
         'notas',
         'firma_paciente',
+        'fecha_pago',
     ];
 
     /**
@@ -34,6 +35,7 @@ class Pago extends Model
         'notas' => 'encrypted',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'fecha_pago' => 'date',
     ];
 
     /**
@@ -81,7 +83,13 @@ class Pago extends Model
      */
     public function scopeByDate($query, $fecha)
     {
-        return $query->whereDate('created_at', $fecha);
+        return $query->where(function($q) use ($fecha) {
+            $q->whereDate('fecha_pago', $fecha)
+              ->orWhere(function($subQ) use ($fecha) {
+                  $subQ->whereNull('fecha_pago')
+                       ->whereDate('created_at', $fecha);
+              });
+        });
     }
 
     /**
@@ -89,7 +97,13 @@ class Pago extends Model
      */
     public function scopeBetweenDates($query, $fechaInicio, $fechaFin)
     {
-        return $query->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+        return $query->where(function($q) use ($fechaInicio, $fechaFin) {
+            $q->whereBetween('fecha_pago', [$fechaInicio, $fechaFin])
+              ->orWhere(function($subQ) use ($fechaInicio, $fechaFin) {
+                  $subQ->whereNull('fecha_pago')
+                       ->whereBetween('created_at', [$fechaInicio, $fechaFin]);
+              });
+        });
     }
 
     /**
@@ -121,7 +135,13 @@ class Pago extends Model
      */
     public function scopeHoy($query)
     {
-        return $query->whereDate('created_at', today());
+        return $query->where(function($q) {
+            $q->whereDate('fecha_pago', today())
+              ->orWhere(function($subQ) {
+                  $subQ->whereNull('fecha_pago')
+                       ->whereDate('created_at', today());
+              });
+        });
     }
 
     /**
@@ -129,8 +149,15 @@ class Pago extends Model
      */
     public function scopeMesActual($query)
     {
-        return $query->whereMonth('created_at', now()->month)
-                     ->whereYear('created_at', now()->year);
+        return $query->where(function($q) {
+            $q->whereMonth('fecha_pago', now()->month)
+              ->whereYear('fecha_pago', now()->year)
+              ->orWhere(function($subQ) {
+                  $subQ->whereNull('fecha_pago')
+                       ->whereMonth('created_at', now()->month)
+                       ->whereYear('created_at', now()->year);
+              });
+        });
     }
 
     /**

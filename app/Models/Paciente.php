@@ -44,7 +44,12 @@ class Paciente extends Model
         'color',
         'user_id',
         'clinica_id',
-        'sucursal_id'
+        'sucursal_id',
+        'aviso_privacidad_aceptado_at',
+        'version_aviso',
+        'archivo_muerto',
+        'archivo_muerto_at',
+        'archivo_muerto_motivo'
     ];
 
     /**
@@ -64,6 +69,9 @@ class Paciente extends Model
         'motivo_consulta' => 'encrypted',
         'alergias' => 'encrypted',
         'fechaNacimiento' => 'date',
+        'aviso_privacidad_aceptado_at' => 'datetime',
+        'archivo_muerto' => 'boolean',
+        'archivo_muerto_at' => 'datetime',
     ];
 
     /**

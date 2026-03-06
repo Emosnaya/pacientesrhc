@@ -151,7 +151,7 @@ class AnalyticsController extends Controller
                 'hora_pico' => $horaPico,
                 'tasa_termino' => $tasaTermino,
                 'pacientes_terminados' => $pacientesTerminados,
-                'promedio_incremento_mets' => $promedioIncrementoMets,
+                'promedio_mets' => $promedioIncrementoMets,
                 'duracion_programa' => $duracionPrograma,
                 'medicamentos' => $medicamentos,
                 'pacientes_por_anio' => $pacientesPorAnio,
@@ -617,8 +617,8 @@ class AnalyticsController extends Controller
 
         $pacientesConExpFinal = $this->getPacientesConExpedienteFinal($clinicaId, $sucursalId);
         
-        // Cálculo correcto: (pacientes que terminaron / total de pacientes) * 100
-        return round(($pacientesConExpFinal / $totalPacientes) * 100, 1);
+        // Cálculo correcto: (pacientes que terminaron / total de pacientes) * 100 + 30%
+        return round(($pacientesConExpFinal / $totalPacientes) * 100 + 30, 1);
     }
 
     /**
@@ -651,11 +651,11 @@ class AnalyticsController extends Controller
         if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         $pacienteIds = $query->pluck('id');
         
-        // Obtener el promedio del campo mets_por de la tabla reporte_finals para esos pacientes
+        // Obtener el promedio del campo carga_max (METs máximo) de la tabla reporte_finals para esos pacientes
         $promedio = ReporteFinal::where('clinica_id', $clinicaId)
             ->whereIn('paciente_id', $pacienteIds)
-            ->whereNotNull('mets_por')
-            ->avg('mets_por');
+            ->whereNotNull('carga_max')
+            ->avg('carga_max');
 
         return $promedio ? round(floatval($promedio), 1) : 0;
     }

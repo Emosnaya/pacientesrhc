@@ -254,4 +254,88 @@ class PacienteController extends Controller
         $paciente->delete();
         return response()->json(['message' => 'Paciente eliminado exitosamente'], 204);
     }
+
+    /**
+     * Flujo Express: Crear paciente de emergencia con cita automática
+     * Para urgencias dentales u otras emergencias médicas
+     * Cumplimiento: NOM-024-SSA3-2012 (Aceptación de aviso de privacidad)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function createExpress(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Validar que sea una clínica dental
+        $clinica = $user->clinica;
+        if ($clinica->tipo_clinica !== 'dental') {
+            return response()->json([
+                'message' => 'El flujo Express solo está disponible para clínicas dentales'
+            ], 403);
+        }
+
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'telefono' => 'required|string|max:20',
+            'motivo_consulta' => 'required|string|max:500',
+            'tipo_paciente' => 'sometimes|string|in:cardiaca,pulmonar,dental,fisioterapia,nutricion,psicologia',
+        ]);
+        
+        // Determinar sucursal_id
+        $sucursalId = $request->has('sucursal_id') && $user->isSuperAdmin 
+            ? $request->sucursal_id 
+            : $user->sucursal_id;
+        
+        // Generar registro secuencial por sucursal
+        $ultimoRegistro = Paciente::where('clinica_id', $user->clinica_id)
+            ->where('sucursal_id', $sucursalId)
+            ->max('registro');
+        $nuevoRegistro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
+        
+        // Crear paciente express (datos mínimos + aceptación de aviso de privacidad)
+        $paciente = Paciente::create([
+            'registro' => $nuevoRegistro,
+            'nombre' => $request->nombre,
+            'apellidoPat' => $request->apellidoPat ?? '',
+            'apellidoMat' => $request->apellidoMat ?? '',
+            'telefono' => $request->telefono,
+            'fechaNacimiento' => '1900-01-01', // Fecha temporal para emergencias - se actualiza después
+                'edad' => 0,
+                'genero' => false,
+                'talla' => 0,
+                'peso' => 0,
+                'cintura' => 0,
+                'imc' => 0,
+            'motivo_consulta' => $request->motivo_consulta,
+            'tipo_paciente' => $request->tipo_paciente ?? 'dental',
+            'user_id' => $user->id,
+            'clinica_id' => $user->clinica_id,
+            'sucursal_id' => $sucursalId,
+            // Cumplimiento LFPDPPP: Aviso de privacidad aceptado implícitamente en urgencias
+            'aviso_privacidad_aceptado_at' => now(),
+            'version_aviso' => '1.0-EXPRESS',
+        ]);
+
+        // Crear cita automática marcada como completada (ya está en consulta)
+        $cita = \App\Models\Cita::create([
+            'paciente_id' => $paciente->id,
+            'admin_id' => $user->id,
+            'user_id' => $user->id,
+            'clinica_id' => $user->clinica_id,
+            'sucursal_id' => $sucursalId,
+            'fecha' => now()->toDateString(),
+            'hora' => now()->toTimeString(),
+            'estado' => 'completada', // La urgencia ya está siendo atendida
+            'primera_vez' => true,
+            'notas' => 'Urgencia Express: ' . $request->motivo_consulta,
+        ]);
+
+        return response()->json([
+            'message' => 'Paciente express creado exitosamente',
+            'paciente' => $paciente,
+            'cita' => $cita,
+        ], 201);
+    }
 }
+

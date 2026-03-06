@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pago;
+use App\Models\Egreso;
 use App\Models\Paciente;
 use App\Models\Clinica;
 use Illuminate\Http\Request;
@@ -26,22 +27,35 @@ class FinanzasController extends Controller
         $firmaObligatoria = !$clinica || $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar';
 
         $request->validate([
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'nullable|exists:pacientes,id',
             'monto' => 'required|numeric|min:0.01',
             'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
             'referencia' => 'nullable|string|max:255',
             'concepto' => 'nullable|string|max:500',
             'notas' => 'nullable|string',
-            'firma_paciente' => [$firmaObligatoria ? 'required' : 'nullable', 'string'],
+            'firma_paciente' => ['nullable', 'string'],
             'cita_id' => 'nullable|exists:citas,id',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+            'fecha_pago' => 'nullable|date|before_or_equal:today',
         ]);
 
-        // Verificar que el paciente pertenece a la misma clínica
-        $paciente = Paciente::findOrFail($request->paciente_id);
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        $paciente = null;
+        if ($request->filled('paciente_id')) {
+            // Verificar que el paciente pertenece a la misma clínica
+            $paciente = Paciente::findOrFail($request->paciente_id);
+            if ($paciente->clinica_id !== $user->clinica_id) {
+                return response()->json([
+                    'message' => 'No tienes permiso para registrar pagos de este paciente'
+                ], 403);
+            }
+        }
+
+        // Si es pago sin paciente, no se requiere firma
+        $firmaObligatoria = $paciente && ($clinica && $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar');
+        if ($firmaObligatoria && !$request->firma_paciente) {
             return response()->json([
-                'message' => 'No tienes permiso para registrar pagos de este paciente'
-            ], 403);
+                'errors' => ['firma_paciente' => ['La firma del paciente es obligatoria']]
+            ], 422);
         }
 
         // Validar firma si se proporciona
@@ -54,11 +68,16 @@ class FinanzasController extends Controller
             }
         }
 
+        $clinicaId = $paciente ? $paciente->clinica_id : $user->clinica_id;
+        $sucursalId = $paciente
+            ? $paciente->sucursal_id
+            : ($user->isSuperAdmin && $request->filled('sucursal_id') ? $request->sucursal_id : $user->sucursal_id);
+
         // Crear el pago
         $pago = Pago::create([
-            'paciente_id' => $request->paciente_id,
-            'clinica_id' => $paciente->clinica_id, // Usar la clínica del paciente
-            'sucursal_id' => $paciente->sucursal_id, // Usar la sucursal del paciente
+            'paciente_id' => $paciente?->id,
+            'clinica_id' => $clinicaId,
+            'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
             'cita_id' => $request->cita_id,
             'monto' => $request->monto,
@@ -67,6 +86,7 @@ class FinanzasController extends Controller
             'concepto' => $request->concepto,
             'notas' => $request->notas,
             'firma_paciente' => $request->firma_paciente ?: null,
+            'fecha_pago' => $request->fecha_pago ? Carbon::parse($request->fecha_pago)->toDateString() : now()->toDateString(),
         ]);
 
         // Cargar relaciones
@@ -76,6 +96,270 @@ class FinanzasController extends Controller
             'message' => 'Pago registrado exitosamente',
             'pago' => $pago
         ], 201);
+    }
+
+    /**
+     * Actualizar un pago existente
+     */
+    public function updatePago(Request $request, $id)
+    {
+        $user = Auth::user();
+        $clinica = Clinica::find($user->clinica_id);
+        $firmaObligatoria = !$clinica || $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar';
+
+        $pago = Pago::findOrFail($id);
+
+        // Verificar permisos: solo el usuario que creó el pago o superadmin puede editar
+        if ($pago->user_id !== $user->id && !$user->isSuperAdmin) {
+            return response()->json([
+                'message' => 'No tienes permiso para editar este pago'
+            ], 403);
+        }
+
+        // Verificar que el pago pertenece a la misma clínica
+        if ($pago->clinica_id !== $user->clinica_id) {
+            return response()->json([
+                'message' => 'No tienes permiso para editar pagos de esta clínica'
+            ], 403);
+        }
+
+        $request->validate([
+            'paciente_id' => 'nullable|exists:pacientes,id',
+            'monto' => 'required|numeric|min:0.01',
+            'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
+            'referencia' => 'nullable|string|max:255',
+            'concepto' => 'nullable|string|max:500',
+            'notas' => 'nullable|string',
+            'firma_paciente' => ['nullable', 'string'],
+            'cita_id' => 'nullable|exists:citas,id',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+            'fecha_pago' => 'nullable|date|before_or_equal:today',
+        ]);
+
+        $paciente = null;
+        if ($request->filled('paciente_id')) {
+            $paciente = Paciente::findOrFail($request->paciente_id);
+            if ($paciente->clinica_id !== $user->clinica_id) {
+                return response()->json([
+                    'message' => 'No tienes permiso para asignar pagos a este paciente'
+                ], 403);
+            }
+        }
+
+        // Si es pago sin paciente, no se requiere firma
+        $firmaObligatoria = $paciente && ($clinica && $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar');
+        if ($firmaObligatoria && !$request->firma_paciente && !$pago->firma_paciente) {
+            return response()->json([
+                'errors' => ['firma_paciente' => ['La firma del paciente es obligatoria']]
+            ], 422);
+        }
+
+        // Validar firma si se proporciona
+        if ($request->firma_paciente) {
+            if (!preg_match('/^data:image\/(png|jpg|jpeg);base64,/', $request->firma_paciente)) {
+                return response()->json([
+                    'message' => 'La firma debe ser una imagen válida en formato base64'
+                ], 422);
+            }
+        }
+
+        $clinicaId = $paciente ? $paciente->clinica_id : $pago->clinica_id;
+        $sucursalId = $paciente
+            ? $paciente->sucursal_id
+            : ($user->isSuperAdmin && $request->filled('sucursal_id') ? $request->sucursal_id : $pago->sucursal_id);
+
+        // Actualizar el pago
+        $pago->update([
+            'paciente_id' => $paciente?->id,
+            'clinica_id' => $clinicaId,
+            'sucursal_id' => $sucursalId,
+            'cita_id' => $request->cita_id,
+            'monto' => $request->monto,
+            'metodo_pago' => $request->metodo_pago,
+            'referencia' => $request->referencia,
+            'concepto' => $request->concepto,
+            'notas' => $request->notas,
+            'firma_paciente' => $request->firma_paciente ?: $pago->firma_paciente,
+            'fecha_pago' => $request->fecha_pago ? Carbon::parse($request->fecha_pago)->toDateString() : $pago->fecha_pago,
+        ]);
+
+        // Cargar relaciones
+        $pago->load(['paciente', 'usuario', 'cita']);
+
+        return response()->json([
+            'message' => 'Pago actualizado exitosamente',
+            'pago' => $pago
+        ]);
+    }
+
+    /**
+     * Eliminar un pago
+     */
+    public function destroyPago(Request $request, $id)
+    {
+        $user = Auth::user();
+        $pago = Pago::findOrFail($id);
+
+        // Verificar permisos: solo superadmin puede eliminar pagos
+        if (!$user->isSuperAdmin) {
+            return response()->json([
+                'message' => 'Solo los administradores pueden eliminar pagos'
+            ], 403);
+        }
+
+        // Verificar que el pago pertenece a la misma clínica
+        if ($pago->clinica_id !== $user->clinica_id) {
+            return response()->json([
+                'message' => 'No tienes permiso para eliminar pagos de esta clínica'
+            ], 403);
+        }
+
+        $pago->delete();
+
+        return response()->json([
+            'message' => 'Pago eliminado exitosamente'
+        ]);
+    }
+
+    /**
+     * Registrar un nuevo egreso
+     */
+    public function registrarEgreso(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'monto' => 'required|numeric|min:0.01',
+            'tipo_egreso' => 'required|in:compra_material,servicio,mantenimiento,nomina,renta,servicios_publicos,otro',
+            'concepto' => 'required|string|max:500',
+            'proveedor' => 'nullable|string|max:255',
+            'factura' => 'nullable|string|max:255',
+            'notas' => 'nullable|string',
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+        ]);
+
+        $sucursalId = $user->isSuperAdmin && $request->filled('sucursal_id')
+            ? $request->sucursal_id
+            : $user->sucursal_id;
+
+        // Crear el egreso
+        $egreso = Egreso::create([
+            'clinica_id' => $user->clinica_id,
+            'sucursal_id' => $sucursalId,
+            'user_id' => $user->id,
+            'monto' => $request->monto,
+            'tipo_egreso' => $request->tipo_egreso,
+            'concepto' => $request->concepto,
+            'proveedor' => $request->proveedor,
+            'factura' => $request->factura,
+            'notas' => $request->notas,
+        ]);
+
+        // Cargar relaciones
+        $egreso->load(['usuario', 'clinica', 'sucursal']);
+
+        return response()->json([
+            'message' => 'Egreso registrado exitosamente',
+            'egreso' => $egreso
+        ], 201);
+    }
+
+    /**
+     * Listar egresos con filtros
+     */
+    public function indexEgresos(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            $query = Egreso::where('clinica_id', $user->clinica_id)
+                ->where('sucursal_id', $user->sucursal_id)
+                ->with(['usuario', 'sucursal']);
+
+            // Filtrar por fecha
+            if ($request->has('fecha')) {
+                $query->whereDate('created_at', $request->fecha);
+            }
+
+            // Filtrar por rango de fechas
+            if ($request->has('fecha_inicio') && $request->has('fecha_fin')) {
+                $query->whereBetween('created_at', [
+                    $request->fecha_inicio . ' 00:00:00',
+                    $request->fecha_fin . ' 23:59:59'
+                ]);
+            }
+
+            // Filtrar por tipo de egreso
+            if ($request->has('tipo_egreso')) {
+                $query->where('tipo_egreso', $request->tipo_egreso);
+            }
+
+            $egresos = $query->orderBy('created_at', 'desc')
+                ->paginate($request->per_page ?? 50);
+
+            return response()->json($egresos);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al obtener egresos',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mostrar un egreso específico
+     */
+    public function showEgreso(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            
+            $egreso = Egreso::where('id', $id)
+                ->where('clinica_id', $user->clinica_id)
+                ->where('sucursal_id', $user->sucursal_id)
+                ->with(['usuario', 'clinica', 'sucursal'])
+                ->firstOrFail();
+
+            return response()->json($egreso);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Egreso no encontrado',
+                'message' => $e->getMessage()
+            ], 404);
+        }
+    }
+
+    /**
+     * Eliminar un egreso (solo admin/superadmin)
+     */
+    public function destroyEgreso(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Solo admin o superadmin pueden eliminar egresos
+            if (!in_array($user->role, ['admin', 'superadmin'])) {
+                return response()->json([
+                    'error' => 'No tienes permisos para eliminar egresos'
+                ], 403);
+            }
+            
+            $egreso = Egreso::where('id', $id)
+                ->where('clinica_id', $user->clinica_id)
+                ->where('sucursal_id', $user->sucursal_id)
+                ->firstOrFail();
+
+            $egreso->delete();
+
+            return response()->json([
+                'message' => 'Egreso eliminado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al eliminar egreso',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -143,7 +427,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $fecha = $request->input('fecha', Carbon::today()->toDateString());
 
-        // Total por método de pago
+        // Total por método de pago (ingresos)
         $totalesPorMetodo = Pago::where('clinica_id', $user->clinica_id)
             ->byDate($fecha)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -173,7 +457,7 @@ class FinanzasController extends Controller
                 ];
             });
 
-        // Total general
+        // Total general de ingresos (pagos)
         $todosPagos = Pago::where('clinica_id', $user->clinica_id)
             ->byDate($fecha)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -181,11 +465,28 @@ class FinanzasController extends Controller
             })
             ->get();
 
-        $totalGeneral = $todosPagos->sum(function($pago) {
+        $totalIngresos = $todosPagos->sum(function($pago) {
             return (float) $pago->monto;
         });
 
-        $cantidadTotal = $todosPagos->count();
+        $cantidadPagos = $todosPagos->count();
+
+        // Total de egresos del día
+        $todosEgresos = Egreso::where('clinica_id', $user->clinica_id)
+            ->byDate($fecha)
+            ->when($request->filled('sucursal_id'), function($query) use ($request) {
+                $query->where('sucursal_id', $request->sucursal_id);
+            })
+            ->get();
+
+        $totalEgresos = $todosEgresos->sum(function($egreso) {
+            return (float) $egreso->monto;
+        });
+
+        $cantidadEgresos = $todosEgresos->count();
+
+        // Balance del día
+        $balance = $totalIngresos - $totalEgresos;
 
         // Últimos pagos del día
         $ultimosPagos = Pago::with(['paciente', 'usuario', 'clinica', 'sucursal'])
@@ -198,12 +499,27 @@ class FinanzasController extends Controller
             ->limit(10)
             ->get();
 
+        // Últimos egresos del día
+        $ultimosEgresos = Egreso::with(['usuario', 'clinica', 'sucursal'])
+            ->where('clinica_id', $user->clinica_id)
+            ->byDate($fecha)
+            ->when($request->filled('sucursal_id'), function($query) use ($request) {
+                $query->where('sucursal_id', $request->sucursal_id);
+            })
+            ->latest()
+            ->limit(10)
+            ->get();
+
         return response()->json([
             'fecha' => $fecha,
             'totales_por_metodo' => $totalesPorMetodo,
-            'total_general' => $totalGeneral,
-            'cantidad_total' => $cantidadTotal,
-            'ultimos_pagos' => $ultimosPagos
+            'total_ingresos' => $totalIngresos,
+            'total_egresos' => $totalEgresos,
+            'balance' => $balance,
+            'cantidad_pagos' => $cantidadPagos,
+            'cantidad_egresos' => $cantidadEgresos,
+            'ultimos_pagos' => $ultimosPagos,
+            'ultimos_egresos' => $ultimosEgresos
         ]);
     }
 
@@ -227,12 +543,29 @@ class FinanzasController extends Controller
             })
             ->get();
 
-        $totalPeriodo = $pagos->sum(function($pago) {
+        $totalIngresos = $pagos->sum(function($pago) {
             return (float) $pago->monto;
         });
 
+        // Obtener egresos del mismo período
+        $egresos = Egreso::where('clinica_id', $user->clinica_id)
+            ->whereDate('created_at', '>=', $fechaInicio)
+            ->whereDate('created_at', '<=', $fechaFin)
+            ->when($request->filled('sucursal_id'), function($query) use ($request) {
+                $query->where('sucursal_id', $request->sucursal_id);
+            })
+            ->get();
+
+        $totalEgresos = $egresos->sum(function($egreso) {
+            return (float) $egreso->monto;
+        });
+
+        $balance = $totalIngresos - $totalEgresos;
+
         $dias = Carbon::parse($fechaInicio)->diffInDays(Carbon::parse($fechaFin)) + 1;
-        $promedioDiario = $dias > 0 ? ($totalPeriodo / $dias) : 0;
+        $promedioIngresoDiario = $dias > 0 ? ($totalIngresos / $dias) : 0;
+        $promedioEgresoDiario = $dias > 0 ? ($totalEgresos / $dias) : 0;
+        $promedioBalanceDiario = $dias > 0 ? ($balance / $dias) : 0;
 
         // Distribución por método de pago
         $porMetodo = $pagos->groupBy('metodo_pago')->map(function($grupo) {
@@ -240,6 +573,16 @@ class FinanzasController extends Controller
                 'cantidad' => $grupo->count(),
                 'total' => $grupo->sum(function($pago) {
                     return (float) $pago->monto;
+                })
+            ];
+        });
+
+        // Distribución de egresos por tipo
+        $egresosPorTipo = $egresos->groupBy('tipo_egreso')->map(function($grupo) {
+            return [
+                'cantidad' => $grupo->count(),
+                'total' => $grupo->sum(function($egreso) {
+                    return (float) $egreso->monto;
                 })
             ];
         });
@@ -265,16 +608,40 @@ class FinanzasController extends Controller
             ->take(5)
             ->values();
 
+        // Top 5 categorías de egresos
+        $topEgresos = $egresosPorTipo->sortByDesc('total')->take(5)->map(function($data, $tipo) {
+            return [
+                'tipo' => $tipo,
+                'cantidad' => $data['cantidad'],
+                'total' => $data['total']
+            ];
+        })->values();
+
         return response()->json([
             'periodo' => [
                 'fecha_inicio' => $fechaInicio,
                 'fecha_fin' => $fechaFin
             ],
-            'total_periodo' => $totalPeriodo,
-            'promedio_diario' => round($promedioDiario, 2),
+            // Totales
+            'total_ingresos' => $totalIngresos,
+            'total_egresos' => $totalEgresos,
+            'balance' => $balance,
+            // Promedios diarios
+            'promedio_ingreso_diario' => round($promedioIngresoDiario, 2),
+            'promedio_egreso_diario' => round($promedioEgresoDiario, 2),
+            'promedio_balance_diario' => round($promedioBalanceDiario, 2),
+            // Contadores
             'cantidad_pagos' => $pagos->count(),
+            'cantidad_egresos' => $egresos->count(),
+            // Distribuciones
             'por_metodo' => $porMetodo,
-            'top_pacientes' => $topPacientes
+            'egresos_por_tipo' => $egresosPorTipo,
+            // Top lists
+            'top_pacientes' => $topPacientes,
+            'top_egresos' => $topEgresos,
+            // Legacy (mantener compatibilidad)
+            'total_periodo' => $totalIngresos,
+            'promedio_diario' => round($promedioIngresoDiario, 2)
         ]);
     }
 
@@ -564,44 +931,82 @@ class FinanzasController extends Controller
         // Filtrar por rango de fechas según el tipo de corte
         switch ($tipo) {
             case 'dia':
-                // Solo el día específico seleccionado
-                $query->whereDate('created_at', $fecha->toDateString());
+                $query->byDate($fecha->toDateString());
                 break;
             case 'mes':
-                // Desde el día 1 del mes seleccionado hasta el último día de ese mes
-                $inicioMes = $fecha->copy()->startOfMonth();
-                $finMes = $fecha->copy()->endOfMonth();
+                $inicioMes = $fecha->copy()->startOfMonth()->toDateString();
+                $finMes = $fecha->copy()->endOfMonth()->toDateString();
                 
                 // Si es el mes actual, limitar hasta hoy
                 if ($fecha->month === now()->month && $fecha->year === now()->year) {
-                    $finMes = now();
+                    $finMes = now()->toDateString();
                 }
                 
-                $query->whereBetween('created_at', [$inicioMes, $finMes]);
+                $query->betweenDates($inicioMes, $finMes);
                 break;
             case 'año':
-                // Todo el año seleccionado
-                $inicioAño = $fecha->copy()->startOfYear();
-                $finAño = $fecha->copy()->endOfYear();
+                $inicioAño = $fecha->copy()->startOfYear()->toDateString();
+                $finAño = $fecha->copy()->endOfYear()->toDateString();
                 
                 // Si es el año actual, limitar hasta hoy
                 if ($fecha->year === now()->year) {
-                    $finAño = now();
+                    $finAño = now()->toDateString();
                 }
                 
-                $query->whereBetween('created_at', [$inicioAño, $finAño]);
+                $query->betweenDates($inicioAño, $finAño);
                 break;
         }
 
         $pagos = $query->orderBy('created_at', 'asc')->get();
 
-        // Calcular totales por método de pago
+        // Construir consulta de egresos
+        $queryEgresos = Egreso::where('clinica_id', $user->clinica_id)
+            ->with(['usuario', 'sucursal']);
+
+        if ($sucursalId) {
+            $queryEgresos->where('sucursal_id', $sucursalId);
+        }
+
+        // Filtrar egresos por el mismo rango de fechas
+        switch ($tipo) {
+            case 'dia':
+                $queryEgresos->whereDate('created_at', $fecha->toDateString());
+                break;
+            case 'mes':
+                $inicioMes = $fecha->copy()->startOfMonth();
+                $finMes = $fecha->copy()->endOfMonth();
+                if ($fecha->month === now()->month && $fecha->year === now()->year) {
+                    $finMes = now();
+                }
+                $queryEgresos->whereBetween('created_at', [$inicioMes, $finMes]);
+                break;
+            case 'año':
+                $inicioAño = $fecha->copy()->startOfYear();
+                $finAño = $fecha->copy()->endOfYear();
+                if ($fecha->year === now()->year) {
+                    $finAño = now();
+                }
+                $queryEgresos->whereBetween('created_at', [$inicioAño, $finAño]);
+                break;
+        }
+
+        $egresos = $queryEgresos->orderBy('created_at', 'asc')->get();
+
+        // Calcular totales de ingresos por método de pago
+        $totalIngresos = $pagos->sum('monto');
+        $totalEgresos = $egresos->sum('monto');
+        
         $totales = [
             'efectivo' => $pagos->where('metodo_pago', 'efectivo')->sum('monto'),
             'tarjeta' => $pagos->where('metodo_pago', 'tarjeta')->sum('monto'),
             'transferencia' => $pagos->where('metodo_pago', 'transferencia')->sum('monto'),
-            'total' => $pagos->sum('monto'),
+            'total_ingresos' => $totalIngresos,
+            'total_egresos' => $totalEgresos,
+            'balance' => $totalIngresos - $totalEgresos,
             'cantidad_pagos' => $pagos->count(),
+            'cantidad_egresos' => $egresos->count(),
+            // Legacy
+            'total' => $totalIngresos,
         ];
 
         return response()->json([
@@ -609,6 +1014,7 @@ class FinanzasController extends Controller
             'fecha' => $fecha->toDateString(),
             'sucursal_id' => $sucursalId,
             'pagos' => $pagos,
+            'egresos' => $egresos,
             'totales' => $totales,
         ]);
     }
@@ -640,32 +1046,29 @@ class FinanzasController extends Controller
         // Filtrar por rango de fechas según el tipo de corte
         switch ($tipo) {
             case 'dia':
-                // Solo el día específico seleccionado
-                $query->whereDate('created_at', $fecha->toDateString());
+                $query->byDate($fecha->toDateString());
                 break;
             case 'mes':
-                // Desde el día 1 del mes seleccionado hasta el último día de ese mes
-                $inicioMes = $fecha->copy()->startOfMonth();
-                $finMes = $fecha->copy()->endOfMonth();
+                $inicioMes = $fecha->copy()->startOfMonth()->toDateString();
+                $finMes = $fecha->copy()->endOfMonth()->toDateString();
                 
                 // Si es el mes actual, limitar hasta hoy
                 if ($fecha->month === now()->month && $fecha->year === now()->year) {
-                    $finMes = now();
+                    $finMes = now()->toDateString();
                 }
                 
-                $query->whereBetween('created_at', [$inicioMes, $finMes]);
+                $query->betweenDates($inicioMes, $finMes);
                 break;
             case 'año':
-                // Todo el año seleccionado
-                $inicioAño = $fecha->copy()->startOfYear();
-                $finAño = $fecha->copy()->endOfYear();
+                $inicioAño = $fecha->copy()->startOfYear()->toDateString();
+                $finAño = $fecha->copy()->endOfYear()->toDateString();
                 
                 // Si es el año actual, limitar hasta hoy
                 if ($fecha->year === now()->year) {
-                    $finAño = now();
+                    $finAño = now()->toDateString();
                 }
                 
-                $query->whereBetween('created_at', [$inicioAño, $finAño]);
+                $query->betweenDates($inicioAño, $finAño);
                 break;
         }
 
@@ -679,7 +1082,7 @@ class FinanzasController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function() use ($pagos, $tipo, $fecha) {
+        $callback = function() use ($pagos, $tipo, $fecha, $user, $sucursalId) {
             $file = fopen('php://output', 'w');
             
             // BOM para UTF-8
@@ -705,7 +1108,7 @@ class FinanzasController extends Controller
             foreach ($pagos as $pago) {
                 fputcsv($file, [
                     str_pad($pago->id, 6, '0', STR_PAD_LEFT),
-                    Carbon::parse($pago->created_at)->format('Y-m-d'),
+                    $pago->fecha_pago ?? Carbon::parse($pago->created_at)->format('Y-m-d'),
                     Carbon::parse($pago->created_at)->format('H:i:s'),
                     $pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A',
                     $pago->paciente->registro ?? 'N/A',
@@ -719,14 +1122,101 @@ class FinanzasController extends Controller
                 ]);
             }
 
-            // Totales
+            // Separador y totales de Ingresos
             fputcsv($file, []);
-            fputcsv($file, ['TOTALES']);
-            fputcsv($file, ['Efectivo', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'efectivo')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Tarjeta', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'tarjeta')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Transferencia', '', '', '', '', '', '', '', number_format($pagos->where('metodo_pago', 'transferencia')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['TOTAL GENERAL', '', '', '', '', '', '', '', number_format($pagos->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Cantidad de pagos', '', '', '', '', '', '', '', $pagos->count()]);
+            fputcsv($file, []);
+            fputcsv($file, ['=== RESUMEN DE INGRESOS ===']);
+            fputcsv($file, []);
+            fputcsv($file, ['Método de Pago', 'Cantidad', 'Total']);
+            fputcsv($file, ['Efectivo', $pagos->where('metodo_pago', 'efectivo')->count(), number_format($pagos->where('metodo_pago', 'efectivo')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Tarjeta', $pagos->where('metodo_pago', 'tarjeta')->count(), number_format($pagos->where('metodo_pago', 'tarjeta')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Transferencia', $pagos->where('metodo_pago', 'transferencia')->count(), number_format($pagos->where('metodo_pago', 'transferencia')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, []);
+            $totalIngresos = $pagos->sum('monto');
+            fputcsv($file, ['TOTAL INGRESOS', $pagos->count(), number_format($totalIngresos, 2, '.', '')]);
+
+            // Obtener egresos del mismo período
+            $queryEgresos = Egreso::where('clinica_id', $user->clinica_id);
+            
+            if ($sucursalId) {
+                $queryEgresos->where('sucursal_id', $sucursalId);
+            }
+            
+            switch ($tipo) {
+                case 'dia':
+                    $queryEgresos->whereDate('created_at', $fecha->toDateString());
+                    break;
+                case 'mes':
+                    $inicioMes = $fecha->copy()->startOfMonth();
+                    $finMes = $fecha->copy()->endOfMonth();
+                    if ($fecha->month === now()->month && $fecha->year === now()->year) {
+                        $finMes = now();
+                    }
+                    $queryEgresos->whereBetween('created_at', [$inicioMes, $finMes]);
+                    break;
+                case 'año':
+                    $inicioAño = $fecha->copy()->startOfYear();
+                    $finAño = $fecha->copy()->endOfYear();
+                    if ($fecha->year === now()->year) {
+                        $finAño = now();
+                    }
+                    $queryEgresos->whereBetween('created_at', [$inicioAño, $finAño]);
+                    break;
+            }
+            
+            $egresos = $queryEgresos->with(['usuario', 'sucursal'])->orderBy('created_at', 'asc')->get();
+
+            // Sección de Egresos
+            fputcsv($file, []);
+            fputcsv($file, []);
+            fputcsv($file, ['=== EGRESOS (GASTOS/RETIROS) ===']);
+            fputcsv($file, []);
+            fputcsv($file, ['No.', 'Fecha', 'Hora', 'Tipo', 'Concepto', 'Proveedor', 'Factura', '', 'Monto', 'Registró', 'Sucursal', 'Notas']);
+            
+            foreach ($egresos as $egreso) {
+                fputcsv($file, [
+                    str_pad($egreso->id, 6, '0', STR_PAD_LEFT),
+                    Carbon::parse($egreso->created_at)->format('Y-m-d'),
+                    Carbon::parse($egreso->created_at)->format('H:i:s'),
+                    ucfirst(str_replace('_', ' ', $egreso->tipo_egreso)),
+                    $egreso->concepto ?? '',
+                    $egreso->proveedor ?? '',
+                    $egreso->factura ?? '',
+                    '', // Columna vacía para alinear con estructura de ingresos
+                    number_format($egreso->monto, 2, '.', ''),
+                    $egreso->usuario ? "{$egreso->usuario->nombre} {$egreso->usuario->apellidoPat}" : 'N/A',
+                    $egreso->sucursal->nombre ?? 'N/A',
+                    $egreso->notas ?? ''
+                ]);
+            }
+
+            // Totales de Egresos por tipo
+            fputcsv($file, []);
+            fputcsv($file, []);
+            fputcsv($file, ['=== RESUMEN DE EGRESOS ===']);
+            fputcsv($file, []);
+            fputcsv($file, ['Tipo de Egreso', 'Cantidad', 'Total']);
+            fputcsv($file, ['Compra de Material', $egresos->where('tipo_egreso', 'compra_material')->count(), number_format($egresos->where('tipo_egreso', 'compra_material')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Servicio', $egresos->where('tipo_egreso', 'servicio')->count(), number_format($egresos->where('tipo_egreso', 'servicio')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Mantenimiento', $egresos->where('tipo_egreso', 'mantenimiento')->count(), number_format($egresos->where('tipo_egreso', 'mantenimiento')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Nómina', $egresos->where('tipo_egreso', 'nomina')->count(), number_format($egresos->where('tipo_egreso', 'nomina')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Renta', $egresos->where('tipo_egreso', 'renta')->count(), number_format($egresos->where('tipo_egreso', 'renta')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Servicios Públicos', $egresos->where('tipo_egreso', 'servicios_publicos')->count(), number_format($egresos->where('tipo_egreso', 'servicios_publicos')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, ['Otro', $egresos->where('tipo_egreso', 'otro')->count(), number_format($egresos->where('tipo_egreso', 'otro')->sum('monto'), 2, '.', '')]);
+            fputcsv($file, []);
+            $totalEgresos = $egresos->sum('monto');
+            fputcsv($file, ['TOTAL EGRESOS', $egresos->count(), number_format($totalEgresos, 2, '.', '')]);
+
+            // Balance General
+            fputcsv($file, []);
+            fputcsv($file, []);
+            fputcsv($file, ['=== BALANCE GENERAL ===']);
+            fputcsv($file, []);
+            fputcsv($file, ['Concepto', 'Monto']);
+            fputcsv($file, ['Total Ingresos (+)', number_format($totalIngresos, 2, '.', '')]);
+            fputcsv($file, ['Total Egresos (-)', number_format($totalEgresos, 2, '.', '')]);
+            fputcsv($file, []);
+            fputcsv($file, ['BALANCE NETO', number_format($totalIngresos - $totalEgresos, 2, '.', '')]);
 
             fclose($file);
         };
