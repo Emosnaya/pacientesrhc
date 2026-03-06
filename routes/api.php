@@ -66,6 +66,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 
     // Almacenar ordenes
     Route::apiResource('/pacientes', PacienteController::class);
+    Route::post('/pacientes/express', [PacienteController::class, 'createExpress']); // Flujo urgencias
     
     // Rutas para el calendario de citas
     Route::apiResource('/citas', CitaController::class);
@@ -115,7 +116,14 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::post('/pagos', [FinanzasController::class, 'registrarPago']);
         Route::get('/pagos', [FinanzasController::class, 'index']);
         Route::get('/pagos/{id}', [FinanzasController::class, 'show']);
-        Route::delete('/pagos/{id}', [FinanzasController::class, 'destroy']);
+        Route::put('/pagos/{id}', [FinanzasController::class, 'updatePago']);
+        Route::delete('/pagos/{id}', [FinanzasController::class, 'destroyPago']);
+        
+        // Gestión de egresos (retiros/gastos)
+        Route::post('/egresos', [FinanzasController::class, 'registrarEgreso']);
+        Route::get('/egresos', [FinanzasController::class, 'indexEgresos']);
+        Route::get('/egresos/{id}', [FinanzasController::class, 'showEgreso']);
+        Route::delete('/egresos/{id}', [FinanzasController::class, 'destroyEgreso']);
         
         // Historial de pagos por paciente
         Route::get('/pacientes/{pacienteId}/pagos', [FinanzasController::class, 'historialPaciente']);
