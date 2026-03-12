@@ -642,20 +642,24 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Obtener el promedio de incremento en METs desde reporte_finals
+     * Obtener el promedio de incremento en METs
+     * Fórmula: promedio de (METs finales - METs iniciales) por paciente
      */
     private function getPromedioIncrementoMets($clinicaId, $sucursalId = null)
     {
-        // Obtener IDs de pacientes de la clínica/sucursal
-        $query = Paciente::where('clinica_id', $clinicaId);
-        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        $pacienteIds = $query->pluck('id');
-        
-        // Obtener el promedio del campo carga_max (METs máximo) de la tabla reporte_finals para esos pacientes
-        $promedio = ReporteFinal::where('clinica_id', $clinicaId)
-            ->whereIn('paciente_id', $pacienteIds)
-            ->whereNotNull('carga_max')
-            ->avg('carga_max');
+        $promedio = ReporteFinal::query()
+            ->join('pacientes', 'reporte_finals.paciente_id', '=', 'pacientes.id')
+            ->join('esfuerzos as esfuerzo_inicial', 'reporte_finals.pe_1', '=', 'esfuerzo_inicial.id')
+            ->join('esfuerzos as esfuerzo_final', 'reporte_finals.pe_2', '=', 'esfuerzo_final.id')
+            ->where('reporte_finals.clinica_id', $clinicaId)
+            ->where('pacientes.clinica_id', $clinicaId)
+            ->when($sucursalId, function ($query) use ($sucursalId) {
+                $query->where('pacientes.sucursal_id', $sucursalId);
+            })
+            ->whereNotNull('esfuerzo_inicial.mets_max')
+            ->whereNotNull('esfuerzo_final.mets_max')
+            ->selectRaw('AVG(esfuerzo_final.mets_max - esfuerzo_inicial.mets_max) as promedio_incremento_mets')
+            ->value('promedio_incremento_mets');
 
         return $promedio ? round(floatval($promedio), 1) : 0;
     }
