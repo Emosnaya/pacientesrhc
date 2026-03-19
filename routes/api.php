@@ -5,6 +5,7 @@ use App\Http\Controllers\ClinicoController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EsfuerzoController;
 use App\Http\Controllers\EstratificacionController;
+use App\Http\Controllers\EstratiAacvprController;
 use App\Http\Controllers\InfoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PDFController;
@@ -81,6 +82,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 
     Route::apiResource('/esfuerzo',EsfuerzoController::class);
     Route::apiResource('/estratificacion',EstratificacionController::class);
+    Route::apiResource('/estrati-aacvpr',EstratiAacvprController::class);
     Route::apiResource('/clinico',ClinicoController::class);
     Route::apiResource('/reporte',ReporteFinalController::class);
     Route::apiResource('/psico',ReportePsicoController::class);
@@ -145,6 +147,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
+    Route::get('/estrati-aacvpr/imprimir/{id}',[PDFController::class,'estratiAacvprPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
     Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::get('/psico/imprimir/{id}',[PDFController::class,'psicoPdf']);
@@ -163,6 +166,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/clinicos/{id}',[InfoController::class,'clinicos']);
     Route::get('/esfuerzos/{id}',[InfoController::class,'esfuerzos']);
     Route::get('/estratificaciones/{id}',[InfoController::class,'estratificaciones']);
+    Route::get('/estrati-aacvprs/{id}',[InfoController::class,'estratiAacvprs']);
     Route::get('/reportes/{id}',[InfoController::class,'reportes']);
     Route::get('/nutricional/{id}',[InfoController::class,'nutricional']);
     Route::get('/psicologico/{id}',[InfoController::class,'psicologico']);

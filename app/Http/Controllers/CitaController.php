@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\User;
+use App\Models\Evento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -225,6 +226,48 @@ class CitaController extends Controller
 
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
+            // Verificar si hay bloqueos para esta fecha/hora
+            $fechaCita = $request->fecha;
+            $horaCita = $request->hora;
+            
+            $bloqueos = Evento::where('tipo', 'bloqueo')
+                ->where('clinica_id', $user->clinica_id)
+                ->where('sucursal_id', $sucursalId)
+                ->whereDate('fecha', $fechaCita)
+                ->get();
+            
+            foreach ($bloqueos as $bloqueo) {
+                // Si es bloqueo de todo el día, no permitir ninguna cita
+                if ($bloqueo->todo_el_dia) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se pueden agendar citas en esta fecha. Motivo: ' . $bloqueo->titulo
+                    ], 422);
+                }
+                
+                // Si es bloqueo por horario, verificar si la hora de la cita está dentro del rango
+                if ($bloqueo->hora && $bloqueo->hora_fin) {
+                    $horaBloqueoInicio = substr($bloqueo->hora, 0, 5);
+                    $horaBloqueoFin = substr($bloqueo->hora_fin, 0, 5);
+                    
+                    if ($horaCita >= $horaBloqueoInicio && $horaCita < $horaBloqueoFin) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Este horario está bloqueado (' . $horaBloqueoInicio . ' - ' . $horaBloqueoFin . '). Motivo: ' . $bloqueo->titulo
+                        ], 422);
+                    }
+                } elseif ($bloqueo->hora) {
+                    // Si solo tiene hora de inicio, bloquear esa hora específica
+                    $horaBloqueo = substr($bloqueo->hora, 0, 5);
+                    if ($horaCita === $horaBloqueo) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Este horario está bloqueado. Motivo: ' . $bloqueo->titulo
+                        ], 422);
+                    }
+                }
+            }
 
             // Crear la cita (se permiten múltiples citas al mismo tiempo en la misma sucursal)
             $cita = Cita::create([

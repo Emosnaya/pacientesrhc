@@ -39,39 +39,14 @@
             page-break-before: avoid;
             page-break-inside: avoid;
         }
-        /* Estilo para el logo */
-        .logo-container {
-            height: 60px;
-            overflow: hidden;
-            display: inline-block;
-        }
-        .logo-container img {
-            height: 60px;
-            width: auto;
-        }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 9px;
-            line-height: 1.2;
-            margin: 0 25px 15px 15px;
-            padding: 10px;
-        }
-        .paciente {
-            font-size: 9px;
-        }
-        .medio {
-            position: relative;
-            margin-bottom: 6px;
-        }
-        .texto-izquierda {
-            text-align: left;
-            position: absolute;
-            left: 0;
-        }
-        .texto-derecha {
-            text-align: right;
-            position: absolute;
-            right: 0;
+            line-height: 1.3;
+            color: #1e293b;
+            background: #ffffff;
+            margin: 0;
+            padding: 10px 20px;
         }
         .f-bold {
             font-weight: bold;
@@ -110,12 +85,14 @@
             margin-bottom: 0.25rem;
         }
         .section-title {
-            background-color: #e8f4f8;
+            background-color: #DDDEE1;
+            border-left: 3px solid #0A1628;
             padding: 3px 5px;
             margin-top: 5px;
             margin-bottom: 3px;
             font-weight: bold;
             font-size: 10px;
+            page-break-after: avoid;
         }
         .check-item {
             display: inline-block;
@@ -151,24 +128,71 @@
             border-top: 1px solid #333;
             margin: 2px 0;
         }
+        /* === HEADER MODERNO === */
+        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { vertical-align: middle; padding: 0; border: none; }
+        .header-logo-cell { width: 60px; padding-right: 12px !important; }
+        .header-logo { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; }
+        .header-logo img { max-height: 35px; max-width: 35px; }
+        .header-title { font-size: 14px; font-weight: 700; color: white; }
+        .header-subtitle { font-size: 9px; color: #94a3b8; }
+        .header-meta-cell { text-align: right; width: 120px; }
+        .header-badge { background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 4px; }
+        .header-badge-label { font-size: 8px; text-transform: uppercase; color: #94a3b8; }
+        .header-badge-value { font-size: 12px; font-weight: 700; color: white; }
+        .header-date { font-size: 9px; color: #94a3b8; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer-table { width: 100%; }
+        .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
+        .page-footer .clinic-contact { text-align: right; color: #64748b; }
+        .page-footer-table td { border: none; padding: 0; }
+        .content-wrapper { padding-bottom: 35px; }
+        .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
     </style>
 </head>
 <body>
+    <!-- PAGE FOOTER (fixed) -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? '' }}</td>
+                <td class="clinic-contact">
+                    {{ $clinica->telefono ?? '' }}
+                    @if($clinica->email ?? null)
+                        | {{ $clinica->email }}
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="content-wrapper">
     <div class="container-fluid">
-        <!-- Header -->
-        <header style="margin-bottom: 8px;">
-            <div class="paciente ma-t-0 mb-0">
-                <p class="f-bold f-15 text-center mb-0 mt-0">Historia Clínica Dental</p>
-                @if(!empty($clinicaLogo))
-                <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="Logo"></div>
-                @endif
-                <div class="medio">
-                    <p class="texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha ? $data->fecha->format('d/m/Y') : 'N/A' }}</p>
-                    <span class="texto-derecha f-bold">Lugar: {{ $data->lugar ?? 'N/A' }}</span>
-                </div>
-                <br>
-            </div>
-        </header>
+        <!-- HEADER -->
+        <div class="header">
+            <table class="header-table">
+                <tr>
+                    <td class="header-logo-cell">
+                        <div class="header-logo">
+                            @if(!empty($clinicaLogo))
+                                <img src="{{ $clinicaLogo }}" alt="Logo">
+                            @endif
+                        </div>
+                    </td>
+                    <td style="padding-left: 10px;">
+                        <div class="header-title">Historia Clínica Dental</div>
+                        <div class="header-subtitle">Odontología{{ !empty($data->lugar) ? ' · ' . $data->lugar : '' }}</div>
+                    </td>
+                    <td class="header-meta-cell">
+                        <div class="header-badge">
+                            <div class="header-badge-label">Registro</div>
+                            <div class="header-badge-value">#{{ $paciente->registro ?? 'N/A' }}</div>
+                        </div>
+                        <div class="header-date">{{ $data->fecha ? $data->fecha->format('d/m/Y') : date('d/m/Y') }}</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
         <!-- Datos del Paciente -->
         <div class="section-title mt-0">DATOS DEL PACIENTE</div>
@@ -429,5 +453,6 @@
         </div>
         @endif
     </div>
+    </div><!-- end content-wrapper -->
 </body>
 </html>

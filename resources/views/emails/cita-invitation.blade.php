@@ -5,18 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $subject }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
+            color: #1e293b;
+            background-color: #f1f5f9;
+            padding: 40px 20px;
         }
         .email-wrapper {
             max-width: 600px;
@@ -24,195 +19,178 @@
         }
         .email-container {
             background-color: #ffffff;
-            border-radius: 16px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
+            background: #0A1628;
+            padding: 32px 30px;
             text-align: center;
             color: #ffffff;
-            position: relative;
-        }
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #ffd700 0%, #ff6b6b 50%, #4ecdc4 100%);
         }
         .logo {
             max-width: 160px;
-            max-height: 90px;
-            margin-bottom: 20px;
+            max-height: 70px;
+            object-fit: contain;
+            margin-bottom: 16px;
             background-color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 10px 16px;
+            border-radius: 8px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         .header h1 {
             margin: 0;
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            color: white;
         }
         .content {
-            padding: 40px 35px;
+            padding: 32px 35px;
         }
         .greeting {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
+            color: #0A1628;
+            margin-bottom: 14px;
         }
         .intro {
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 30px;
+            font-size: 15px;
+            color: #475569;
+            margin-bottom: 24px;
             line-height: 1.7;
         }
         .cita-details {
-            background: linear-gradient(135deg, #f8f9fc 0%, #e8eaf0 100%);
-            border-left: 5px solid #667eea;
-            padding: 25px;
-            border-radius: 12px;
-            margin: 30px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0A1628;
+            padding: 22px 24px;
+            border-radius: 8px;
+            margin: 24px 0;
         }
         .detail-row {
             display: flex;
             align-items: flex-start;
-            padding: 12px 0;
-            border-bottom: 1px dashed #d0d4e0;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
         }
         .detail-row:last-child {
             border-bottom: none;
         }
         .detail-label {
             font-weight: 700;
-            color: #667eea;
+            color: #64748b;
             min-width: 130px;
-            font-size: 15px;
+            font-size: 13px;
         }
         .detail-value {
-            color: #333;
+            color: #1e293b;
             flex: 1;
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 14px;
         }
         .alert {
-            border-radius: 12px;
-            padding: 18px 22px;
-            margin: 25px 0;
-            font-size: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 20px 0;
+            font-size: 14px;
         }
         .alert.success {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border-left: 5px solid #28a745;
-            color: #155724;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 4px solid #16a34a;
+            color: #166534;
         }
         .alert.danger {
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-            border-left: 5px solid #dc3545;
-            color: #721c24;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #dc2626;
+            color: #991b1b;
         }
         .btn-calendar {
             display: inline-block;
-            padding: 16px 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 13px 28px;
+            background: #1d4ed8;
             color: white;
             text-decoration: none;
-            border-radius: 30px;
+            border-radius: 6px;
             font-weight: 700;
-            font-size: 16px;
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-            transition: transform 0.3s ease;
+            font-size: 15px;
             text-align: center;
-            margin: 30px 0;
+            margin: 20px 0;
         }
         .info-box {
-            margin-top: 30px;
-            padding: 25px;
-            background: linear-gradient(135deg, #e8f4fd 0%, #d1e7f7 100%);
-            border-radius: 12px;
-            border-left: 5px solid #3b82f6;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-top: 24px;
+            padding: 20px 22px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-left: 4px solid #1d4ed8;
+            border-radius: 6px;
         }
         .info-box-title {
             color: #1e40af;
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         .info-box-content {
-            line-height: 2;
+            line-height: 1.9;
             color: #334155;
+            font-size: 14px;
         }
         .recommendations {
-            margin-top: 18px;
-            padding: 18px;
-            background: linear-gradient(135deg, #fef3cd 0%, #fce8a8 100%);
-            border-radius: 10px;
+            margin-top: 16px;
+            padding: 16px 18px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
             border-left: 4px solid #f59e0b;
+            border-radius: 6px;
         }
         .recommendations-title {
             color: #92400e;
             font-weight: 700;
-            margin-bottom: 10px;
-            font-size: 15px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
         .recommendations ul {
-            margin: 12px 0 0 20px;
+            margin: 10px 0 0 18px;
             color: #78350f;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.9;
         }
         .footer {
-            background: linear-gradient(135deg, #f8f9fc 0%, #e8eaf0 100%);
-            padding: 30px 35px;
+            background: #f8fafc;
+            padding: 24px 30px;
             text-align: center;
-            color: #666;
-            font-size: 14px;
-            border-top: 4px solid #667eea;
+            color: #64748b;
+            font-size: 13px;
+            border-top: 2px solid #0A1628;
         }
         .footer .clinica-name {
             font-weight: 700;
-            color: #667eea;
-            font-size: 18px;
-            margin-bottom: 15px;
+            color: #0A1628;
+            font-size: 16px;
+            margin-bottom: 12px;
         }
         .footer-contact {
-            margin: 15px 0;
+            margin: 12px 0;
             line-height: 1.9;
         }
         .badge {
             display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
+            padding: 4px 12px;
+            border-radius: 4px;
             font-size: 12px;
             font-weight: 700;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: #0d9488;
             color: white;
-            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
         }
         @media only screen and (max-width: 600px) {
-            .content {
-                padding: 30px 20px;
-            }
-            .detail-row {
-                flex-direction: column;
-            }
-            .detail-label {
-                min-width: auto;
-                margin-bottom: 5px;
-            }
+            body { padding: 16px 10px; }
+            .content { padding: 24px 20px; }
+            .detail-row { flex-direction: column; }
+            .detail-label { min-width: auto; margin-bottom: 4px; }
         }
     </style>
 </head>
@@ -235,14 +213,14 @@
 
                 @if($action === 'cancel')
                     <div class="alert danger">
-                        <strong>⚠️ Atención:</strong> La cita ha sido cancelada.
+                        <strong>Atención:</strong> La cita ha sido cancelada.
                         @if($isPatient ?? false)
                             <br>Si necesitas reagendar, por favor contáctanos.
                         @endif
                     </div>
                 @else
                     <div class="alert success">
-                        <strong>✅ Confirmación:</strong> 
+                        <strong>Confirmación:</strong> 
                         @if($isPatient ?? false)
                             Tu cita ha sido registrada exitosamente.
                         @else
@@ -254,7 +232,7 @@
                 @if(!($isPatient ?? false))
                 <div style="text-align: center;">
                     <a href="{{ $calendarUrl }}"  class="btn-calendar">
-                        📅 Ver mi Calendario
+                        Ver mi Calendario
                     </a>
                 </div>
                 @endif
@@ -262,26 +240,26 @@
                 <!-- Detalles de la cita -->
                 <div class="cita-details">
                     <div class="detail-row">
-                        <span class="detail-label">👤 Paciente:</span>
+                        <span class="detail-label">Paciente:</span>
                         <span class="detail-value">{{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">📅 Fecha:</span>
+                        <span class="detail-label">Fecha:</span>
                         <span class="detail-value">{{ $fechaFormateada }}</span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">🕐 Hora:</span>
+                        <span class="detail-label">Hora:</span>
                         <span class="detail-value">{{ $horaFormateada }}</span>
                     </div>
                     @if($cita->primera_vez)
                     <div class="detail-row">
-                        <span class="detail-label">🆕 Primera vez:</span>
+                        <span class="detail-label">Primera vez:</span>
                         <span class="detail-value"><span class="badge">Primera Consulta</span></span>
                     </div>
                     @endif
                     @if($cita->notas)
                     <div class="detail-row">
-                        <span class="detail-label">📝 Notas:</span>
+                        <span class="detail-label">Notas:</span>
                         <span class="detail-value">{{ $cita->notas }}</span>
                     </div>
                     @endif
@@ -290,7 +268,7 @@
                 @if($isPatient ?? false)
                     <!-- Información para el paciente -->
                     <div class="info-box">
-                        <div class="info-box-title">📍 ¿Cómo llegar?</div>
+                        <div class="info-box-title">Ubicación</div>
                         <div class="info-box-content">
                             @php
                                 $direccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
@@ -301,15 +279,15 @@
                                 <div><strong>Dirección:</strong> {{ $direccion }}</div>
                             @endif
                             @if($telefono)
-                                <div style="margin-top: 12px;"><strong>Teléfono:</strong> 📞 {{ $telefono }}</div>
+                                <div style="margin-top: 12px;"><strong>Teléfono:</strong> {{ $telefono }}</div>
                             @endif
                             @if($email)
-                                <div><strong>Email:</strong> ✉️ {{ $email }}</div>
+                                <div><strong>Email:</strong> {{ $email }}</div>
                             @endif
                         </div>
                         @if($action !== 'cancel')
                         <div class="recommendations">
-                            <div class="recommendations-title">⏰ Recomendaciones importantes:</div>
+                            <div class="recommendations-title">Recomendaciones importantes:</div>
                             <ul>
                                 <li>Llega 10 minutos antes de tu cita</li>
                                 <li>Trae tu identificación oficial</li>
@@ -325,16 +303,16 @@
                     <!-- Información de contacto del paciente para el doctor -->
                     @if($paciente->telefono || $paciente->email || $paciente->domicilio)
                     <div class="info-box">
-                        <div class="info-box-title">📋 Información de contacto del paciente:</div>
+                        <div class="info-box-title">Información de contacto del paciente:</div>
                         <div class="info-box-content">
                             @if($paciente->telefono)
-                            <div>📞 {{ $paciente->telefono }}</div>
+                            <div>Tel: {{ $paciente->telefono }}</div>
                             @endif
                             @if($paciente->email)
-                            <div>✉️ {{ $paciente->email }}</div>
+                            <div>Email: {{ $paciente->email }}</div>
                             @endif
                             @if($paciente->domicilio)
-                            <div style="margin-top: 8px;">📍 {{ $paciente->domicilio }}</div>
+                            <div style="margin-top: 8px;">{{ $paciente->domicilio }}</div>
                             @endif
                         </div>
                     </div>
@@ -348,16 +326,16 @@
                     @endphp
                     @if($direccion || $telefono || $email)
                     <div class="info-box">
-                        <div class="info-box-title">🏥 Ubicación de la cita:</div>
+                        <div class="info-box-title">Ubicación de la cita:</div>
                         <div class="info-box-content">
                             @if($direccion)
                             <div><strong>Dirección:</strong> {{ $direccion }}</div>
                             @endif
                             @if($telefono)
-                            <div style="margin-top: 8px;"><strong>Teléfono:</strong> 📞 {{ $telefono }}</div>
+                            <div style="margin-top: 8px;"><strong>Teléfono:</strong> {{ $telefono }}</div>
                             @endif
                             @if($email)
-                            <div><strong>Email:</strong> ✉️ {{ $email }}</div>
+                            <div><strong>Email:</strong> {{ $email }}</div>
                             @endif
                         </div>
                     </div>
@@ -367,16 +345,16 @@
 
             <!-- Footer -->
             <div class="footer">
-                <div class="clinica-name">🏥 {{ $clinicaDisplayName ?? ($clinica->nombre ?? 'Clínica Médica') }}</div>
+                <div class="clinica-name">{{ $clinicaDisplayName ?? ($clinica->nombre ?? 'Clínica Médica') }}</div>
                 <div class="footer-contact">
                     @php
                         $footerTelefono = $sucursal->telefono ?? ($clinica->telefono ?? null);
                         $footerEmail = $sucursal->email ?? ($clinica->email ?? null);
                         $footerDireccion = $sucursal->direccion ?? ($clinica->direccion ?? null);
                     @endphp
-                    @if($footerTelefono)<div>📞 {{ $footerTelefono }}</div>@endif
-                    @if($footerEmail)<div>✉️ {{ $footerEmail }}</div>@endif
-                    @if($footerDireccion)<div>📍 {{ $footerDireccion }}</div>@endif
+                    @if($footerTelefono)<div>Tel: {{ $footerTelefono }}</div>@endif
+                    @if($footerEmail)<div>Email: {{ $footerEmail }}</div>@endif
+                    @if($footerDireccion)<div>{{ $footerDireccion }}</div>@endif
                 </div>
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #d0d4e0; font-size: 12px; color: #999;">
                     Este es un correo automático, por favor no responder.

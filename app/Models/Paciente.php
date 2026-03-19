@@ -29,6 +29,13 @@ class Paciente extends Model
         'estadoCivil',
         'profesion',
         'domicilio',
+        'calle',
+        'num_ext',
+        'num_int',
+        'colonia',
+        'codigo_postal',
+        'ciudad',
+        'estado_dir',
         'talla',
         'peso',
         'cintura',
@@ -52,6 +59,8 @@ class Paciente extends Model
         'archivo_muerto_motivo'
     ];
 
+    protected $appends = ['domicilio_formateado'];
+
     /**
      * The attributes that should be cast.
      *
@@ -64,6 +73,8 @@ class Paciente extends Model
         'telefono' => 'encrypted',
         'email' => 'encrypted',
         'domicilio' => 'encrypted',
+        'calle' => 'encrypted',
+        'colonia' => 'encrypted',
         'diagnostico' => 'encrypted',
         'medicamentos' => 'encrypted',
         'motivo_consulta' => 'encrypted',
@@ -73,6 +84,28 @@ class Paciente extends Model
         'archivo_muerto' => 'boolean',
         'archivo_muerto_at' => 'datetime',
     ];
+
+    /**
+     * Dirección formateada: usa campos nuevos si existen, sino cae al domicilio legacy.
+     */
+    public function getDomicilioFormateadoAttribute(): string
+    {
+        if (!empty($this->calle)) {
+            $calle = trim($this->calle);
+            if (!empty($this->num_ext)) $calle .= ' #' . $this->num_ext;
+            if (!empty($this->num_int)) $calle .= ' Int. ' . $this->num_int;
+            $parts = [$calle];
+            if (!empty($this->colonia)) $parts[] = 'Col. ' . $this->colonia;
+            if (!empty($this->ciudad)) {
+                $ciudad = $this->ciudad;
+                if (!empty($this->estado_dir)) $ciudad .= ', ' . $this->estado_dir;
+                $parts[] = $ciudad;
+            }
+            if (!empty($this->codigo_postal)) $parts[] = 'C.P. ' . $this->codigo_postal;
+            return implode(', ', $parts);
+        }
+        return $this->domicilio ?? '';
+    }
 
     /**
      * Relación con el usuario propietario

@@ -240,117 +240,117 @@ class EstratificacionController extends Controller
             return response()->json(['error' => 'No tienes acceso a este expediente de estratificación'], 403);
         }
 
-        $expedienteFind = Estratificacion::find($request->id);
+        // Usar el modelo que viene del Route Model Binding
+        $estratificacion->primeravez_rhc = $request['rhc_1_fecha'];
+        $estratificacion->pe_fecha = $request['pe'];
+        $estratificacion->estrati_fecha = $request['estrati'];
+        $estratificacion->c_isquemia = $request['cIsquemia'];
+        $estratificacion->sesiones = intval($request['sesiones']);
+        $estratificacion->im = ($request['im'] == 'true' || $request['im'] == 1) ? 1:0;
+        $estratificacion->ima = ($request['ima'] == 'true'|| $request['ima'] == 1) ? 1:0;
+        $estratificacion->imas = ($request['imas'] == 'true' || $request['imas'] == 1) ? 1:0;
+        $estratificacion->imaa =($request['imaa'] == 'true'|| $request['imaa'] == 1) ? 1:0;
+        $estratificacion->imal  =($request['imal'] == 'true'|| $request['imal'] == 1) ? 1:0;
+        $estratificacion->imae =($request['imae'] == 'true'|| $request['imae'] == 1) ? 1:0;
+        $estratificacion->iminf = ($request['imInf'] == 'true'|| $request['imInf'] == 1) ? 1:0;
+        $estratificacion->impi =($request['impi'] == 'true'|| $request['impi'] == 1) ? 1:0;
+        $estratificacion->impi_vd =  ($request['impiVd'] == 'true'|| $request['impiVd'] == 1) ? 1:0;
+        $estratificacion->imlat = ($request['imLat'] == 'true'|| $request['imLat'] == 1) ? 1:0;
+        $estratificacion->imsesst =  ($request['imSesst'] == 'true'|| $request['imSesst'] == 1) ? 1:0;
+        $estratificacion->imComplicado =  ($request['imComplicado'] == 'true'|| $request['imComplicado'] == 1) ? 1:0;
+        $estratificacion->valvular = $request['valvular'];
+        $estratificacion->otro = ($request['otro'] == 'true'|| $request['otro'] == 1) ? 1:0;
+        $estratificacion->mcd =  ($request['mcd'] == 'true'|| $request['mcd'] == 1) ? 1:0;
+        $estratificacion->icc = ($request['icc'] == 'true'|| $request['icc'] == 1) ? 1:0;
+        $estratificacion->reanimacion_cardio =  ($request['reanimacion'] == 'true'|| $request['reanimacion'] == 1) ? 1:0;
+        $estratificacion->falla_entrenar = ($request['fallaEntrenar'] == 'true'|| $request['fallaEntrenar'] == 1) ? 1:0;
+        $estratificacion->tabaquismo =  ($request['tabaquismo'] == 'true' || $request['tabaquismo'] == 1) ? 1:0;
+        $estratificacion->dislipidemia =  ($request['dislipidemia'] == 'true' || $request['dislipidemia'] == 1) ? 1:0;
+        $estratificacion->dm =  ($request['dm'] == 'true' || $request['dm'] == 1) ? 1:0;
+        $estratificacion->has =  ($request['has'] == 'true' || $request['has'] == 1) ? 1:0;
+        $estratificacion->obesidad = ($request['obesidad'] == 'true' || $request['obesidad'] == 1) ? 1:0;
+        $estratificacion->estres =  ($request['estres'] == 'true' || $request['estres'] == 1) ? 1:0;
+        $estratificacion->sedentarismo =  ($request['sedentarismo'] == 'true' || $request['sedentarismo'] == 1) ? 1:0;
+        $estratificacion->riesgo_otro =  $request['otroFactor'] ?: '';
+        $estratificacion->depresion = ($request['depresion'] == 'true' || $request['depresion'] == 1) ? 1:0;
+        $estratificacion->ansiedad =  ($request['ansiedad'] == 'true' || $request['ansiedad'] == 1) ? 1:0;
+        $estratificacion->sintomatologia = $request['sintomatologia'];
+        $estratificacion->puntuacion_atp2000 = $request['puntuacionAtp'];
+        $estratificacion->heart_score = $request['heartScore'];
+        $estratificacion->col_total = $request['colTotal'];
+        $estratificacion->ldl = $request['ldl'];
+        $estratificacion->hdl = $request['hdl'];
+        $estratificacion->tg = $request['tg'];
+        $estratificacion->fevi = $request['fevi'];
+        $estratificacion->pcr = $request['pcr'];
+        $estratificacion->enf_coronaria = $request['enfCoronaria'];
+        $estratificacion->isquemia = $request['isquemia'];
+        $estratificacion->isquemia_irm = $request['isquemiaIrm'];
+        $estratificacion->eco_estres = $request['eco'];
+        $estratificacion->holter = $request['holter'];
+        $estratificacion->pe_capacidad =  ($request['capacidadPe'] == 'true') ? 1:0;
+        $estratificacion->fc_basal = $request['fcBasal'];
+        $estratificacion->fc_maxima = $request['fcMax'];
+        $estratificacion->fc_borg_12 = $request['fcBorg12'];
+        $estratificacion->dp_borg_12 = $request['dpBorg12'];
+        $estratificacion->mets_borg_12 = $request['metsBorg12'];
+        $estratificacion->carga_max_bnda = $request['carga_maxima'];
+        $estratificacion->tolerancia_max_esfuerzo = $request['tolerancia_esfuerzo'];
+        $estratificacion->respuesta_presora = $request['respuestaPre'];
+        $estratificacion->indice_ta_esf = $request['indiceTa'];
+        $estratificacion->porc_fc_pre_alcanzado = $request['porcentajeFC'];
+        $estratificacion->r_cronotr = $request['cronotr'];
+        $estratificacion->porder_cardiaco = $request['poderCardiaco'];
+        $estratificacion->recuperacion_tas = $request['recuperacionTas'];
+        $estratificacion->recuperacion_fc = $request['recuperacionFc'];
+        $estratificacion->duke = $request['duke'];
+        $estratificacion->veteranos = $request['veteranos'];
+        $estratificacion->ectopia_ventricular =($request['ectopiaVen'] == 'true') ? 1:0;
+        $estratificacion->umbral_isquemico = ($request['umbralIs'] == 'true') ? 1:0;
+        $estratificacion->supranivel_st = ($request['supradesnivel'] == 'true' || $request['supradesnivel'] == 1) ? 1:0;
+        $estratificacion->infra_st_mayor2_135 = ($request['infra135'] == 'true') ? 1:0;
+        $estratificacion->infra_st_mayor2_5mets = ($request['infra5'] == 'true') ? 1:0;
+        $estratificacion->riesgo_global = $request['riesgoGlobal'];
+        $estratificacion->grupo = $request['grupo'];
+        $estratificacion->semanas = $request['semanas'];
+        $estratificacion->borg = $request['borg'];
+        $estratificacion->fc_diana_str = $request['fcDiana'];
+        $estratificacion->dp_diana = $request['dpDiana'];
 
-        $paciente = Paciente::find($request->paciente_id);
+        $fcBasal = floatval($request['fcBasal']) ?: 0;
+        $fcMaxima = floatval($request['fcMax']) ?: 0;
+        $pacienteObj = $estratificacion->paciente;
+        $edad = $pacienteObj ? $pacienteObj->edad : 0;
 
+        $karvonen = (($fcMaxima - $fcBasal) * 0.7) + $fcBasal;
+        $blackburn = ($fcMaxima * 0.8);
+        $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $edad)));
 
-
-        $expedienteFind->primeravez_rhc = $request['primeravez_rhc'];
-        $expedienteFind->pe_fecha = $request['pe_fecha'];
-        $expedienteFind->estrati_fecha = $request['estrati_fecha'];
-        $expedienteFind->c_isquemia = $request['c_isquemia'];
-        $expedienteFind->sesiones = intval($request['sesiones']);
-        $expedienteFind->im = ($request['im'] == 'true' || $request['im'] == 1) ? 1:0;
-        $expedienteFind->ima = ($request['ima'] == 'true'|| $request['ima'] == 1) ? 1:0;
-        $expedienteFind->imas = ($request['imas'] == 'true' || $request['imas'] == 1) ? 1:0;
-        $expedienteFind->imaa =($request['imaa'] == 'true'|| $request['imaa'] == 1) ? 1:0;
-        $expedienteFind->imal  =($request['imal'] == 'true'|| $request['imal'] == 1) ? 1:0;
-        $expedienteFind->imae =($request['imae'] == 'true'|| $request['imae'] == 1) ? 1:0;
-        $expedienteFind->iminf = ($request['iminf'] == 'true'|| $request['iminf'] == 1) ? 1:0;
-        $expedienteFind->impi =($request['impi'] == 'true'|| $request['impi'] == 1) ? 1:0;
-        $expedienteFind->impi_vd =  ($request['impi_vd'] == 'true'|| $request['impi_vd'] == 1) ? 1:0;
-        $expedienteFind->imlat = ($request['imlat'] == 'true'|| $request['imlat'] == 1) ? 1:0;
-        $expedienteFind->imsesst =  ($request['imsesst'] == 'true'|| $request['imsesst'] == 1) ? 1:0;
-        $expedienteFind->imComplicado =  ($request['imComplicado'] == 'true'|| $request['imComplicado'] == 1) ? 1:0;
-        $expedienteFind->valvular = $request['valvular'];
-        $expedienteFind->otro = ($request['otro'] == 'true'|| $request['otro'] == 1) ? 1:0;
-        $expedienteFind->mcd =  ($request['mcd'] == 'true'|| $request['mcd'] == 1) ? 1:0;
-        $expedienteFind->icc = ($request['icc'] == 'true'|| $request['icc'] == 1) ? 1:0;
-        $expedienteFind->reanimacion_cardio =  ($request['reanimacion_cardio'] == 'true'|| $request['reanimacion_cardio'] == 1) ? 1:0;
-        $expedienteFind->falla_entrenar = ($request['falla_entrenar'] == 'true'|| $request['falla_entrenar'] == 1) ? 1:0;
-        $expedienteFind->tabaquismo =  ($request['tabaquismo'] == 'true' || $request['tabaquismo'] == 1) ? 1:0;
-        $expedienteFind->dislipidemia =  ($request['dislipidemia'] == 'true' || $request['dislipidemia'] == 1) ? 1:0;
-        $expedienteFind->dm =  ($request['dm'] == 'true' || $request['dm'] == 1) ? 1:0;
-        $expedienteFind->has =  ($request['has'] == 'true' || $request['has'] == 1) ? 1:0;
-        $expedienteFind->obesidad = ($request['obesidad'] == 'true' || $request['obesidad'] == 1) ? 1:0;
-        $expedienteFind->estres =  ($request['estres'] == 'true' || $request['estres'] == 1) ? 1:0;
-        $expedienteFind->sedentarismo =  ($request['sedentarismo'] == 'true' || $request['sedentarismo'] == 1) ? 1:0;
-        $expedienteFind->riesgo_otro =  ($request['riesgo_otro'] == 'true' || $request['riesgo_otro'] == 1) ? 1:0;
-        $expedienteFind->depresion = ($request['depresion'] == 'true' || $request['depresion'] == 1) ? 1:0;
-        $expedienteFind->ansiedad =  ($request['ansiedad'] == 'true' || $request['ansiedad'] == 1) ? 1:0;
-        $expedienteFind->sintomatologia = $request['sintomatologia'];
-        $expedienteFind->puntuacion_atp2000 = $request['puntuacion_atp2000'];
-        $expedienteFind->heart_score = $request['heart_score'];
-        $expedienteFind->col_total = $request['col_total'];
-        $expedienteFind->ldl = $request['ldl'];
-        $expedienteFind->hdl = $request['hdl'];
-        $expedienteFind->tg = $request['tg'];
-        $expedienteFind->fevi = $request['fevi'];
-        $expedienteFind->pcr = $request['pcr'];
-        $expedienteFind->enf_coronaria = $request['enf_coronaria'];
-        $expedienteFind->isquemia = $request['isquemia'];
-        $expedienteFind->isquemia_irm = $request['isquemia_irm'];
-        $expedienteFind->eco_estres = $request['eco_estres'];
-        $expedienteFind->holter = $request['holter'];
-        $expedienteFind->pe_capacidad =  ($request['pe_capacidad'] == 'true') ? 1:0;
-        $expedienteFind->fc_basal = $request['fc_basal'];
-        $expedienteFind->fc_maxima = $request['fc_maxima'];
-        $expedienteFind->fc_borg_12 = $request['fc_borg_12'];
-        $expedienteFind->dp_borg_12 = $request['dp_borg_12'];
-        $expedienteFind->mets_borg_12 = $request['mets_borg_12'];
-        $expedienteFind->carga_max_bnda = $request['carga_max_bnda'];
-        $expedienteFind->tolerancia_max_esfuerzo = $request['tolerancia_max_esfuerzo'];
-        $expedienteFind->respuesta_presora = $request['respuesta_presora'];
-        $expedienteFind->indice_ta_esf = $request['indice_ta_esf'];
-        $expedienteFind->porc_fc_pre_alcanzado = $request['porc_fc_pre_alcanzado'];
-        $expedienteFind->r_cronotr = $request['r_cronotr'];
-        $expedienteFind->porder_cardiaco = $request['porder_cardiaco'];
-        $expedienteFind->recuperacion_tas = $request['recuperacion_tas'];
-        $expedienteFind->recuperacion_fc = $request['recuperacion_fc'];
-        $expedienteFind->duke = $request['duke'];
-        $expedienteFind->veteranos = $request['veteranos'];
-        $expedienteFind->ectopia_ventricular =($request['ectopia_ventricular'] == 'true') ? 1:0;
-        $expedienteFind->umbral_isquemico = $request['umbral_isquemico'];
-        $expedienteFind->supranivel_st = ($request['supranivel_st'] == 'true' || $request['supranivel_st'] == 1) ? 1:0;
-        $expedienteFind->infra_st_mayor2_135 = $request['infra_st_mayor2_135'];
-        $expedienteFind->infra_st_mayor2_5mets = $request['infra_st_mayor2_5mets'];
-        $expedienteFind->riesgo_global = $request['riesgo_global'];
-        $expedienteFind->grupo = $request['grupo'];
-        $expedienteFind->semanas = $request['semanas'];
-        $expedienteFind->borg = $request['borg'];
-        $expedienteFind->fc_diana_str = $request['fc_diana_str'];
-        $expedienteFind->dp_diana = $request['dp_diana'];
-
-        $karvonen = (($request['fc_maxima']-$request['fc_basal'])*0.7)+$request['fc_basal'];
-        $blackburn = ($request['fc_maxima']*0.8);
-        $narita = (78.4+((0.76*$request['fc_basal'])-(0.27*$paciente->edad)));
-
-        if($request['fc_diana_str'] === 'K'){
+        if($request['fcDiana'] === 'K'){
             $fcDiana = $karvonen;
-        }else if($request['fc_diana_str'] === 'BI'){
+        }else if($request['fcDiana'] === 'BI'){
             $fcDiana = $blackburn;
-        }else if($request['fc_diana_str'] === 'N'){
+        }else if($request['fcDiana'] === 'N'){
             $fcDiana = $narita;
         }else if($request['fcDiana'] === 'UISQ'){
-            $fcDiana = $request['fcdianaNumber'];    
+            $fcDiana = floatval($request['fcdianaNumber']) ?: 0;    
+        }else{
+            $fcDiana = floatval($request['fcBorg12']) ?: 0;
         }
-        else{
-            $fcDiana = $request['fc_borg_12'];
-        }
 
-        $expedienteFind->karvonen = $karvonen;
-        $expedienteFind->blackburn = $blackburn;
-        $expedienteFind->narita = $narita;
-        $expedienteFind->fc_diana = $fcDiana;
-        $expedienteFind->carga_inicial = ($request['carga_max_bnda']*0.6)*10;
-        $expedienteFind->comentarios = $request['comentarios'];
-        $expedienteFind->tipo_exp = 2;
-        $expedienteFind->clinica_id = $user->clinica_id;
-        $expedienteFind->save();
+        $estratificacion->karvonen = $karvonen;
+        $estratificacion->blackburn = $blackburn;
+        $estratificacion->narita = $narita;
+        $estratificacion->fc_diana = $fcDiana;
+        $cargaMaxBnda = floatval($request['carga_maxima']) ?: 0;
+        $estratificacion->carga_inicial = ($cargaMaxBnda * 0.6) * 10;
+        $estratificacion->comentarios = $request['comentarios'];
+        $estratificacion->tipo_exp = 2;
+        $estratificacion->clinica_id = $user->clinica_id;
+        $estratificacion->save();
 
 
-        return response()->json($expedienteFind);
+        return response()->json($estratificacion);
     }
 
     /**

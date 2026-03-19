@@ -99,18 +99,18 @@ class ReportePsicoController extends Controller
      * @param  \App\Models\ReportePsico  $reportePsico
      * @return \Illuminate\Http\Response
      */
-    public function show(ReportePsico $reportePsico)
+    public function show(ReportePsico $psico)
     {
         $user = Auth::user();
         
-        // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reportePsico->paciente;
+        $paciente = $psico->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
 
-        return response()->json($reportePsico->load('paciente'));
+        return response()->json($psico);
     }
+
 
     /**
      * Update the specified resource in storage.
@@ -119,17 +119,19 @@ class ReportePsicoController extends Controller
      * @param  \App\Models\ReportePsico  $reportePsico
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $data, ReportePsico $reportePsico)
+    public function update(Request $request, ReportePsico $psico)
     {
         $user = Auth::user();
         
         // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reportePsico->paciente;
+        $paciente = $psico->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         
-        $psicoFind = ReportePsico::find($data->id);
+        $psicoFind = $psico;
+        $data = $request->all();
+        
         $psicoFind->motivo_consulta = $data['motivo_consulta']?$data['motivo_consulta']:null;
         $psicoFind->antecedentes_medicos = $data['antecedentes_medicos']?$data['antecedentes_medicos']:null;
         $psicoFind->cirugias_previas = $data['cirugias_previas']?$data['cirugias_previas']:null;
@@ -178,7 +180,7 @@ class ReportePsicoController extends Controller
      * @param  \App\Models\ReportePsico  $reportePsico
      * @return \Illuminate\Http\Response
      */
-    public function destroy(ReportePsico $reportePsico)
+    public function destroy(ReportePsico $psico)
     {
         $user = Auth::user();
         
@@ -188,12 +190,12 @@ class ReportePsicoController extends Controller
         }
         
         // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reportePsico->paciente;
+        $paciente = $psico->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         
-        $reportePsico->delete();
+        $psico->delete();
         return response()->json(['message' => 'Reporte psicológico eliminado exitosamente'], 204);
     }
 }

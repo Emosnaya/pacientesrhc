@@ -19,14 +19,18 @@ class Evento extends Model
         'descripcion',
         'fecha',
         'hora',
+        'hora_fin',
         'color',
-        'completado'
+        'completado',
+        'todo_el_dia'
     ];
 
     protected $casts = [
         'fecha' => 'date:Y-m-d',
         'hora' => 'string',
+        'hora_fin' => 'string',
         'completado' => 'boolean',
+        'todo_el_dia' => 'boolean',
     ];
 
     /**

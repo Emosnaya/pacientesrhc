@@ -6,22 +6,22 @@
     <title>Expediente Médico - {{ $clinica->nombre ?? 'Clínica' }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #1e293b;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
+            padding: 30px 20px;
+            background-color: #f1f5f9;
         }
         .email-container {
             background-color: white;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: linear-gradient(135deg, #255FA5 0%, #1e4a7f 100%);
+            background: #0A1628;
             color: white;
             padding: 30px 20px;
             text-align: center;
@@ -47,15 +47,15 @@
             padding: 30px;
         }
         .patient-info {
-            background-color: #f8f9fa;
+            background-color: #f8fafc;
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
-            border-left: 4px solid #255FA5;
+            border-left: 4px solid #0A1628;
         }
         .patient-info h3 {
             margin-top: 0;
-            color: #255FA5;
+            color: #0A1628;
         }
         .patient-info p {
             margin: 8px 0;
@@ -63,8 +63,8 @@
         .footer {
             text-align: center;
             padding: 20px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            background-color: #f8fafc;
+            border-top: 2px solid #0A1628;
         }
         .footer p {
             margin: 5px 0;
@@ -77,7 +77,7 @@
             margin-top: 10px;
         }
         strong {
-            color: #255FA5;
+            color: #0A1628;
         }
     </style>
 </head>
@@ -97,7 +97,7 @@
             <p>{{ $mensaje }}</p>
             
             <div class="patient-info">
-                <h3>📋 Información del Paciente</h3>
+                <h3>Información del Paciente</h3>
                 <p><strong>Nombre:</strong> {{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</p>
                 <p><strong>Registro:</strong> {{ $paciente->registro ?? 'N/A' }}</p>
                 @if($paciente->fechaNacimiento)
@@ -109,7 +109,7 @@
                 @endif
             </div>
             
-            <p>📎 El expediente se encuentra adjunto a este correo en formato PDF.</p>
+            <p>El expediente se encuentra adjunto a este correo en formato PDF.</p>
             
             <p>Si tiene alguna pregunta o necesita información adicional, no dude en contactarnos.</p>
             
@@ -121,13 +121,13 @@
             <p><strong>{{ $clinica->nombre ?? 'Clínica Médica' }}</strong></p>
             <div class="clinic-info">
                 @if($clinica && $clinica->telefono)
-                    <p>📞 {{ $clinica->telefono }}</p>
+                    <p>Tel: {{ $clinica->telefono }}</p>
                 @endif
                 @if($clinica && $clinica->email)
-                    <p>📧 {{ $clinica->email }}</p>
+                    <p>Email: {{ $clinica->email }}</p>
                 @endif
                 @if($clinica && $clinica->direccion)
-                    <p>📍 {{ $clinica->direccion }}</p>
+                    <p>{{ $clinica->direccion }}</p>
                 @endif
             </div>
             <p style="margin-top: 15px; font-size: 11px; color: #999;">

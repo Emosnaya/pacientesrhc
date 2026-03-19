@@ -283,13 +283,15 @@ class ReporteFinalPulmonarController extends Controller
 
         // Obtener logo de la clínica
         $clinicaLogo = $this->getClinicaLogoBase64($user);
+        $clinica = $user->clinica;
 
         $pdf = PDF::loadView('pulmonar.reportefinalpulmonar', [
             'data' => $data,
             'paciente' => $paciente,
             'user' => $firmaUser,
             'firmaBase64' => $firmaBase64,
-            'clinicaLogo' => $clinicaLogo
+            'clinicaLogo' => $clinicaLogo,
+            'clinica' => $clinica
         ]);
 
         $pdf->setPaper('letter', 'portrait');
@@ -329,13 +331,15 @@ class ReporteFinalPulmonarController extends Controller
 
         // Obtener logo de la clínica
         $clinicaLogo = $this->getClinicaLogoBase64($user);
+        $clinica = $user->clinica;
 
         $pdf = PDF::loadView('pulmonar.reportefinalpulmonar', [
             'data' => $data,
             'paciente' => $paciente,
             'user' => $firmaUser,
             'firmaBase64' => $firmaBase64,
-            'clinicaLogo' => $clinicaLogo
+            'clinicaLogo' => $clinicaLogo,
+            'clinica' => $clinica
         ]);
 
         $pdf->setPaper('letter', 'portrait');

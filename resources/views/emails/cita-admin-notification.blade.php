@@ -5,94 +5,150 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nueva Cita Programada - CERCAP</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
+            color: #1e293b;
+            background-color: #f1f5f9;
+            padding: 40px 20px;
         }
         .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
+            background: #0A1628;
+            padding: 28px 30px;
             text-align: center;
-            margin-bottom: 30px;
         }
         .header img {
-            max-width: 200px;
-            height: 90px;
+            max-width: 160px;
+            max-height: 60px;
             object-fit: contain;
+            background: white;
+            padding: 8px 14px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         .header h1 {
-            color: #2c3e50;
-            margin: 15px 0 10px 0;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
         }
         .header p {
-            color: #7f8c8d;
+            color: #94a3b8;
+            font-size: 13px;
             margin: 0;
         }
         .content {
-            margin-bottom: 30px;
+            padding: 28px 30px;
         }
         .content h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
+            color: #0A1628;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .content p {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 14px;
         }
         .appointment-details {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 5px;
-            padding: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0A1628;
+            border-radius: 6px;
+            padding: 18px 20px;
             margin: 20px 0;
         }
         .appointment-details h3 {
-            color: #2c3e50;
-            margin-top: 0;
-        }
-        .detail-row {
-            display: flex;
-            margin-bottom: 10px;
-        }
-        .detail-label {
-            font-weight: bold;
-            width: 150px;
-            color: #555;
-        }
-        .detail-value {
-            flex: 1;
+            color: #0A1628;
+            font-size: 14px;
+            font-weight: 700;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
         .patient-details {
-            background-color: #e8f4fd;
-            border: 1px solid #bee5eb;
-            border-radius: 5px;
-            padding: 20px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-left: 4px solid #1d4ed8;
+            border-radius: 6px;
+            padding: 18px 20px;
             margin: 20px 0;
         }
         .patient-details h3 {
-            color: #0c5460;
-            margin-top: 0;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ecf0f1;
-            color: #7f8c8d;
+            color: #1e40af;
             font-size: 14px;
+            font-weight: 700;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #bfdbfe;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .detail-row {
+            display: flex;
+            align-items: flex-start;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label {
+            font-weight: 700;
+            min-width: 150px;
+            color: #64748b;
+            font-size: 13px;
+        }
+        .detail-value {
+            flex: 1;
+            color: #1e293b;
+            font-size: 13px;
         }
         .reminder {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-left: 4px solid #0d9488;
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin: 18px 0;
+            color: #166534;
+            font-size: 14px;
+        }
+        .footer {
+            background: #f8fafc;
+            border-top: 2px solid #0A1628;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        .footer p {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.8;
+            margin: 0;
+        }
+        .footer strong {
+            color: #0A1628;
+            font-weight: 700;
+        }
+        @media only screen and (max-width: 600px) {
+            body { padding: 16px 10px; }
+            .header, .content, .footer { padding-left: 16px; padding-right: 16px; }
+            .detail-row { flex-direction: column; }
+            .detail-label { min-width: auto; margin-bottom: 2px; }
         }
     </style>
 </head>

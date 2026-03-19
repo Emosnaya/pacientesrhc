@@ -9,65 +9,33 @@
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             font-size: 10px;
             line-height: 1.4;
-            color: #1f2937;
+            color: #1e293b;
             margin: 0;
-            padding: 0;
+            padding: 8px 18px;
         }
-        .page-header {
-            display: table;
-            width: 100%;
-            margin-bottom: 18px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #0ea5e9;
-        }
-        .logo-cell {
-            display: table-cell;
-            width: 70px;
-            vertical-align: middle;
-        }
-        .logo-cell img {
-            height: 44px;
-            width: auto;
-            max-width: 70px;
-            object-fit: contain;
-        }
-        .clinica-cell {
-            display: table-cell;
-            vertical-align: middle;
-            padding-left: 12px;
-            padding-right: 12px;
-            text-align: left;
-        }
-        .universidad-cell {
-            display: table-cell;
-            vertical-align: middle;
-            padding-right: 12px;
-            text-align: right;
-        }
-        .logo-uni-cell {
-            display: table-cell;
-            width: 70px;
-            vertical-align: middle;
-            text-align: right;
-        }
-        .logo-uni-cell img {
-            height: 44px;
-            width: auto;
-            max-width: 70px;
-            object-fit: contain;
-        }
-        .clinica-name {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0c4a6e;
-            margin: 0 0 2px 0;
-            letter-spacing: 0.02em;
-        }
-        .clinica-meta {
-            font-size: 9px;
-            color: #64748b;
-            margin: 0;
-        }
+        /* === HEADER MODERNO === */
+        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 14px; padding: 10px 14px; }
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { vertical-align: middle; padding: 0; border: none; }
+        .doctor-cell { padding-right: 14px; }
+        .doctor-logo-wrap { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; display: block; margin: 0 auto; }
+        .doctor-logo-wrap img { max-height: 35px; max-width: 35px; display: block; margin: 0 auto; }
+        .doctor-info { }
+        .doctor-name { font-size: 14px; font-weight: 700; color: white; }
+        .doctor-meta { font-size: 8.5px; color: #94a3b8; line-height: 1.7; margin-top: 2px; }
+        .clinic-cell { text-align: right; }
+        .clinic-info-wrap { display: inline-block; vertical-align: middle; text-align: right; }
+        .clinic-name-hdr { font-size: 14px; font-weight: 700; color: white; }
+        .clinic-meta-hdr { font-size: 8.5px; color: #94a3b8; line-height: 1.7; }
+        .clinic-logo-wrap { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; display: block; margin: 0 auto; }
+        .clinic-logo-wrap img { max-height: 35px; max-width: 35px; display: block; margin: 0 auto; }
+        /* === FOOTER FIJO === */
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 5px 18px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer-table { width: 100%; border-collapse: collapse; }
+        .page-footer-table td { border: none; padding: 0; vertical-align: middle; }
+        .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
+        .page-footer .clinic-contact { text-align: right; color: #64748b; }
+        .content-wrapper { padding-bottom: 38px; }
         .titulo-doc {
             text-align: center;
             margin: 14px 0 16px;
@@ -121,7 +89,7 @@
         }
         .medicamentos-section .card-title {
             font-size: 10px;
-            color: #0c4a6e;
+            color: #0A1628;
         }
         table.meds {
             width: 100%;
@@ -134,8 +102,8 @@
             font-weight: 600;
             color: #334155;
             padding: 8px 6px;
-            border-bottom: 2px solid #0ea5e9;
-            background: #f0f9ff;
+            border-bottom: 2px solid #0A1628;
+            background: #eef1f5;
         }
         table.meds td {
             padding: 8px 6px;
@@ -231,10 +199,7 @@
             );
         }
         .pie-receta {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
+            margin-top: 24px;
             text-align: center;
             font-size: 7px;
             color: #94a3b8;
@@ -242,60 +207,82 @@
     </style>
 </head>
 <body>
+    <!-- FOOTER FIJO -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? '' }}</td>
+                <td class="clinic-contact">{{ $clinica->telefono ?? '' }}{{ (!empty($clinica->telefono) && !empty($clinica->email)) ? ' | ' : '' }}{{ $clinica->email ?? '' }}</td>
+            </tr>
+        </table>
+    </div>
+    <div class="content-wrapper">
 @php
     $config = $clinica->receta_pdf_config ?? [];
     $ordenSecciones = $config['orden_secciones'] ?? ['header', 'titulo', 'paciente', 'diagnostico', 'medicamentos', 'indicaciones', 'firma'];
 @endphp
 @foreach($ordenSecciones as $seccion)
     @if($seccion === 'header')
-    <div class="page-header">
-        <div class="logo-cell">
-            @if(!empty($clinicaLogo))
-                <img src="{{ $clinicaLogo }}" alt="Logo">
-            @endif
-        </div>
-        <div class="clinica-cell">
-            <p class="clinica-name">{{ $clinica->nombre ?? 'Clínica' }}</p>
-            @if(!empty($sucursal))
-                <p class="clinica-meta" style="font-weight: 600; color: #0c4a6e;">Sucursal: {{ $sucursal->nombre }}</p>
-            @endif
-            @if(!empty($clinica->telefono) || !empty($clinica->email))
-                <p class="clinica-meta">
-                    @if(!empty($clinica->telefono)){{ $clinica->telefono }}@endif
-                    @if(!empty($clinica->telefono) && !empty($clinica->email)) · @endif
-                    @if(!empty($clinica->email)){{ $clinica->email }}@endif
-                </p>
-            @endif
-             @if(!empty($clinica->direccion))
-                <p class="clinica-meta">{{ $clinica->direccion }}</p>
-            @endif
-        </div>
-        <div class="universidad-cell">
-            @if(!empty($user->cedula) || !empty($user->cedula_especialista) || !empty($user->universidad))
-                <p class="clinica-name" style="margin-bottom: 4px;">{{ $user->nombre_con_titulo ?? '' }}</p>
-                @if(!empty($user->cedula))
-                    <p class="clinica-meta"><strong>Cédula Profesional:</strong> {{ $user->cedula }}</p>
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <!-- Logo clínica (extremo izquierdo) -->
+                @if(!empty($clinicaLogo))
+                <td style="width: 55px; padding-right: 12px; text-align: center;">
+                    <div class="clinic-logo-wrap">
+                        <img src="{{ $clinicaLogo }}" alt="Logo">
+                    </div>
+                </td>
                 @endif
-                @if(!empty($user->cedula_especialista))
-                    <p class="clinica-meta"><strong>Cédula de Especialista:</strong> {{ $user->cedula_especialista }}</p>
+                <!-- Izquierda: Doctor -->
+                <td class="doctor-cell">
+                    <div class="doctor-info">
+                        <div class="doctor-name">{{ $user->nombre_con_titulo ?? '' }}</div>
+                        <div class="doctor-meta">
+                            @if(!empty($user->cedula))
+                                Cédula Profesional: {{ $user->cedula }}<br>
+                            @endif
+                            @if(!empty($user->cedula_especialista))
+                                Cédula Especialista: {{ $user->cedula_especialista }}<br>
+                            @endif
+                            @if(!empty($user->universidad))
+                                {{ $user->universidad }}
+                            @endif
+                        </div>
+                    </div>
+                </td>
+                <!-- Derecha: Clínica -->
+                <td class="clinic-cell">
+                    <div class="clinic-info-wrap">
+                        <div class="clinic-name-hdr">{{ $clinica->nombre ?? 'Clínica' }}</div>
+                        @if(!empty($sucursal))
+                            <div class="clinic-meta-hdr" style="color: #93c5fd;">Sucursal: {{ $sucursal->nombre }}</div>
+                        @endif
+                        @if(!empty($clinica->telefono) || !empty($clinica->email))
+                            <div class="clinic-meta-hdr">{{ $clinica->telefono ?? '' }}{{ (!empty($clinica->telefono) && !empty($clinica->email)) ? ' · ' : '' }}{{ $clinica->email ?? '' }}</div>
+                        @endif
+                        @if(!empty($clinica->direccion))
+                            <div class="clinic-meta-hdr">{{ $clinica->direccion }}</div>
+                        @endif
+                    </div>
+                </td>
+                <!-- Logo universidad (extremo derecho) -->
+                @if(isset($universidadLogo) && $universidadLogo)
+                <td style="width: 55px; padding-left: 12px; text-align: center;">
+                    <div class="doctor-logo-wrap">
+                        <img src="{{ $universidadLogo }}" alt="Universidad">
+                    </div>
+                </td>
                 @endif
-                @if(!empty($user->universidad))
-                    <p class="clinica-meta">{{ $user->universidad }}</p>
-                @endif
-            @endif
-        </div>
-        <div class="logo-uni-cell">
-            @if(isset($universidadLogo) && $universidadLogo)
-                <img src="{{ $universidadLogo }}" alt="Logo Universidad">
-            @endif
-        </div>
+            </tr>
+        </table>
     </div>
     @endif
 
     @if($seccion === 'titulo')
     <div class="titulo-doc">
         @if(!empty($data->folio))
-            <p style="margin: 4px 0 0 0; font-size: 10px; color: #0c4a6e; font-weight: 600;">FOLIO: {{ str_pad($data->folio, 4, '0', STR_PAD_LEFT) }}</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #0A1628; font-weight: 600;">FOLIO: {{ str_pad($data->folio, 4, '0', STR_PAD_LEFT) }}</p>
         @endif
         <p class="fecha">{{ $data->fecha ? \Carbon\Carbon::parse($data->fecha)->format('d/m/Y') : date('d/m/Y') }}</p>
     </div>
@@ -397,6 +384,7 @@
 <div class="pie-receta">
     <p>Este documento es válido únicamente con firma y sello del médico tratante · No se aceptan fotocopias</p>
 </div>
+    </div><!-- end content-wrapper -->
 
 </body>
 </html>

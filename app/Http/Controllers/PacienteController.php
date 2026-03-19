@@ -105,6 +105,13 @@ class PacienteController extends Controller
         $paciente->apellidoMat = $request->apellidoMat ?? null;
         $paciente->telefono = $request->telefono;
         $paciente->domicilio = $request->domicilio ?? null;
+        $paciente->calle = $request->calle ?? null;
+        $paciente->num_ext = $request->num_ext ?? null;
+        $paciente->num_int = $request->num_int ?? null;
+        $paciente->colonia = $request->colonia ?? null;
+        $paciente->codigo_postal = $request->codigo_postal ?? null;
+        $paciente->ciudad = $request->ciudad ?? null;
+        $paciente->estado_dir = $request->estado_dir ?? null;
         $paciente->profesion = $request->profesion ?? null;
         $paciente->cintura = $request->cintura ?? 0;
         $paciente->estadoCivil = $request->estadoCivil ?? null;
@@ -205,6 +212,13 @@ class PacienteController extends Controller
             'apellidoMat' => $request->apellidoMat,
             'telefono' => $request->telefono,
             'domicilio' => $request->domicilio,
+            'calle' => $request->calle,
+            'num_ext' => $request->num_ext,
+            'num_int' => $request->num_int,
+            'colonia' => $request->colonia,
+            'codigo_postal' => $request->codigo_postal,
+            'ciudad' => $request->ciudad,
+            'estado_dir' => $request->estado_dir,
             'profesion' => $request->profesion,
             'cintura' => $request->cintura,
             'estadoCivil' => $request->estadoCivil,

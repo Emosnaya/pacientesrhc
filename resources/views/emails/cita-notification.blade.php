@@ -5,246 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notificación de Cita - {{ $clinica->nombre ?? 'Sistema Médico' }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #2c3e50;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1e293b;
+            background-color: #f1f5f9;
             padding: 40px 20px;
-            min-height: 100vh;
         }
-        
         .email-wrapper {
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            border-radius: 16px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
-        
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
+            background: #0A1628;
+            padding: 32px 30px;
             text-align: center;
-            position: relative;
         }
-        
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, 
-                #667eea 0%, 
-                #764ba2 25%, 
-                #f093fb 50%, 
-                #764ba2 75%, 
-                #667eea 100%);
-        }
-        
         .header img {
-            max-width: 180px;
-            height: auto;
+            max-width: 160px;
+            max-height: 70px;
+            object-fit: contain;
             background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            margin-bottom: 20px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
-        
         .header h1 {
             color: white;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 700;
-            margin: 15px 0 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin: 0 0 6px 0;
         }
-        
         .header p {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 16px;
-            font-weight: 500;
+            color: #94a3b8;
+            font-size: 13px;
+            margin: 0;
         }
-        
         .content {
-            padding: 40px 30px;
+            padding: 32px 30px;
         }
-        
         .content h2 {
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 25px;
-        }
-        
-        .content p {
-            color: #555;
-            font-size: 16px;
-            line-height: 1.8;
-            margin-bottom: 20px;
-        }
-        
-        .content strong {
-            color: #2c3e50;
-            font-weight: 600;
-        }
-        
-        .appointment-details {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 12px;
-            padding: 25px;
-            margin: 30px 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        
-        .appointment-details h3 {
-            color: #2c3e50;
             font-size: 20px;
             font-weight: 700;
+            color: #0A1628;
             margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
         }
-        
+        .content p {
+            color: #475569;
+            font-size: 15px;
+            line-height: 1.75;
+            margin-bottom: 16px;
+        }
+        .content strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .appointment-details {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0A1628;
+            border-radius: 8px;
+            padding: 22px 24px;
+            margin: 24px 0;
+        }
+        .appointment-details h3 {
+            color: #0A1628;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
         .detail-row {
             display: flex;
             align-items: flex-start;
-            margin-bottom: 14px;
             padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
         }
-        
         .detail-row:last-child {
-            margin-bottom: 0;
+            border-bottom: none;
+            padding-bottom: 0;
         }
-        
         .detail-label {
             font-weight: 700;
             min-width: 130px;
-            color: #667eea;
-            font-size: 15px;
+            color: #64748b;
+            font-size: 13px;
         }
-        
         .detail-value {
             flex: 1;
-            color: #2c3e50;
-            font-size: 15px;
-            font-weight: 500;
+            color: #1e293b;
+            font-size: 14px;
         }
-        
         .reminder {
-            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
-            border-left: 4px solid #00acc1;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 30px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-left: 4px solid #0d9488;
+            border-radius: 6px;
+            padding: 18px 20px;
+            margin: 24px 0;
         }
-        
         .reminder strong {
-            color: #00838f;
-            font-size: 17px;
+            color: #0d9488;
+            font-size: 14px;
+            font-weight: 700;
             display: block;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
-        
         .reminder ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
         .reminder ul li {
-            color: #00695c;
-            padding: 6px 0;
-            padding-left: 25px;
+            color: #334155;
+            padding: 5px 0 5px 16px;
             position: relative;
+            font-size: 14px;
             line-height: 1.6;
         }
-        
         .reminder ul li::before {
-            content: '✓';
+            content: '-';
             position: absolute;
             left: 0;
-            color: #00acc1;
+            color: #0d9488;
             font-weight: bold;
-            font-size: 16px;
         }
-        
         .footer {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-            padding: 30px;
+            background: #f8fafc;
+            border-top: 2px solid #0A1628;
+            padding: 24px 30px;
             text-align: center;
-            border-top: 3px solid #667eea;
         }
-        
         .footer p {
-            color: #5a6c7d;
-            font-size: 14px;
+            color: #64748b;
+            font-size: 13px;
             line-height: 1.8;
             margin: 0;
         }
-        
         .footer strong {
-            color: #2c3e50;
-            font-size: 16px;
+            color: #0A1628;
+            font-size: 14px;
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
-        
-        /* Responsive Design */
         @media only screen and (max-width: 600px) {
-            body {
-                padding: 20px 10px;
-            }
-            
-            .email-wrapper {
-                border-radius: 12px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .content h2 {
-                font-size: 20px;
-            }
-            
-            .appointment-details {
-                padding: 20px;
-            }
-            
-            .detail-row {
-                flex-direction: column;
-            }
-            
-            .detail-label {
-                min-width: auto;
-                margin-bottom: 4px;
-            }
-            
-            .footer {
-                padding: 25px 20px;
-            }
+            body { padding: 16px 10px; }
+            .header { padding: 24px 20px; }
+            .content { padding: 24px 20px; }
+            .detail-row { flex-direction: column; }
+            .detail-label { min-width: auto; margin-bottom: 4px; }
+            .footer { padding: 20px; }
         }
     </style>
 </head>
@@ -264,7 +183,7 @@
             <p>Se ha programado una nueva cita para el paciente <strong>{{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</strong>.</p>
             
             <div class="appointment-details">
-                <h3>📋 Detalles de la Cita</h3>
+                <h3>Detalles de la Cita</h3>
                 <div class="detail-row">
                     <div class="detail-label">Paciente:</div>
                     <div class="detail-value">{{ $paciente->nombre }} {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }}</div>
@@ -290,7 +209,7 @@
             </div>
             
             <div class="reminder">
-                <strong>📌 Recordatorio Importante:</strong>
+                <strong>Recordatorio Importante:</strong>
                 <ul>
                     <li>Por favor llegue 15 minutos antes de su cita</li>
                     <li>Traiga una identificación oficial</li>
