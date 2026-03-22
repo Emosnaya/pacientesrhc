@@ -16,20 +16,17 @@ return new class extends Migration
     public function up()
     {
         // Migrar usuarios existentes: cada usuario se vincula a su clínica actual
-        // Asumimos que el rol viene de users.rol (1=superadmin, 2=admin, 3=doctor, 4=recepcionista)
+        // Propietario: isSuperAdmin=1 O isAdmin=1 de esa clínica
+        // Colaborador: resto de usuarios
         DB::statement('
-            INSERT INTO user_clinicas (user_id, clinica_id, rol_en_clinica, es_principal, activa, created_at, updated_at)
+            INSERT INTO user_clinicas (user_id, clinica_id, rol_en_clinica, activa, created_at, updated_at)
             SELECT 
                 u.id,
                 u.clinica_id,
                 CASE 
-                    WHEN u.rol = 1 THEN "superadmin"
-                    WHEN u.rol = 2 THEN "admin"
-                    WHEN u.rol = 3 THEN "doctor"
-                    WHEN u.rol = 4 THEN "recepcionista"
-                    ELSE "doctor"
-                END as rol,
-                1 as es_principal,
+                    WHEN u.isSuperAdmin = 1 THEN "propietario"
+                    ELSE "colaborador"
+                END as rol_en_clinica,
                 1 as activa,
                 NOW(),
                 NOW()
