@@ -20,9 +20,9 @@ class ClinicoController extends Controller
     {
         $user = Auth::user();
         
-        // Todos los usuarios pueden ver los clínicos de su clínica
+        // Todos los usuarios pueden ver los clínicos de su clínica/workspace activo
         $clinicos = Clinico::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new ClinicoCollection($clinicos);
@@ -76,7 +76,7 @@ class ClinicoController extends Controller
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
             $nuevoPaciente->user_id = $user->id;
-            $nuevoPaciente->clinica_id = $user->clinica_id;
+            $nuevoPaciente->clinica_id = $user->clinica_efectiva_id;
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $nuevoPaciente->sucursal_id = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
@@ -86,8 +86,8 @@ class ClinicoController extends Controller
             $id = intval($request->input('id'));
             $nuevoPaciente = Paciente::find($id);
             
-            // Verificar que el paciente pertenece a la misma clínica
-            if ($nuevoPaciente->clinica_id !== $user->clinica_id) {
+            // Verificar que el paciente pertenece a la misma clínica/workspace activo
+            if ($nuevoPaciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
         }
@@ -294,7 +294,7 @@ class ClinicoController extends Controller
         // Asignar el user_id del dueño del paciente
         $clinico->user_id = $nuevoPaciente->user_id;
         $clinico->paciente_id = $nuevoPaciente->id;
-        $clinico->clinica_id = $user->clinica_id;
+        $clinico->clinica_id = $user->clinica_efectiva_id;
         $clinico->sucursal_id = $nuevoPaciente->sucursal_id;
         $clinico->save();
 
@@ -311,9 +311,9 @@ class ClinicoController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el clínico pertenece a la misma clínica
+        // Verificar que el clínico pertenece al workspace activo
         $paciente = $clinico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente clínico'], 403);
         }
 
@@ -331,9 +331,9 @@ class ClinicoController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el clínico pertenece a la misma clínica
+        // Verificar que el clínico pertenece al workspace activo
         $paciente = $clinico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente clínico'], 403);
         }
 
@@ -536,7 +536,7 @@ class ClinicoController extends Controller
         $clinico->estudios = $data['estudios'];
         $clinico->diagnostico_general = $data['diagnostico_general'];
         $clinico->plan = $data['plan'];
-        $clinico->clinica_id = $user->clinica_id;
+        $clinico->clinica_id = $user->clinica_efectiva_id;
 
         $clinico->save();
 
@@ -558,9 +558,9 @@ class ClinicoController extends Controller
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
-        // Verificar que el clínico pertenece a la misma clínica
+        // Verificar que el clínico pertenece al workspace activo
         $paciente = $clinico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente clínico'], 403);
         }
         

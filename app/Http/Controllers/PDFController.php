@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Clinico;
 use App\Models\Esfuerzo;
 use App\Models\Estratificacion;
+use App\Models\EstratiAacvpr;
 use App\Models\Paciente;
 use App\Models\ReporteFinal;
 use App\Models\ReporteFisio;
@@ -464,6 +465,22 @@ class PDFController extends Controller
 
         $pdf = Pdf::loadView('cardiaca.estrati', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
         return $pdf->stream('Estratificacion.pdf'); 
+    }
+
+    public function estratiAacvprPdf(Request $request)
+    {
+        $data = EstratiAacvpr::find($request->id);
+        $paciente = Paciente::find($data->paciente_id);
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
+        // Obtener información de la clínica
+        $clinica = $this->getClinicaInfo($user);
+        $clinicaLogo = $this->getClinicaLogoBase64($user);
+
+        $firmaBase64 = $this->getFirmaBase64($userFirma);
+
+        $pdf = Pdf::loadView('cardiaca.estrati_aacvpr', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
+        return $pdf->stream('Estratificacion_AACVPR_EAPC.pdf'); 
     }
 
     public function clinicoPdf(Request $request)

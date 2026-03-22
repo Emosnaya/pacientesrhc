@@ -94,17 +94,16 @@ class ReporteNutriController extends Controller
      * @param  \App\Models\ReporteNutri  $reporteNutri
      * @return \Illuminate\Http\Response
      */
-    public function show(ReporteNutri $reporteNutri)
+    public function show(ReporteNutri $nutri)
     {
         $user = Auth::user();
         
-        // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reporteNutri->paciente;
+        $paciente = $nutri->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
 
-        return response()->json($reporteNutri->load('paciente'));
+        return response()->json($nutri);
     }
 
     /**
@@ -114,17 +113,19 @@ class ReporteNutriController extends Controller
      * @param  \App\Models\ReporteNutri  $reporteNutri
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $data, ReporteNutri $reporte)
+    public function update(Request $request, ReporteNutri $nutri)
     {
         $user = Auth::user();
         
         // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reporte->paciente;
+        $paciente = $nutri->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         
-        $reporteNutri = ReporteNutri::find($data->id);
+        $reporteNutri = $nutri;
+        $data = $request->all();
+        
         $reporteNutri->sistolica = $data['sistolica'];
         $reporteNutri->diastolica = $data['diastolica'];
         $reporteNutri->trigliceridos = $data['trigliceridos'];
@@ -167,7 +168,7 @@ class ReporteNutriController extends Controller
      * @param  \App\Models\ReporteNutri  $reporteNutri
      * @return \Illuminate\Http\Response
      */
-    public function destroy(ReporteNutri $reporteNutri)
+    public function destroy(ReporteNutri $nutri)
     {
         $user = Auth::user();
         
@@ -177,12 +178,12 @@ class ReporteNutriController extends Controller
         }
         
         // Verificar que el reporte pertenece a la misma clínica
-        $paciente = $reporteNutri->paciente;
+        $paciente = $nutri->paciente;
         if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         
-        $reporteNutri->delete();
+        $nutri->delete();
         return response()->json(['message' => 'Reporte nutricional eliminado exitosamente'], 204);
     }
 }

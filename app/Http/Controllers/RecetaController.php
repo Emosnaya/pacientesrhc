@@ -16,8 +16,18 @@ class RecetaController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
+        // Validar que la sucursal pertenezca a la clínica efectiva
+        $sucursalId = null;
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $request->sucursal_id)
+                ->where('clinica_id', $clinicaId)->exists();
+            $sucursalId = $valida ? $request->sucursal_id : null;
+        } elseif ($user->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $user->sucursal_id)
+                ->where('clinica_id', $clinicaId)->exists();
+            $sucursalId = $valida ? $user->sucursal_id : null;
+        }
 
         $query = Receta::where('clinica_id', $clinicaId)
             ->with(['paciente', 'user', 'medicamentos'])
@@ -42,10 +52,20 @@ class RecetaController extends Controller
     public function getByPaciente(Request $request, $pacienteId)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+        $clinicaId = $user->clinica_efectiva_id;
+        $sucursalId = null;
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $request->sucursal_id)
+                ->where('clinica_id', $clinicaId)->exists();
+            $sucursalId = $valida ? $request->sucursal_id : null;
+        } elseif ($user->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $user->sucursal_id)
+                ->where('clinica_id', $clinicaId)->exists();
+            $sucursalId = $valida ? $user->sucursal_id : null;
+        }
 
         $query = Receta::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->with(['user', 'medicamentos'])
             ->orderBy('fecha', 'desc')
             ->orderBy('created_at', 'desc');
@@ -64,7 +84,7 @@ class RecetaController extends Controller
     public function show($id)
     {
         $user = Auth::user();
-        $receta = Receta::where('clinica_id', $user->clinica_id)
+        $receta = Receta::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'user', 'sucursal', 'medicamentos'])
             ->findOrFail($id);
         return response()->json($receta);
@@ -102,7 +122,7 @@ class RecetaController extends Controller
         $paciente = \App\Models\Paciente::findOrFail($request->paciente_id);
 
         // Generar folio automáticamente por clínica/sucursal
-        $clinicaId = $user->clinica_id ?? $paciente->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
         $folio = $this->generarFolio($clinicaId, $sucursalId);
 
         $receta = Receta::create([
@@ -146,7 +166,7 @@ class RecetaController extends Controller
     public function getPdfConfig(Request $request)
     {
         $user = Auth::user();
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($user->clinica_efectiva_id);
         if (!$clinica) {
             return response()->json([
                 'orden_secciones' => ['header', 'titulo', 'paciente', 'diagnostico', 'medicamentos', 'indicaciones', 'firma']
@@ -174,7 +194,7 @@ class RecetaController extends Controller
     public function updatePdfConfig(Request $request)
     {
         $user = Auth::user();
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($user->clinica_efectiva_id);
         if (!$clinica) {
             return response()->json(['message' => 'Clínica no encontrada'], 404);
         }

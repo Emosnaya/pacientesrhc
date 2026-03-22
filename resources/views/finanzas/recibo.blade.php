@@ -18,7 +18,7 @@
             width: 100%;
             margin-bottom: 12px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #6B21A8;
+            border-bottom: 2px solid #0A1628;
         }
         .clinic-logo {
             display: table-cell;
@@ -40,7 +40,7 @@
         .clinic-name {
             font-size: 15px;
             font-weight: 700;
-            color: #4c1d95;
+            color: #0A1628;
             margin: 0 0 4px 0;
             letter-spacing: 0.02em;
         }
@@ -58,7 +58,7 @@
             margin-bottom: 10px;
             padding-bottom: 8px;
         }
-        .page-header h1 { font-size: 16px; font-weight: 700; color: #4c1d95; margin: 0 0 2px 0; }
+        .page-header h1 { font-size: 16px; font-weight: 700; color: #0A1628; margin: 0 0 2px 0; }
         .recibo-num { font-size: 10px; color: #64748b; margin: 0; }
         .recibo-fecha { font-size: 8px; color: #94a3b8; margin-top: 2px; }
         .fiscal-notice {
@@ -187,7 +187,7 @@
 
     <!-- Aviso Fiscal -->
     <div class="fiscal-notice">
-        ⚠️ NO ES COMPROBANTE FISCAL
+        AVISO: NO ES COMPROBANTE FISCAL
     </div>
 
     <div class="footer-doc">

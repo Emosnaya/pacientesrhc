@@ -13,6 +13,8 @@ class ReporteFinal extends Model
     protected $fillable = [
         'paciente_id',
         'user_id',
+        'clinica_id',
+        'sucursal_id',
         'fecha',
         'contenido'
     ];

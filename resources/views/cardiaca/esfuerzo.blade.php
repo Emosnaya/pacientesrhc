@@ -1,250 +1,370 @@
 
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-    <!-- Bootstrap CSS -->
+    <title>Reporte de Prueba Ergométrica</title>
     <style>
-        /* Estilo para el logo */
-        .logo-container {
-            height: 36px;
-            overflow: hidden;
-            display: inline-block;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .logo-container img {
-            height: 36px;
-            width: auto;
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 10px;
+            line-height: 1.3;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 10px 20px;
         }
-        /* Estilo para la línea de firma */
-        .signature {
-        text-align: center;
-        width: 100%;
-        margin-top: 5rem
-    }
-    .line {
-        display: inline-block;
-        border-top: 1px solid black;
-        width: 20%;
-        margin-top: 4rem;
-        margin-right: 2rem;
-        margin-left: 2rem
-        padding: 1rem;
-    }
-    .text {
-        font-size: 9.5px;
-        text-align: center;
-        width: 100%; /* Espacio entre línea y texto */
-    }
-        .tabla{
-            font-size: 8.5px;
-            margin-bottom: 0;
-            width: 100%
+
+        /* === HEADER === */
+        .header {
+            width: 100%;
+            background: #0A1628;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
         }
-        .f-10{
-          font-size: 10px;
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .f-15{
-          font-size: 15px;
+
+        .header-table td {
+            vertical-align: middle;
+            padding: 0;
         }
-        .f-7{
-          font-size: 7px;
+
+        .header-logo-cell {
+            width: 60px;
+            padding-right: 12px !important;
         }
-        .paciente{
-            font-size: 12px
-        }
-        .text-right{
-            text-align: right;
-        }
-        .f-bold{
-            font-weight: bold;
-        }
-        .f-normal{
-            font-weight: normal
-        }
-        .text-lft{
-            text-align: left;
-        }
-        .text-ctr{
+
+        .header-logo {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 6px;
+            padding: 5px;
             text-align: center;
         }
 
-        .flex{
-          display: flex;
+        .header-logo img {
+            max-height: 35px;
+            max-width: 35px;
         }
 
-        .container-g {
-        width: 100%;
-    }
-    .table-container-g {
-        width: 40%;
-        float: right;
-    }
-    .text-container-g {
-        width: 50%;
-        float: left;
-    }
-    .table-g {
-        border: 1px solid black;
-        width: 100%;
-    }
-    .border-t{
-      border: 1px solid black;
-    }
-    .border-l{
-      border-left: 1px solid black;
-    }
-    .border-r{
-      border-right: 1px solid black;
-    }
-    .border-b{
-      border-bottom: 1px solid black;
-    }
-    .b-dark{
-      background-color: #000;
-      color: white;
-      
-    }
-    .b-w{
-      background-color: #ffffff;
-      color: black;
-      
-    }
-    .coments{
-      position: absolute;
-        top: 0;
-        left: 0;
-    }
-    .txt{
-      width: 20%;
-      margin-left: 1.5rem;
-      margin-right: 5rem;
-    }
-    .ma-t-0{
-      margin-top: 0px;
-    }
-    .medio{
-      position: relative;
-    }
-  
-  .texto-izquierda {
-    text-align: left; /* Alinear a la izquierda */
-    position: absolute; /* Posicionamiento absoluto */
-    left: 0; /* /* Alinear a la izquierda */
-  }
-  
-  .texto-derecha {
-    text-align: right; /* Alinear a la derecha */
-    position: absolute; /* Posicionamiento absoluto */
-    right: 0;; /* Alinear a la derecha */
-  }
-  .contenedor {
-    position: relative; /* Establece contexto de posición */
-    text-align:justify; /* Alinea contenido al centro horizontalmente */
-    margin-bottom: 0; /* Espacio opcional al final del contenedor */
-  }
-  
-  .titulo {
-    display: inline-block;/* Hace que el título sea un bloque en línea */ /* Opcional: fondo blanco detrás del título */ /* Espaciado opcional alrededor del título */
-    position: relative; /* Establece contexto de posición */
-    z-index: 1; /* Asegura que el título esté por encima de la línea */
-  }
-  .m-t-2{
-    margin-top: -1rem;
-  }
-  .m-t-3{
-    margin-top: -2rem;
-  }
-  .m-t-07{
-    margin-top: -0.7rem;
-  }
-  .m-t-0{
-    margin-top: -1rem;
-  }
-  
-  .linea {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 4rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-des {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 6.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-med {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 16rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-is {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-ar {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5.5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-pu {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 7.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-t {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 0; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .backgr-black{
-    background-color: #000
-  }
-  .bck-gray{
-    background-color: #DDDEE1  ;
-  }
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 9px;
+            color: #94a3b8;
+        }
+
+        .header-meta-cell {
+            text-align: right;
+            width: 120px;
+        }
+
+        .header-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        .header-badge-label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+        }
+
+        .header-badge-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-date {
+            font-size: 9px;
+            color: #94a3b8;
+        }
+
+        /* === PATIENT INFO === */
+        .patient-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .patient-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .patient-table td {
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+
+        .patient-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0A1628;
+            margin-bottom: 6px;
+        }
+
+        .patient-label {
+            color: #64748b;
+            font-size: 9px;
+        }
+
+        .patient-value {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .patient-diagnosis {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 10px;
+        }
+
+        .patient-diagnosis-label {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* === PAGE FOOTER === */
+        .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 6px 20px;
+            background: white;
+            border-top: 2px solid #0A1628;
+            font-size: 9px;
+        }
+
+        .page-footer-table {
+            width: 100%;
+        }
+
+        .page-footer .clinic-name {
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        .page-footer .clinic-contact {
+            text-align: right;
+            color: #64748b;
+        }
+
+        .content-wrapper {
+            padding-bottom: 35px;
+        }
+
+        /* === EXISTING STYLES === */
+        .tabla {
+            font-size: 8.5px;
+            margin-bottom: 0;
+            width: 100%;
+        }
+        .f-10 { font-size: 10px; }
+        .f-15 { font-size: 15px; }
+        .f-7 { font-size: 7px; }
+        .paciente { font-size: 11px; }
+        .text-right { text-align: right; }
+        .f-bold { font-weight: bold; }
+        .f-normal { font-weight: normal; }
+        .text-lft { text-align: left; }
+        .text-ctr { text-align: center; }
+        .border-t { border: 1px solid black; }
+        .border-l { border-left: 1px solid black; }
+        .border-r { border-right: 1px solid black; }
+        .border-b { border-bottom: 1px solid black; }
+        .backgr-black { background-color: #000; color: white; }
+        .bck-gray { background-color: #DDDEE1; padding: 4px 8px; }
+        .ma-t-0 { margin-top: 0px; }
+        .m-t-2 { margin-top: 2px; }
+        .m-t-3 { margin-top: 0; }
+        .m-t-07 { margin-top: 2px; }
+        .m-t-0 { margin-top: 2px; }
+        .mt-0 { margin-top: 0; }
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
+        .ml-1 { margin-left: 4px; }
+        .ml-2 { margin-left: 8px; }
+        .ml-3 { margin-left: 12px; }
+        .ml-5 { margin-left: 20px; }
+        .mr-2 { margin-right: 8px; }
+        
+        .h5 { font-size: 12px; font-weight: 700; }
+
+        .container-g { width: 100%; }
+        .table-container-g { width: 40%; float: right; }
+        .text-container-g { width: 50%; float: left; }
+
+        .contenedor {
+            position: relative;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+        
+        .titulo {
+            display: inline-block;
+            position: relative;
+            z-index: 1;
+            background: white;
+            padding-right: 8px;
+        }
+
+        .linea {
+            position: absolute;
+            left: 4rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-des {
+            position: absolute;
+            left: 6.2rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-med {
+            position: absolute;
+            left: 16rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-is {
+            position: absolute;
+            left: 5rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-ar {
+            position: absolute;
+            left: 5.5rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-pu {
+            position: absolute;
+            left: 7.2rem;
+            right: 0;
+            top: 0.5rem;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
+        .linea-t {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-bottom: 2px solid #0A1628;
+            z-index: 0;
+        }
     </style>
   </head>
   <body>
-    <header class="mb-0">
-      <div class="paciente ma-t-0 mb-0">
-        <p class="f-bold f-15 text-center mb-0 mt-0">Reporte de Prueba Ergométrica {{ isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca' }}</p>
-        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-        <div class="medio">
-          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->fecha))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
+    <!-- PAGE FOOTER (fixed) -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? 'Clínica' }}</td>
+                <td class="clinic-contact">
+                    {{ $clinica->telefono ?? '' }}
+                    @if($clinica->email ?? null)
+                        | {{ $clinica->email }}
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="content-wrapper">
+    <!-- HEADER -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo-cell">
+                    <div class="header-logo">
+                        @if(isset($clinicaLogo) && $clinicaLogo)
+                            <img src="{{ $clinicaLogo }}" alt="Logo">
+                        @else
+                            <span style="font-size: 24px;">❤️</span>
+                        @endif
+                    </div>
+                </td>
+                <td style="padding-left: 10px;">
+                    <div class="header-title">Prueba Ergométrica {{ isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca' }}</div>
+                    <div class="header-subtitle">Reporte de evaluación funcional</div>
+                </td>
+                <td class="header-meta-cell">
+                    <div class="header-badge">
+                        <div class="header-badge-label">Registro</div>
+                        <div class="header-badge-value">#{{ $paciente->registro }}</div>
+                    </div>
+                    <div class="header-date">{{ date('d/m/Y', strtotime($data->fecha)) }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- PATIENT INFO -->
+    <div class="patient-card">
+        <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
+        <table class="patient-table">
+            <tr>
+                <td><span class="patient-label">Peso:</span> <span class="patient-value">{{ $paciente->peso }} kg</span></td>
+                <td><span class="patient-label">Talla:</span> <span class="patient-value">{{ $paciente->talla }} cm</span></td>
+                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
+                <td><span class="patient-label">IMC:</span> <span class="patient-value">{{ round($paciente->imc, 2) }}</span></td>
+                <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</span></td>
+            </tr>
+        </table>
+        @if($paciente->medicamentos)
+        <div class="patient-diagnosis">
+            <span class="patient-diagnosis-label">Medicamentos:</span> {{ $paciente->medicamentos }}
         </div>
-        <br>
-          <p  class="f-bold mt-2 mb-0 ">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span><span class="f-bold ml-2">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
-            <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold">  IMC: <span  class="f-normal">{{round($paciente->imc,2)}}</span></span>
-            <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span></p>
-          <p class="f-bold mt-0 mb-0">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span> </p>
-          <p><span class="f-bold mt-0 mb-1">  Diagnostico: <span  class="f-normal">{{$paciente->diagnostico}}</span></span></p>
-      </div>
-    </header>
+        @endif
+        @if($paciente->diagnostico)
+        <div class="patient-diagnosis">
+            <span class="patient-diagnosis-label">Diagnóstico:</span> {{ $paciente->diagnostico }}
+        </div>
+        @endif
+    </div>
+
     <main class="ma-t-0">
       <div class="paciente ma-t-0-0">
         <div class="contenedor ">
@@ -375,48 +495,44 @@
       <h2 class="h5 titulo">Medición de Gases Espirados</h2>
       <div class="linea-med"></div>
     </div>
-    <p  class="f-bold m-t-2">VO2max (mlO2/Kg/min): <span class="f-normal">{{ round($data->vo2_max_gases,2)}}</span>
-    <span class="f-bold">  VO2pico (mlO2/Kg/min): <span class="f-normal">{{round($data->vo2_pico_gases,2)}}</span></span> <span class=f-bold"">  R/Q(max.esf): <span  class="f-normal">{{round($data->r_qmax,2)}}</span></span>
-    <span class=f-bold"">  Umbral A/An(mlO2/Kg/min): <span  class="f-normal">{{$data->umbral_aeer_anaer==null?0:$data->umbral_aeer_anaer}}</span></span> <span class=f-bold"">  %PO 2 teórico: <span  class="f-normal">{{$data->po2_teor==null?0:$data->po2_teor}}</span></span></p>
+    <p class="f-bold m-t-2">VO2max (mlO2/Kg/min): <span class="f-normal">{{ round($data->vo2_max_gases,2)}}</span>
+    <span class="f-bold ml-2">VO2pico (mlO2/Kg/min): <span class="f-normal">{{round($data->vo2_pico_gases,2)}}</span></span>
+    <span class="f-bold ml-2">R/Q(max.esf): <span class="f-normal">{{round($data->r_qmax,2)}}</span></span>
+    <span class="f-bold ml-2">Umbral A/An(mlO2/Kg/min): <span class="f-normal">{{$data->umbral_aeer_anaer==null?0:$data->umbral_aeer_anaer}}</span></span>
+    <span class="f-bold ml-2">%PO 2 teórico: <span class="f-normal">{{$data->po2_teor==null?0:$data->po2_teor}}</span></span></p>
   </div>
+
   <div class="bck-gray">
-  <div class="container-g f-10 mt-0">
     <div class="contenedor">
       <h2 class="h5 titulo">Isquemia</h2>
       <div class="linea-is"></div>
     </div>
-    <div class="table-container-g ml-2 bck-gray">
-      </div>
-      <div class="ml-2 text-container-g bck-gray">
-        <p class="mb-2 f-bold">Indice Angina:<span class="ml-1 f-normal">{{$data->scoreAngina}}</span></p>
-        <p class="f-bold mb-1"> Depresión max ST (mm): <span class="ml-1 mr-2 f-normal">{{$data->MaxInfra}}</span></p>
-      </div>
+    <p class="f-bold mb-1">Indice Angina: <span class="f-normal">{{$data->scoreAngina}}</span>
+    <span class="f-bold ml-3">Depresión max ST (mm): <span class="f-normal">{{$data->MaxInfra}}</span></span></p>
   </div>
-  <br>
-  <br>
-  </div>
-  <div class="paciente mt-0">
-    <p class="f-bold text-sm bck-gray" >Tipo de cambio: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
-    <div class="contenedor ">
-      <h2 class="h5 titulo m-t-0">Arritmias</h2>
+
+  <div class="paciente mt-1">
+    <p class="f-bold">Tipo de cambio: <span class="f-normal">{{$data->tipoCambioElectrico}}</span></p>
+    <div class="contenedor">
+      <h2 class="h5 titulo">Arritmias</h2>
       <div class="linea-ar"></div>
     </div>
-    <p  class="f-bold m-t-07">Arritimias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
+    <p class="f-bold">Arritmias: <span class="f-normal">{{ $data->tipoArritmias}}</span></p>
   </div>
+
   <div class="bck-gray">
-  <div class="paciente mt-0 mb-0">
-    <div class="contenedor ">
-      <h2 class="h5 titulo m-t-07">Puntuaciones</h2>
+    <div class="contenedor">
+      <h2 class="h5 titulo">Puntuaciones</h2>
       <div class="linea-pu"></div>
     </div>
-    <p  class="f-bold m-t-0 mb-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
-      <span class="f-bold">  Veteranos (VA): <span class="f-normal">{{round($data->veteranos,2)}}</span></span></p>
+    <p class="f-bold mb-0">Duke: <span class="f-normal">{{ round($data->duke,2)}}</span>
+    <span class="f-bold ml-3">Veteranos (VA): <span class="f-normal">{{round($data->veteranos,2)}}</span></span></p>
   </div>
-  <div class="contenedor ">
-    <h2 class="h5 titulo"></h2>
+
+  <div class="contenedor">
     <div class="linea-t"></div>
   </div>
-</div>
+
   <div class="paciente mt-1 mb-1">
     <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
     <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
@@ -444,8 +560,7 @@
       <span class="f-bold">  V.Predictivo: <span class="f-normal">{{round($data->vpp*100)}}%</span></span></p>
   </div>
 
-  
-      
     </main>
+    </div><!-- End content-wrapper -->
   </body>
 </html>

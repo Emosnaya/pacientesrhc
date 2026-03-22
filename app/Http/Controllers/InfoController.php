@@ -11,6 +11,7 @@ use App\Http\Resources\ReportePsicoCollection;
 use App\Models\Clinico;
 use App\Models\Esfuerzo;
 use App\Models\Estratificacion;
+use App\Models\EstratiAacvpr;
 use App\Models\Paciente;
 use App\Models\ReporteFinal;
 use App\Models\ReporteNutri;
@@ -69,6 +70,23 @@ class InfoController extends Controller
         }
 
         return new EstratificacionCollection(Estratificacion::where('paciente_id', $id)->get());
+    }
+
+    public function estratiAacvprs($id)
+    {
+        $user = Auth::user();
+        $paciente = Paciente::find($id);
+        
+        if (!$paciente) {
+            return response()->json(['error' => 'Paciente no encontrado'], 404);
+        }
+
+        // Verificar que el paciente pertenece a la misma clínica
+        if ($paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
+        }
+
+        return response()->json(EstratiAacvpr::where('paciente_id', $id)->get());
     }
 
     public function reportes($id)

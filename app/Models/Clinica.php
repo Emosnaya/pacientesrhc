@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Clinica extends Model
 {
@@ -28,12 +30,15 @@ class Clinica extends Model
         'max_usuarios',
         'max_pacientes',
         'receta_pdf_config',
+        'es_consultorio_privado',
+        'propietario_user_id',
     ];
 
     protected $casts = [
         'pagado' => 'boolean',
         'activa' => 'boolean',
         'permite_multiples_sucursales' => 'boolean',
+        'es_consultorio_privado' => 'boolean',
         'fecha_vencimiento' => 'date',
         'modulos_habilitados' => 'array',
         'receta_pdf_config' => 'array'
@@ -65,6 +70,25 @@ class Clinica extends Model
     public function sucursalPrincipal()
     {
         return $this->hasOne(Sucursal::class)->where('es_principal', true);
+    }
+
+    /**
+     * Propietario del consultorio privado
+     */
+    public function propietario()
+    {
+        return $this->belongsTo(User::class, 'propietario_user_id');
+    }
+
+    /**
+     * Todos los usuarios que tienen acceso a esta clínica/consultorio (pivot enriquecido)
+     */
+    public function miembros()
+    {
+        return $this->belongsToMany(User::class, 'user_clinicas')
+                    ->using(UserClinica::class)
+                    ->withPivot(['rol_en_clinica', 'activa', 'invitado_por'])
+                    ->withTimestamps();
     }
 
     // Métodos auxiliares

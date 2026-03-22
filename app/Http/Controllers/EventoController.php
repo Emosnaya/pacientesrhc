@@ -114,13 +114,15 @@ class EventoController extends Controller
             }
 
             $validator = Validator::make($data, [
-                'tipo' => 'required|in:recordatorio,tarea,evento',
+                'tipo' => 'required|in:recordatorio,tarea,evento,bloqueo',
                 'titulo' => 'required|string|max:255',
                 'descripcion' => 'nullable|string|max:1000',
                 'fecha' => 'required|date',
                 'hora' => 'nullable|date_format:H:i',
+                'hora_fin' => 'nullable|date_format:H:i',
                 'color' => 'nullable|string|max:7',
-                'completado' => 'sometimes|boolean'
+                'completado' => 'sometimes|boolean',
+                'todo_el_dia' => 'sometimes|boolean'
             ]);
 
             if ($validator->fails()) {
@@ -143,8 +145,10 @@ class EventoController extends Controller
                 'descripcion' => $data['descripcion'] ?? null,
                 'fecha' => $data['fecha'],
                 'hora' => $data['hora'],
+                'hora_fin' => $data['hora_fin'] ?? null,
                 'color' => $data['color'] ?? $this->getDefaultColor($data['tipo']),
-                'completado' => $data['completado'] ?? false
+                'completado' => $data['completado'] ?? false,
+                'todo_el_dia' => $data['todo_el_dia'] ?? false
             ]);
 
             return response()->json([
@@ -197,13 +201,15 @@ class EventoController extends Controller
             }
 
             $validator = Validator::make($data, [
-                'tipo' => 'sometimes|in:recordatorio,tarea,evento',
+                'tipo' => 'sometimes|in:recordatorio,tarea,evento,bloqueo',
                 'titulo' => 'sometimes|string|max:255',
                 'descripcion' => 'nullable|string|max:1000',
                 'fecha' => 'sometimes|date',
                 'hora' => 'nullable|date_format:H:i',
+                'hora_fin' => 'nullable|date_format:H:i',
                 'color' => 'nullable|string|max:7',
-                'completado' => 'sometimes|boolean'
+                'completado' => 'sometimes|boolean',
+                'todo_el_dia' => 'sometimes|boolean'
             ]);
 
             if ($validator->fails()) {
@@ -216,7 +222,7 @@ class EventoController extends Controller
 
             // Actualizar solo los campos presentes
             $updateData = [];
-            foreach (['tipo', 'titulo', 'descripcion', 'fecha', 'hora', 'color', 'completado'] as $field) {
+            foreach (['tipo', 'titulo', 'descripcion', 'fecha', 'hora', 'hora_fin', 'color', 'completado', 'todo_el_dia'] as $field) {
                 if (array_key_exists($field, $data)) {
                     $updateData[$field] = $data[$field];
                 }
@@ -267,7 +273,8 @@ class EventoController extends Controller
         $colores = [
             'recordatorio' => '#F59E0B', // Amarillo/Naranja
             'tarea' => '#10B981',        // Verde
-            'evento' => '#3B82F6'        // Azul
+            'evento' => '#3B82F6',       // Azul
+            'bloqueo' => '#EF4444'       // Rojo
         ];
 
         return $colores[$tipo] ?? '#3B82F6';

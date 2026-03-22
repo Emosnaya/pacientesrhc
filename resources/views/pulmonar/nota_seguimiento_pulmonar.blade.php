@@ -6,9 +6,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <title>Nota de Seguimiento Pulmonar</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 10px;
+            line-height: 1.3;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 10px 20px;
+        }
         .logo-container { height: 36px; overflow: hidden; display: inline-block; }
         .logo-container img { height: 36px; width: auto; }
-        body { font-family: Arial, sans-serif; font-size: 9px; line-height: 1.3; }
         .paciente { font-size: 10px; }
         .f-bold { font-weight: bold; }
         .f-normal { font-weight: normal; }
@@ -19,107 +27,146 @@
         .medio { position: relative; }
         .texto-izquierda { text-align: left; position: absolute; left: 0; }
         .texto-derecha { text-align: right; position: absolute; right: 0; }
-        .contenedor { position: relative; text-align: justify; margin-bottom: 0; margin-top: 1.5rem; }
-        .titulo { display: inline-block; position: relative; z-index: 1; padding-right: 0.5rem; font-size: 12px; font-weight: bold; }
-        .linea { position: absolute; left: 0; right: 0; top: 0.5rem; border-bottom: 3px solid black; z-index: 0; }
-        .m-t-0 { margin-top: -0.7rem; }
-        .bck-gray { background-color: #DDDEE1; }
-        .tabla { font-size: 10px; margin-bottom: 0.8rem; width: 100%; }
-        .tabla td { padding: 5px 8px; }
-        .border-t { border: 1px solid black; }
+        .section-label { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; padding-bottom: 3px; border-bottom: 2px solid #0A1628; margin-bottom: 5px; margin-top: 8px; }
+        .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #0A1628; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #334155; }
+        .soap-section { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+        .soap-letter { width: 28px; color: white; font-weight: 700; font-size: 14px; text-align: center; padding: 8px 4px; vertical-align: top; }
+        .soap-body { padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: none; vertical-align: top; }
+        .soap-sublabel { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .soap-text { font-size: 10px; color: #334155; }
         .signature { margin-top: 3rem; text-align: center; width: 100%; }
         .signature img { display: block; margin: 0 auto 0.2rem; max-width: 150px; height: auto; }
         .signature-line { border-top: 1px solid #000; width: 250px; margin: 0.2rem auto 0.3rem; }
         .signature-text { font-size: 8px; text-align: center; margin: 0.2rem 0; }
+        /* === HEADER MODERNO === */
+        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { vertical-align: middle; padding: 0; }
+        .header-logo-cell { width: 60px; padding-right: 12px !important; }
+        .header-logo { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; }
+        .header-logo img { max-height: 35px; max-width: 35px; }
+        .header-title { font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.5px; }
+        .header-subtitle { font-size: 9px; color: #94a3b8; }
+        .header-meta-cell { text-align: right; width: 120px; }
+        .header-badge { background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 4px; }
+        .header-badge-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
+        .header-badge-value { font-size: 12px; font-weight: 700; color: white; }
+        .header-date { font-size: 9px; color: #94a3b8; }
+        .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .patient-table { width: 100%; border-collapse: collapse; }
+        .patient-table td { padding: 2px 6px; font-size: 10px; }
+        .patient-name { font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 6px; }
+        .patient-label { color: #64748b; font-size: 9px; }
+        .patient-value { font-weight: 600; color: #334155; }
+        .patient-diagnosis { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 10px; }
+        .patient-diagnosis-label { font-size: 9px; color: #64748b; font-weight: 600; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer-table { width: 100%; }
+        .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
+        .page-footer .clinic-contact { text-align: right; color: #64748b; }
+        .content-wrapper { padding-bottom: 35px; }
     </style>
 </head>
 <body>
-    <header class="mb-0">
-        <div class="paciente ma-t-0 mb-0">
-            <p class="f-bold f-15 text-center mb-0 mt-0">Nota de Seguimiento Pulmonar</p>
-            @if($clinicaLogo)
-            <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-            @endif
-            <div class="medio">
-                <p class="text-sm texto-izquierda mb-0 f-bold">Fecha: {{ $data->fecha_consulta ? $data->fecha_consulta->format('d/m/Y') : '' }}</p>
-                <span class="ml-5 text-right texto-derecha f-bold">Hora: {{ $data->hora_consulta ? \Carbon\Carbon::parse($data->hora_consulta)->format('H:i') : '' }}</span>
-            </div>
-            <br>
-            <p class="f-bold mb-0">Paciente: <span class="f-normal">{{ $paciente->apellidoPat ?? '' }} {{ $paciente->apellidoMat ?? '' }} {{ $paciente->nombre ?? '' }}</span>
-            <span class="f-bold ml-2">Registro: <span class="f-normal">{{ $paciente->registro ?? '' }}</span></span>
-            <span class="f-bold ml-2">Edad: <span class="f-normal">{{ $paciente->edad ?? '' }} años</span></span></p>
-        </div>
-    </header>
+    <!-- PAGE FOOTER (fixed) -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? '' }}</td>
+                <td class="clinic-contact">
+                    {{ $clinica->telefono ?? '' }}
+                    @if($clinica->email ?? null)
+                        | {{ $clinica->email }}
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="content-wrapper">
+    <!-- HEADER -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo-cell">
+                    <div class="header-logo">
+                        @if(isset($clinicaLogo) && $clinicaLogo)
+                            <img src="{{ $clinicaLogo }}" alt="Logo">
+                        @else
+                            <span style="font-size: 24px;">❤️</span>
+                        @endif
+                    </div>
+                </td>
+                <td style="padding-left: 10px;">
+                    <div class="header-title">Nota de Seguimiento Pulmonar</div>
+                    <div class="header-subtitle">Rehabilitación Pulmonar</div>
+                </td>
+                <td class="header-meta-cell">
+                    <div class="header-badge">
+                        <div class="header-badge-label">Registro</div>
+                        <div class="header-badge-value">#{{ $paciente->registro ?? '' }}</div>
+                    </div>
+                    <div class="header-date">{{ $data->fecha_consulta ? $data->fecha_consulta->format('d/m/Y') : '' }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <!-- PATIENT INFO -->
+    <div class="patient-card">
+        <div class="patient-name">{{ $paciente->apellidoPat ?? '' }} {{ $paciente->apellidoMat ?? '' }} {{ $paciente->nombre ?? '' }}</div>
+        <table class="patient-table">
+            <tr>
+                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad ?? '' }} años</span></td>
+                <td><span class="patient-label">Hora:</span> <span class="patient-value">{{ $data->hora_consulta ? \Carbon\Carbon::parse($data->hora_consulta)->format('H:i') : '' }}</span></td>
+            </tr>
+        </table>
+    </div>
 
     <main class="mt-0">
         @if($data->ficha_identificacion)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Ficha de identificación del paciente</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped bck-gray">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->ficha_identificacion }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="section-label">Ficha de identificación</div>
+        <div class="info-block">{{ $data->ficha_identificacion }}</div>
         @endif
 
         @if($data->diagnosticos)
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">Diagnósticos</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped bck-gray">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->diagnosticos }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="section-label">Diagnósticos</div>
+        <div class="info-block">{{ $data->diagnosticos }}</div>
         @endif
 
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">S - Subjetivo</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->s_subjetivo ?: '—' }}</td>
-                </tr>
-            </tbody>
+        <table class="soap-section">
+            <tr>
+                <td class="soap-letter" style="background:#0A1628;">S</td>
+                <td class="soap-body">
+                    <div class="soap-sublabel">Subjetivo</div>
+                    <div class="soap-text">{{ $data->s_subjetivo ?: '—' }}</div>
+                </td>
+            </tr>
         </table>
-
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">O - Objetivo</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped bck-gray">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->o_objetivo ?: '—' }}</td>
-                </tr>
-            </tbody>
+        <table class="soap-section">
+            <tr>
+                <td class="soap-letter" style="background:#1d4ed8;">O</td>
+                <td class="soap-body">
+                    <div class="soap-sublabel">Objetivo</div>
+                    <div class="soap-text">{{ $data->o_objetivo ?: '—' }}</div>
+                </td>
+            </tr>
         </table>
-
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">A - Apreciación</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->a_apreciacion ?: '—' }}</td>
-                </tr>
-            </tbody>
+        <table class="soap-section">
+            <tr>
+                <td class="soap-letter" style="background:#0d9488;">A</td>
+                <td class="soap-body">
+                    <div class="soap-sublabel">Apreciación</div>
+                    <div class="soap-text">{{ $data->a_apreciacion ?: '—' }}</div>
+                </td>
+            </tr>
         </table>
-
-        <div class="contenedor mt-1">
-            <h2 class="h8 titulo">P - Plan</h2>
-        </div>
-        <table class="tabla text-lft border-t text-center table-striped bck-gray">
-            <tbody>
-                <tr>
-                    <td class="f-normal text-lft">{{ $data->p_plan ?: '—' }}</td>
-                </tr>
-            </tbody>
+        <table class="soap-section">
+            <tr>
+                <td class="soap-letter" style="background:#6d28d9;">P</td>
+                <td class="soap-body">
+                    <div class="soap-sublabel">Plan</div>
+                    <div class="soap-text">{{ $data->p_plan ?: '—' }}</div>
+                </td>
+            </tr>
         </table>
 
         @if(isset($firmaBase64) && $firmaBase64)
@@ -133,5 +180,6 @@
         </div>
         @endif
     </main>
+    </div><!-- End content-wrapper -->
 </body>
 </html>

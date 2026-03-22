@@ -425,24 +425,44 @@ class FinanzasController extends Controller
     public function corteCajaDiario(Request $request)
     {
         $user = Auth::user();
+        $periodo = $request->input('periodo', 'dia');
         $fecha = $request->input('fecha', Carbon::today()->toDateString());
+        $mes = $request->input('mes');
+        $anio = $request->input('anio');
+
+        // Calcular fechas según el período
+        if ($periodo === 'mes' && $mes) {
+            // Formato esperado: YYYY-MM
+            $fechaInicio = Carbon::parse($mes . '-01')->startOfMonth()->toDateString();
+            $fechaFin = Carbon::parse($mes . '-01')->endOfMonth()->toDateString();
+            $etiquetaPeriodo = Carbon::parse($mes)->locale('es')->isoFormat('MMMM YYYY');
+        } elseif ($periodo === 'anio' && $anio) {
+            $fechaInicio = Carbon::create($anio, 1, 1)->startOfYear()->toDateString();
+            $fechaFin = Carbon::create($anio, 12, 31)->endOfYear()->toDateString();
+            $etiquetaPeriodo = $anio;
+        } else {
+            // Por defecto: día
+            $fechaInicio = $fecha;
+            $fechaFin = $fecha;
+            $etiquetaPeriodo = Carbon::parse($fecha)->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
+        }
 
         // Total por método de pago (ingresos)
         $totalesPorMetodo = Pago::where('clinica_id', $user->clinica_id)
-            ->byDate($fecha)
+            ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
             ->select('metodo_pago', DB::raw('COUNT(*) as cantidad'))
             ->groupBy('metodo_pago')
             ->get()
-            ->map(function($item) {
+            ->map(function($item) use ($user, $request, $fechaInicio, $fechaFin) {
                 // Obtener el monto total desencriptado para este método
                 $pagos = Pago::where('metodo_pago', $item->metodo_pago)
-                    ->byDate(request()->input('fecha', Carbon::today()->toDateString()))
-                    ->where('clinica_id', auth()->user()->clinica_id)
-                    ->when(request()->filled('sucursal_id'), function($q) {
-                        $q->where('sucursal_id', request()->sucursal_id);
+                    ->betweenDates($fechaInicio, $fechaFin)
+                    ->where('clinica_id', $user->clinica_id)
+                    ->when($request->filled('sucursal_id'), function($q) use ($request) {
+                        $q->where('sucursal_id', $request->sucursal_id);
                     })
                     ->get();
                 
@@ -459,7 +479,7 @@ class FinanzasController extends Controller
 
         // Total general de ingresos (pagos)
         $todosPagos = Pago::where('clinica_id', $user->clinica_id)
-            ->byDate($fecha)
+            ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
@@ -471,9 +491,9 @@ class FinanzasController extends Controller
 
         $cantidadPagos = $todosPagos->count();
 
-        // Total de egresos del día
+        // Total de egresos del período
         $todosEgresos = Egreso::where('clinica_id', $user->clinica_id)
-            ->byDate($fecha)
+            ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
@@ -485,33 +505,37 @@ class FinanzasController extends Controller
 
         $cantidadEgresos = $todosEgresos->count();
 
-        // Balance del día
+        // Balance del período
         $balance = $totalIngresos - $totalEgresos;
 
-        // Últimos pagos del día
+        // Últimos pagos del período
         $ultimosPagos = Pago::with(['paciente', 'usuario', 'clinica', 'sucursal'])
             ->where('clinica_id', $user->clinica_id)
-            ->byDate($fecha)
+            ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
             ->latest()
-            ->limit(10)
+            ->limit(50)
             ->get();
 
-        // Últimos egresos del día
+        // Últimos egresos del período
         $ultimosEgresos = Egreso::with(['usuario', 'clinica', 'sucursal'])
             ->where('clinica_id', $user->clinica_id)
-            ->byDate($fecha)
+            ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
             ->latest()
-            ->limit(10)
+            ->limit(50)
             ->get();
 
         return response()->json([
             'fecha' => $fecha,
+            'periodo' => $periodo,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+            'etiqueta_periodo' => $etiquetaPeriodo,
             'totales_por_metodo' => $totalesPorMetodo,
             'total_ingresos' => $totalIngresos,
             'total_egresos' => $totalEgresos,
@@ -652,13 +676,13 @@ class FinanzasController extends Controller
     {
         $user = Auth::user();
 
-        // Verificar que el paciente pertenece a la misma clínica
-        $paciente = Paciente::where('clinica_id', $user->clinica_id)
+        // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
+        $paciente = Paciente::where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($pacienteId);
 
         $pagos = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
             ->where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->orderBy('created_at', 'desc')
             ->get();
 

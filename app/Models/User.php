@@ -35,7 +35,18 @@ class User extends Authenticatable
         'email_verified',
         'clinica_id',
         'sucursal_id',
-        'rol'
+        'clinica_activa_id',
+        'rol',
+        // Suscripción para consultorios privados
+        'tiene_suscripcion_consultorio',
+        'plan_consultorio',
+        'ciclo_facturacion',
+        'stripe_customer_id',
+        'stripe_subscription_id',
+        'suscripcion_inicio',
+        'suscripcion_fin',
+        'trial_ends_at',
+        'consultorios_adicionales_comprados',
     ];
 
     /**
@@ -58,12 +69,16 @@ class User extends Authenticatable
         'isAdmin' => 'boolean',
         'isSuperAdmin' => 'boolean',
         'email_verified' => 'boolean',
+        'tiene_suscripcion_consultorio' => 'boolean',
+        'suscripcion_inicio' => 'datetime',
+        'suscripcion_fin' => 'datetime',
+        'trial_ends_at' => 'datetime',
     ];
 
     /**
      * Atributos que se agregan al serializar (JSON) para API / sidebar / expedientes
      */
-    protected $appends = ['titulo_profesional', 'nombre_con_titulo'];
+    protected $appends = ['titulo_profesional', 'nombre_con_titulo', 'clinica_efectiva_id'];
 
     /**
      * Título profesional según rol: Dr., Dra., Lic. (vacío si no aplica)
@@ -90,6 +105,36 @@ class User extends Authenticatable
     public function clinica()
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    /**
+     * Clínica activa seleccionada (consultorio privado u otra clínica en la que trabaja).
+     * Si es null, se usa clinica_id como fallback.
+     */
+    public function clinicaActiva()
+    {
+        return $this->belongsTo(Clinica::class, 'clinica_activa_id');
+    }
+
+    /**
+     * Todas las clínicas/consultorios a los que pertenece este usuario (pivot user_clinicas)
+     */
+    public function clinicas()
+    {
+        return $this->belongsToMany(Clinica::class, 'user_clinicas')
+                    ->using(UserClinica::class)
+                    ->withPivot(['rol_en_clinica', 'activa', 'invitado_por'])
+                    ->withTimestamps();
+    }
+
+    /**
+     * ID de la clínica efectiva: clinica_activa_id si está seteada, si no la clinica_id original.
+     * Usar en todos los controllers en vez de $user->clinica_id cuando el usuario puede
+     * pertenecer a múltiples espacios de trabajo.
+     */
+    public function getClinicaEfectivaIdAttribute(): ?int
+    {
+        return $this->clinica_activa_id ?? $this->clinica_id;
     }
 
     /**
@@ -320,5 +365,73 @@ class User extends Authenticatable
             // Usuarios no-admin verifican permisos específicos
             return $this->hasPermissionOn($paciente, $permission);
         }
+    }
+
+    // ========== MÉTODOS DE SUSCRIPCIÓN PARA CONSULTORIOS PRIVADOS ==========
+
+    /**
+     * Verificar si el usuario tiene suscripción activa para consultorios privados
+     */
+    public function tieneSuscripcionConsultorioActiva(): bool
+    {
+        if (!$this->tiene_suscripcion_consultorio) {
+            return false;
+        }
+
+        // Si está en trial
+        if ($this->trial_ends_at && now()->lessThan($this->trial_ends_at)) {
+            return true;
+        }
+
+        // Si tiene suscripción pagada activa
+        if ($this->suscripcion_fin && now()->lessThan($this->suscripcion_fin)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si puede crear consultorios privados
+     */
+    public function puedeCrearConsultorios(): bool
+    {
+        return $this->tieneSuscripcionConsultorioActiva();
+    }
+
+    /**
+     * Obtener cantidad de consultorios privados que puede tener
+     */
+    public function getLimiteConsultoriosAttribute(): int
+    {
+        if (!$this->tieneSuscripcionConsultorioActiva()) {
+            return 0;
+        }
+
+        // 1 consultorio incluido en el plan + adicionales comprados
+        return 1 + ($this->consultorios_adicionales_comprados ?? 0);
+    }
+
+    /**
+     * Obtener cantidad de consultorios privados que tiene actualmente
+     */
+    public function getCantidadConsultoriosPrivadosAttribute(): int
+    {
+        return $this->clinicas()
+            ->where('clinicas.es_consultorio_privado', true)
+            ->wherePivot('activa', true)
+            ->count();
+    }
+
+    /**
+     * Verificar si puede crear un consultorio adicional
+     */
+    public function puedeCrearConsultorioAdicional(): bool
+    {
+        if (!$this->tieneSuscripcionConsultorioActiva()) {
+            return false;
+        }
+
+        return $this->cantidad_consultorios_privados < $this->limite_consultorios;
     }
 }

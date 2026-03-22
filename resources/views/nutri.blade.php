@@ -1,801 +1,896 @@
-
 <!doctype html>
-<html lang="en">
-  <head>
-    <!-- Required meta tags -->
+<html lang="es">
+<head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-    <!-- Bootstrap CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Valoración Nutricional</title>
     <style>
-        /* Estilo para el logo */
-        .logo-container {
-            height: 36px;
-            overflow: hidden;
-            display: inline-block;
+        /* === RESET & BASE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .logo-container img {
-            height: 36px;
-            width: auto;
-        }
-        /* Estilo para la línea de firma */
-        .signature {
-        text-align: center;
-        width: 100%;
-        margin-top: 5rem
-    }
-    .line {
-        display: inline-block;
-        border-top: 1px solid black;
-        width: 20%;
-        margin-top: 4rem;
-        margin-right: 2rem;
-        margin-left: 2rem
-        padding: 1rem;
-    }
-    .text {
-        font-size: 9.5px;
-        text-align: center;
-        width: 100%; /* Espacio entre línea y texto */
-    }
-        .tabla{
-            font-size: 8.5px;
-            margin-bottom: 0;
-            width: 100%
-        }
-        .f-10{
-          font-size: 10px;
-        }
-        .f-15{
-          font-size: 15px;
-        }
-        .f-7{
-          font-size: 7px;
-        }
-        .paciente{
-            font-size: 12px
-        }
-        .text-right{
-            text-align: right;
-        }
-        .f-bold{
-            font-weight: bold;
-        }
-        .f-normal{
-            font-weight: normal
-        }
-        .text-lft{
-            text-align: left;
-        }
-        .text-ctr{
-            text-align: center;
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 10px;
+            line-height: 1.3;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 10px 20px;
         }
 
-        .flex{
-          display: flex;
+        /* === COLORS === */
+        :root {
+            --primary: #0A1628;
+            --primary-light: #1e3a5f;
+            --accent: #3b82f6;
+            --accent-light: #60a5fa;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-500: #64748b;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
         }
 
-        .container-g {
-        width: 100%;
-    }
-    .table-container-g {
-        width: 40%;
-        float: right;
-    }
-    .text-container-g {
-        width: 50%;
-        float: left;
-    }
-    .table-g {
-        border: 1px solid black;
-        width: 100%;
-    }
-    .border-t{
-      border: 1px solid black;
-    }
-    .border-l{
-      border-left: 1px solid black;
-    }
-    .border-r{
-      border-right: 1px solid black;
-    }
-    .border-b{
-      border-bottom: 1px solid black;
-    }
-    .b-dark{
-      background-color: #000;
-      color: white;
-      
-    }
-    .b-w{
-      background-color: #ffffff;
-      color: black;
-      
-    }
-    .coments{
-      position: absolute;
-        top: 0;
-        left: 0;
-    }
-    .txt{
-      width: 20%;
-      margin-left: 1.5rem;
-      margin-right: 5rem;
-    }
-    .ma-t-0{
-      margin-top: 0px;
-    }
-    .medio{
-      position: relative;
-    }
-  
-  .texto-izquierda {
-    text-align: left; /* Alinear a la izquierda */
-    position: absolute; /* Posicionamiento absoluto */
-    left: 0; /* /* Alinear a la izquierda */
-  }
-  
-  .texto-derecha {
-    text-align: right; /* Alinear a la derecha */
-    position: absolute; /* Posicionamiento absoluto */
-    right: 0;; /* Alinear a la derecha */
-  }
-  .contenedor {
-    position: relative; /* Establece contexto de posición */
-    text-align:justify; /* Alinea contenido al centro horizontalmente */
-    margin-bottom: 0; /* Espacio opcional al final del contenedor */
-  }
-  
-  .titulo {
-    display: inline-block;/* Hace que el título sea un bloque en línea */ /* Opcional: fondo blanco detrás del título */ /* Espaciado opcional alrededor del título */
-    position: relative; /* Establece contexto de posición */
-    z-index: 1; /* Asegura que el título esté por encima de la línea */
-  }
-  .m-t-2{
-    margin-top: -1rem;
-  }
-  .m-t-3{
-    margin-top: -2rem;
-  }
-  .m-t-07{
-    margin-top: -0.7rem;
-  }
-  .m-t-0{
-    margin-top: -1rem;
-  }
-
-  .linea-bott{
-    border-bottom: 1px solid black
-  }
-  
-  .linea {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 4rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-des {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 6.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-med {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 16rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-is {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-ar {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5.5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-pu {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 7.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-t {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 0; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .backgr-black{
-    background-color: #000
-  }
-  .bck-gray{
-    background-color: #DDDEE1  ;
-  }
-        .container {
-            width: 800px;
-            margin-top: 15px;
-            position: relative;
-            background: #fff;
-            padding-left: 60px; /* Aumenta el espacio a la izquierda */
-            padding-right: 60px; /* Aumenta el espacio a la derecha */
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        /* === HEADER === */
+        .header {
+            width: 100%;
+            background: #0A1628;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
         }
 
-        .section {
-            border: 1px solid #000;
-            position: absolute;
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+            padding: 0;
+        }
+
+        .header-logo-cell {
+            width: 60px;
+            padding-right: 12px !important;
+        }
+
+        .header-logo {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 6px;
             padding: 5px;
-            background: #fff;
-            margin-bottom: 20px; /* Espacio entre cajas */
-        }
-
-        /* Líquidos */
-        .liquidos {
-            top: 10px;
-            left:  0;
-            width: 220px;
-            height: 130px;
-            bottom: 15px;
-        }
-
-        /* Presión Arterial */
-        .presion {
-            top: 10px;
-            right: 20px;
-            width: 220px;
-            height: 90px;
-        }
-
-        /* Comidas */
-        .comidas {
-            top: 160px;
-            left: 0;
-            width: 220px;
-            height: 60px;
-        }
-
-        /* Cintura */
-        .cintura {
-            top: 120px;
-            right: 20px;
-            width: 220px;
-            height: 70px;
-        }
-
-        /* Actividad Física */
-        .actividad {
-            top: 160px;
-            left: 0;
-            width: 220px;
-            height: 130px;
-        }
-
-        /* IMC */
-        .imc {
-            top: 210px;
-            right: 20px;
-            width: 220px;
-            height: 130px;
-        }
-
-        /* Medicamentos */
-        .medicamentos {
-            top: 310px;
-            left: 0;
-            width: 220px;
-            height: 160px;
-        }
-
-        /* Indicadores adicionales */
-        .indicadores {
-            top: 360px;
-            right: 20px;
-            width: 220px;
-            height: 180px;
-        }
-
-        /* Icono central */
-        .icono-central {
-            position: absolute;
-            margin: 0 auto;
-            height: 6px;
-            width: 4px;
-            left: 240px;
-            top: 240px
-
-        }
-
-
-        h3 {
-            font-size: 14px;
-            margin: 5px 0;
             text-align: center;
-            background-color: #007bff;
-            color: #fff;
         }
 
-        p {
+        .header-logo img {
+            max-height: 35px;
+            max-width: 35px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .header-meta-cell {
+            text-align: right;
+            width: 120px;
+        }
+
+        .header-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+
+        .header-badge-label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+        }
+
+        .header-badge-value {
             font-size: 12px;
-            margin: 5px 0;
+            font-weight: 700;
+            color: white;
         }
-        .container-diag {
-          margin-top: 52rem;
-          width: 90%;
-}
 
-/* Sección con título */
-.section-diag {
-    margin-bottom: 12px; /* Espacio entre secciones */
-    border: 1px solid #ccc;
-}
+        .header-date {
+            font-size: 9px;
+            color: #94a3b8;
+        }
 
-.section-title {
-    background-color: #3b82f6; /* Azul */
-    color: white;
-    font-weight: bold;
-    padding: 1px;
-    text-align: left;
-}
+        /* === PATIENT INFO === */
+        .patient-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
 
-/* Líneas entre los párrafos */
-.section-content p {
-    margin: 10px 0;
-    text-align: justify;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 5px;
-}
+        .patient-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-/* Último párrafo sin línea */
-.section-content p:last-child {
-    border-bottom: none;
-}
-.diet-section {
-    margin: 20px 0; /* Espacio arriba y abajo */
-    overflow: hidden; /* Asegura que los flotantes no rompan el contenedor */
-    border: 1px solid #ccc;
-}
+        .patient-table td {
+            padding: 3px 8px;
+            font-size: 10px;
+        }
 
-.diet-title {
-    background-color: #3b82f6; /* Azul similar */
-    color: white;
-    font-weight: bold;
-    padding: 10px;
-    text-align: left;
-    margin-top: 20px;
-}
+        .patient-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0A1628;
+            margin-bottom: 8px;
+        }
 
-.marg-5{
-  margin-top: 20px;
-}
+        .patient-label {
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+        }
 
-.diet-item {
-    overflow: hidden;
-    margin: 10px 0;
-    border-bottom: 1px solid #ccc; /* Línea separadora */
-    padding-bottom: 10px;
-}
+        .patient-value {
+            font-weight: 600;
+            color: #334155;
+        }
 
-.diet-item:last-child {
-    border-bottom: none; /* Quitar línea del último elemento */
-}
+        .patient-diagnosis {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+        }
 
-.diet-icon img {
-    max-width: 80%; /* Tamaño de la imagen */
-    max-height: 80%;
-}
+        .patient-diagnosis-label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
 
-.diet-content {
-    overflow: hidden; /* Evita que el texto se rompa con el flotante */
-    font-size: 14px;
-}
+        .patient-diagnosis-value {
+            font-size: 10px;
+            color: #334155;
+        }
 
-.diet-content strong {
-    font-weight: bold;
-    color: #333;
-}
+        /* === METRICS TABLE === */
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
 
-.paciente-container {
-    width: 100%;
-    overflow: hidden;
-    border-bottom: 1px solid #ccc; /* Limpia flotantes */
-}
+        .metrics-table td {
+            width: 16.66%;
+            text-align: center;
+            padding: 10px 5px;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
 
-.paciente-info {
-    float: left; /* Columna izquierda */
-    width: 30%; /* Ocupa el 30% del contenedor */
-}
+        .metrics-table td.highlight {
+            background: #0A1628;
+            color: white;
+            border-color: #0A1628;
+        }
 
-.paciente-content {
-    float: left; /* Columna derecha */
-    width: 68%; /* Ocupa el 70% restante */
-    text-align: justify;
-}
+        .metric-label {
+            font-size: 8px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
 
-/* Opcional: Limpiar flotantes después del contenedor */
-.paciente-container::after {
-    content: "";
-    display: table;
-    clear: both;
-}
-.marg-final{
-    margin-top: 12rem
-  }
-  .medio{
-      position: relative;
-    }
+        .metrics-table td.highlight .metric-label {
+            color: #94a3b8;
+        }
 
-    .txt-blue{
-    color: #255FA5;
-  }
-  .txt-r{
-    color: #FB0006;
-  }
+        .metric-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0A1628;
+        }
+
+        .metrics-table td.highlight .metric-value {
+            color: white;
+        }
+
+        .metric-unit {
+            font-size: 9px;
+            font-weight: 400;
+            color: #64748b;
+        }
+
+        .metrics-table td.highlight .metric-unit {
+            color: #94a3b8;
+        }
+
+        /* === SECTIONS === */
+        .section {
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0A1628;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #0A1628;
+        }
+
+        .section-content {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        /* === DATA TABLE === */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .data-table td {
+            width: 50%;
+            vertical-align: top;
+            padding: 0 5px;
+        }
+
+        .data-row {
+            padding: 5px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 10px;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            color: #64748b;
+            font-size: 9px;
+        }
+
+        .data-value {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        /* === DIAGNOSIS BOX === */
+        .diagnosis-box {
+            background: #0A1628;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            color: white;
+            page-break-inside: avoid;
+        }
+
+        .diagnosis-title {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .diagnosis-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .diagnosis-table td {
+            padding: 4px 0;
+            font-size: 9px;
+            vertical-align: top;
+        }
+
+        .diagnosis-check {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #64748b;
+            border-radius: 3px;
+            text-align: center;
+            line-height: 12px;
+            font-size: 9px;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .diagnosis-check.active {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        /* === OBSERVATIONS === */
+        .observations-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #3b82f6;
+            border-radius: 0 6px 6px 0;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .observations-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0A1628;
+            margin-bottom: 5px;
+        }
+
+        .observations-text {
+            color: #334155;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        /* === RECOMMENDATIONS === */
+        .recommendations-box {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .recommendations-header {
+            background: #10b981;
+            color: white;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .recommendations-list {
+            padding: 8px 12px;
+        }
+
+        .recommendation-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 9px;
+        }
+
+        .recommendation-item:last-child {
+            border-bottom: none;
+        }
+
+        .recommendation-check {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 2px;
+            display: inline-block;
+            text-align: center;
+            line-height: 10px;
+            font-size: 8px;
+            color: white;
+            margin-right: 6px;
+        }
+
+        .recommendation-check.active {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        /* === DIET SECTION === */
+        .diet-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .diet-header {
+            background: #f59e0b;
+            color: white;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .diet-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .diet-table td {
+            width: 50%;
+            padding: 8px 10px;
+            vertical-align: top;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        .diet-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .diet-icon img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .diet-name {
+            font-weight: 700;
+            color: #0A1628;
+            font-size: 10px;
+        }
+
+        .diet-desc {
+            font-size: 9px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* === FOOTER === */
+        .footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #0A1628;
+        }
+
+        .professional-info {
+            margin-bottom: 10px;
+        }
+
+        .professional-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0A1628;
+        }
+
+        .professional-cedula {
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        /* === PAGE FOOTER === */
+        .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 25px;
+            background: white;
+            border-top: 2px solid #0A1628;
+            font-size: 9px;
+        }
+
+        .page-footer-table {
+            width: 100%;
+        }
+
+        .page-footer .clinic-name {
+            font-weight: 700;
+            color: #3b82f6;
+        }
+
+        .page-footer .clinic-contact {
+            text-align: right;
+            color: #64748b;
+        }
+
+        .page-footer .email {
+            color: #ef4444;
+        }
+
+        /* Space for fixed footer */
+        .content-wrapper {
+            padding-bottom: 40px;
+        }
+
+        /* === PRINT STYLES === */
+        @media print {
+            body {
+                padding: 10px;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+
+            .section, .diagnosis-box, .observations-box, .recommendations-box, .diet-box {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* === INDICATOR TABLE === */
+        .indicator-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .indicator-table td {
+            width: 33.33%;
+            text-align: center;
+            padding: 8px 5px;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        .indicator-label {
+            font-size: 8px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .indicator-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0A1628;
+        }
+
+        .indicator-value small {
+            font-size: 8px;
+            color: #64748b;
+            font-weight: normal;
+        }
     </style>
-  </head>
-  <body>
-    <header class="mb-0">
-      <div class="paciente ma-t-0 mb-0">
-        <p class="f-bold f-15 text-center mb-0 mt-0">Valoración Nutricional</p>
-        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-        <div class="medio">
-          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->created_at))}} </p>
+</head>
+<body>
+    <!-- PAGE FOOTER (fixed) -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? 'Clínica' }}</td>
+                <td class="clinic-contact">
+                    {{ $clinica->telefono ?? '' }}
+                    @if($clinica->email ?? null)
+                        | <span class="email">{{ $clinica->email }}</span>
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="content-wrapper">
+    <!-- HEADER -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo-cell">
+                    <div class="header-logo">
+                        @if(isset($clinicaLogo) && $clinicaLogo)
+                            <img src="{{ $clinicaLogo }}" alt="Logo">
+                        @else
+                            <span style="font-size: 24px;">🩺</span>
+                        @endif
+                    </div>
+                </td>
+                <td style="padding-left: 10px;">
+                    <div class="header-title">Valoración Nutricional</div>
+                    <div class="header-subtitle">Evaluación integral del estado nutricional</div>
+                </td>
+                <td class="header-meta-cell">
+                    <div class="header-badge">
+                        <div class="header-badge-label">Registro</div>
+                        <div class="header-badge-value">#{{ $paciente->registro }}</div>
+                    </div>
+                    <div class="header-date">{{ date('d/m/Y', strtotime($data->created_at)) }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- PATIENT INFO -->
+    <div class="patient-card">
+        <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
+        <table class="patient-table">
+            <tr>
+                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
+                <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</span></td>
+                <td><span class="patient-label">Teléfono:</span> <span class="patient-value">{{ $paciente->telefono }}</span></td>
+                <td><span class="patient-label">Email:</span> <span class="patient-value">{{ $paciente->email }}</span></td>
+            </tr>
+        </table>
+        @if($paciente->diagnostico)
+        <div class="patient-diagnosis">
+            <div class="patient-diagnosis-label">Diagnóstico</div>
+            <div class="patient-diagnosis-value">{{ $paciente->diagnostico }}</div>
         </div>
-          <p class="f-bold mt-4 mb-0">Registro: {{$paciente->registro}}</p>
-          <p  class="f-bold mt-0 mb-0 text-2xl">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span>
-            <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span>
-            <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span>
-            <span class="f-bold">  Correo: <span  class="f-normal">{{$paciente->email}}</span></span>
-            <span class="f-bold ml-2">  Teléfono: <span  class="f-normal">{{($paciente->telefono)}}</span></span>
-          </p>
-          <p class=" texto-izquierda mb-0 f-bold mt-0">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
-      </div>
-    </header>
-    <div class="container mt-4">
-      <!-- Bloques de información -->
-      <div class="section liquidos">
-          <h3>Recordatorio de 24h</h3>
-          <p>{{$data->recomendacion ?? 'Sin recordatorio.'}}</p>
-      </div>
+        @endif
+    </div>
 
-      <div class="section presion">
-          <h3>Presión arterial</h3>
-          <p class="ml-2 mt-2 font-bold"><span class="linea-bott">{{$data->sistolica}}</span> / <span class="linea-bott mr-2">{{$data->diastolica}}</span>  mmHG</p>
-      </div>
+    <!-- METRICS -->
+    <table class="metrics-table">
+        <tr>
+            <td class="highlight">
+                <div class="metric-label">Peso</div>
+                <div class="metric-value">{{ $paciente->peso }} <span class="metric-unit">kg</span></div>
+            </td>
+            <td class="highlight">
+                <div class="metric-label">Talla</div>
+                <div class="metric-value">{{ $paciente->talla }} <span class="metric-unit">cm</span></div>
+            </td>
+            <td class="highlight">
+                <div class="metric-label">IMC</div>
+                <div class="metric-value">{{ round($paciente->imc, 2) }}</div>
+            </td>
+            <td>
+                <div class="metric-label">Presión</div>
+                <div class="metric-value">{{ $data->sistolica }}/{{ $data->diastolica }}</div>
+            </td>
+            <td>
+                <div class="metric-label">Cintura</div>
+                <div class="metric-value">{{ $paciente->cintura }} <span class="metric-unit">cm</span></div>
+            </td>
+            <td>
+                <div class="metric-label">Estado</div>
+                <div class="metric-value" style="font-size: 11px;">{{ $data->estado ?? 'N/A' }}</div>
+            </td>
+        </tr>
+    </table>
 
-      <div class="section cintura">
-          <h3>Cintura</h3>
-          <p class="ml-2 mt-2"><span  class="f-normal linea-bott">{{$paciente->cintura}}</span> cm</p>
-      </div>
+    <!-- TWO COLUMNS - TABLE -->
+    <table class="data-table">
+        <tr>
+            <!-- ACTIVIDAD FÍSICA -->
+            <td>
+                <div class="section">
+                    <div class="section-title">Actividad Física</div>
+                    <div class="section-content">
+                        <div class="data-row">
+                            <span class="data-label">Realiza actividad:</span>
+                            <span class="data-value">{{ $data->actividad ?? 'No' }}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Días por semana:</span>
+                            <span class="data-value">{{ $data->actividadDias ?? 0 }} días</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Minutos al día:</span>
+                            <span class="data-value">{{ $data->minutosDia ?? 0 }} min</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Fórmula:</span>
+                            <span class="data-value">{{ $data->formula ?? 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <!-- CONTROL DE MEDICAMENTOS -->
+            <td>
+                <div class="section">
+                    <div class="section-title">Control de Medicamentos</div>
+                    <div class="section-content">
+                        <div class="data-row">
+                            <span class="data-label">Control glucosa:</span>
+                            <span class="data-value">@if ($data->Controlglucosa === "1" || $data->Controlglucosa === "true") Sí @else No @endif</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Control lípidos:</span>
+                            <span class="data-value">@if ($data->lipidos === "1" || $data->lipidos === "true") Sí @else No @endif</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Control peso:</span>
+                            <span class="data-value">@if ($data->controlPeso === "1" || $data->controlPeso === "true") Sí @else No @endif</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Control presión:</span>
+                            <span class="data-value">@if ($data->controlPresion === "1" || $data->controlPresion === "true") Sí @else No @endif</span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-      <div class="section actividad">
-          <h3>Actividad</h3>
-          <p>Actividad física: <span class="linea-bott">{{$data->actividad ?? 'No'}}</span></p>
-          <p>Días por semana: <span class="linea-bott">{{$data->actividadDias ?? 0}}</span></p>
-          <p>Minutos al día: <span class="linea-bott">{{$data->minutosDia ?? 0}}</span></p>
-          <p>Fórmula: <span class="linea-bott">{{$data->formula ?? 'N/A'}}</span></p>
-      </div>
+    <!-- INDICADORES BIOQUÍMICOS -->
+    <div class="section">
+        <div class="section-title">Indicadores Bioquímicos</div>
+        <table class="indicator-table">
+            <tr>
+                <td>
+                    <div class="indicator-label">Glucosa</div>
+                    <div class="indicator-value">{{ $data->glucosa ?? 0 }} <small>mg/dL</small></div>
+                </td>
+                <td>
+                    <div class="indicator-label">Triglicéridos</div>
+                    <div class="indicator-value">{{ $data->trigliceridos ?? 0 }} <small>mg/dL</small></div>
+                </td>
+                <td>
+                    <div class="indicator-label">HDL</div>
+                    <div class="indicator-value">{{ $data->hdl ?? 0 }} <small>mg/dL</small></div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="indicator-label">Colesterol</div>
+                    <div class="indicator-value">{{ $data->colesterol ?? 0 }} <small>mg/dL</small></div>
+                </td>
+                <td>
+                    <div class="indicator-label">LDL</div>
+                    <div class="indicator-value">{{ $data->ldl ?? 0 }} <small>mg/dL</small></div>
+                </td>
+                <td>
+                    <div class="indicator-label">Otro</div>
+                    <div class="indicator-value" style="font-size: 11px;">{{ $data->otro ?? 'N/A' }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-      <div class="section imc">
-          <h3>Índice de masa corporal</h3>
-          <p>Peso: <span  class="f-normal linea-bott">{{$paciente->peso}}</span> kg</p>
-          <p>Talla: <span class="f-normal linea-bott">{{$paciente->talla}}</span> cm</p>
-          <p>IMC: <span  class="f-normal linea-bott">{{round($paciente->imc,2)}}</span></p>
-          <p>Estado: <span class="linea-bott">{{$data->estado ?? 'N/A'}}</p>
-      </div>
+    <!-- RECORDATORIO 24H -->
+    @if($data->recomendacion)
+    <div class="observations-box">
+        <div class="observations-title">Recordatorio de 24 horas</div>
+        <div class="observations-text">{{ $data->recomendacion }}</div>
+    </div>
+    @endif
 
-      <div class="section medicamentos">
-          <h3>Medicamentos</h3>
-          <p>Control de glucosa: @if ($data->Controlglucosa === "1" || $data->Controlglucosa === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Control de lípidos: @if ($data->lipidos === "1" || $data->lipidos === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Control de peso: @if ($data->controlPeso === "1" || $data->controlPeso === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-          <p>Control de presión: @if ($data->controlPresion === "1" || $data->controlPresion === "true") <span class="f-normal linea-bott">Si</span> @else <span class="f-normal linea-bott">No</span> @endif</p>
-      </div>
+    <!-- DIAGNÓSTICO NUTRICIONAL -->
+    <div class="diagnosis-box">
+        <div class="diagnosis-title">Diagnóstico Nutricional</div>
+        <table class="diagnosis-table">
+            <tr>
+                <td><span class="diagnosis-check @if($data->diagnostico === "1") active @endif">@if($data->diagnostico === "1")✔@endif</span> Paciente en Obesidad que cumple criterios para Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "2") active @endif">@if($data->diagnostico === "2")✔@endif</span> Paciente en Sobrepeso que cumple criterios para Síndrome Metabólico.</td>
+            </tr>
+            <tr>
+                <td><span class="diagnosis-check @if($data->diagnostico === "3") active @endif">@if($data->diagnostico === "3")✔@endif</span> Paciente en Sobrepeso sin Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "4") active @endif">@if($data->diagnostico === "4")✔@endif</span> Paciente en Obesidad sin Síndrome Metabólico.</td>
+            </tr>
+            <tr>
+                <td><span class="diagnosis-check @if($data->diagnostico === "5") active @endif">@if($data->diagnostico === "5")✔@endif</span> Paciente en Normopeso.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "6") active @endif">@if($data->diagnostico === "6")✔@endif</span> Paciente en Normopeso que cumple criterios para Síndrome Metabólico.</td>
+            </tr>
+            <tr>
+                <td><span class="diagnosis-check @if($data->diagnostico === "7") active @endif">@if($data->diagnostico === "7")✔@endif</span> Paciente en Infrapeso, se recomienda visita con Nutrición.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "8") active @endif">@if($data->diagnostico === "8")✔@endif</span> Paciente en Obesidad Mórbida.</td>
+            </tr>
+        </table>
+    </div>
 
-      <div class="section indicadores">
-          <h3>Indicadores</h3>
-          <p>Glucosa: <span  class="f-normal linea-bott">{{$data->glucosa ?? 0}}</span></p>
-          <p>Triglicéridos: <span  class="f-normal linea-bott">{{$data->trigliceridos ?? 0}}</span></p>
-          <p>HDL: <span  class="f-normal linea-bott">{{$data->hdl ?? 0}}</span></p>
-          <p>Colesterol total: <span  class="f-normal linea-bott">{{$data->colesterol ?? 0}}</span></p>
-          <p>LDL: <span  class="f-normal linea-bott">{{$data->ldl ?? 0}}</span></p>
-          <p>Otro: @if ($data->otro) <span class="f-normal">{{$data->otro}}</span>  @else <span class="f-normal">N/A</span> @endif</p>
-      </div>
+    <!-- OBSERVACIONES -->
+    <div class="observations-box">
+        <div class="observations-title">Observaciones</div>
+        <div class="observations-text">{{ $data->observaciones ?? 'Sin observaciones.' }}</div>
+    </div>
 
-      @if ($paciente->genero==1)
-      <img src="img/person-solid.svg" class="icono-central" alt="">
-      @else
-      <img src="img/person-dress-solid.svg" class="icono-central" alt="">
-      @endif
-  </div>
-  <div class="container-diag ml-4">
-    <!-- Sección Diagnóstico -->
-    <div class="section-diag">
-        <div class="section-title text-xl">Diagnóstico</div>
-        <div class="section-content text-md">
-            <p class="ml-2">@if ($data->diagnostico==="1")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __  
-            @endif Paciente en Obesidad que cumple los criterios armonizados para Síndrome Metabólico.</p>
-            <p class="ml-2">@if ($data->diagnostico==="2")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __  
-            @endif Paciente en Sobrepeso que cumple los criterios armonizados para Síndrome Metabólico. Paciente en Sobrepeso sin Síndrome Metabólico.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="3")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Paciente en Sobrepeso sin Síndrome Metabólico.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="4")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __  
-            @endif Paciente en Obesidad sin Síndrome Metabólico.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="5")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __
-            @endif Paciente en Normopeso.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="6")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Paciente en Normopeso que cumple los criterios armonizados para Síndrome Metabólico.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="7")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __ 
-            @endif Paciente en Infrapeso, se recomienda visita subsecuente con Nutrición para descartar desnutrición.</p>
-            <p  class="ml-2">@if ($data->diagnostico==="8")
-              <img src="img/check-solid-black.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-            @else __  
-            @endif Paciente en Obesidad Morbida.</p>
+    <!-- RECOMENDACIONES -->
+    @php
+        $recomendaciones = json_decode($data->recomendaciones);
+    @endphp
+    <div class="recommendations-box">
+        <div class="recommendations-header">Recomendaciones Específicas</div>
+        <div class="recommendations-list">
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[0]) && $recomendaciones[0] === true) active @endif">@if(isset($recomendaciones[0]) && $recomendaciones[0] === true)✔@endif</div>
+                <span>Evitar el consumo de azúcares (azúcar de mesa, mascabado, mieles, mermeladas, cajeta, lechera) así como productos con azúcares simples.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[1]) && $recomendaciones[1] === true) active @endif">@if(isset($recomendaciones[1]) && $recomendaciones[1] === true)✔@endif</div>
+                <span>Evitar el consumo de bebidas azucaradas e intercambiarlo por agua simple.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[2]) && $recomendaciones[2] === true) active @endif">@if(isset($recomendaciones[2]) && $recomendaciones[2] === true)✔@endif</div>
+                <span>Formar horarios para las tres principales comidas del día.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[3]) && $recomendaciones[3] === true) active @endif">@if(isset($recomendaciones[3]) && $recomendaciones[3] === true)✔@endif</div>
+                <span>Realizar 3 comidas principales al día.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[4]) && $recomendaciones[4] === true) active @endif">@if(isset($recomendaciones[4]) && $recomendaciones[4] === true)✔@endif</div>
+                <span>Aumentar el consumo de agua simple (la sed es la señal más confiable de que necesita agua).</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[5]) && $recomendaciones[5] === true) active @endif">@if(isset($recomendaciones[5]) && $recomendaciones[5] === true)✔@endif</div>
+                <span>Mantener actividad física.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[6]) && $recomendaciones[6] === true) active @endif">@if(isset($recomendaciones[6]) && $recomendaciones[6] === true)✔@endif</div>
+                <span>Iniciar actividad física moderada-ligera (caminar, trotar, bicicleta, natación) por al menos 30 minutos al día 5 días a la semana.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[7]) && $recomendaciones[7] === true) active @endif">@if(isset($recomendaciones[7]) && $recomendaciones[7] === true)✔@endif</div>
+                <span>Aumentar actividad física moderada-ligera por al menos 150 minutos a la semana o 75 minutos de actividad vigorosa.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[8]) && $recomendaciones[8] === true) active @endif">@if(isset($recomendaciones[8]) && $recomendaciones[8] === true)✔@endif</div>
+                <span>A la hora de la comida elegir una opción entre arroz, frijoles, pasta o papa como acompañamiento.</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[9]) && $recomendaciones[9] === true) active @endif">@if(isset($recomendaciones[9]) && $recomendaciones[9] === true)✔@endif</div>
+                <span>Disminuir la cantidad de cereales (arroz, tortilla, pan, papa, pasta).</span>
+            </div>
+            <div class="recommendation-item">
+                <div class="recommendation-check @if(isset($recomendaciones[10]) && $recomendaciones[10] === true) active @endif">@if(isset($recomendaciones[10]) && $recomendaciones[10] === true)✔@endif</div>
+                <span>Siempre y cuando realice 1 hora o más de ejercicio: consumir una colación antes de la actividad y otra después.</span>
+            </div>
         </div>
     </div>
 
-    <div class="section-diag">
-      <div class="section-title text-xl">Observaciones</div>
-      <div class="section-content ">
-          <p class="ml-1 p-2">{{$data->observaciones ?? 'Sin Observaciones.'}}</p>
-      </div>
-  </div>
+    <!-- DIETA BALANCEADA -->
+    <div class="diet-box">
+        <div class="diet-header">Una dieta balanceada contiene</div>
+        <table class="diet-table">
+            <tr>
+                <td>
+                    <span class="diet-icon" style="background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">P</span>
+                    <span class="diet-name">Proteína</span>
+                    <div class="diet-desc">Variedad de carnes, leguminosas, sin freír ni empanizar.</div>
+                </td>
+                <td>
+                    <span class="diet-icon" style="background: #3b82f6; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">L</span>
+                    <span class="diet-name">Lácteos</span>
+                    <div class="diet-desc">Libres o bajos en grasa.</div>
+                </td>
+                <td>
+                    <span class="diet-icon" style="background: #f59e0b; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">A</span>
+                    <span class="diet-name">Aceites</span>
+                    <div class="diet-desc">Vegetales, evitando freír.</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="diet-icon" style="background: #8b5cf6; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">C</span>
+                    <span class="diet-name">Cereales</span>
+                    <div class="diet-desc">Granos y derivados en cantidades moderadas.</div>
+                </td>
+                <td>
+                    <span class="diet-icon" style="background: #ec4899; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">F</span>
+                    <span class="diet-name">Frutas</span>
+                    <div class="diet-desc">Frescas y variadas en color.</div>
+                </td>
+                <td>
+                    <span class="diet-icon" style="background: #10b981; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">V</span>
+                    <span class="diet-name">Vegetales</span>
+                    <div class="diet-desc">Frescos en todas sus variedades.</div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-    <!-- Sección Recomendaciones específicas -->
-    <div class="section-diag">
-      <div class="section-title">Recomendaciones específicas</div>
-      @php
-          // Decodifica las recomendaciones almacenadas como JSON
-          $recomendaciones = json_decode($data->recomendaciones);
-      @endphp
-      <div class="section-content">
-          <!-- Recomendación 1 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[0]) && $recomendaciones[0] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Evitar el consumo de azúcares (azúcar de mesa, mascabado, mieles, mermeladas, cajeta, lechera) así como productos con azúcares simples (jugos, refrescos, yogurt con frutas, postres, etc.).
-          </p>
-  
-          <!-- Recomendación 2 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[1]) && $recomendaciones[1] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Evitar el consumo de bebidas azucaradas e intercambiarlo por agua simple.
-          </p>
-  
-          <!-- Recomendación 3 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[2]) && $recomendaciones[2] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Formar horarios para las tres principales comidas del día.
-          </p>
-  
-          <!-- Recomendación 4 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[3]) && $recomendaciones[3] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Realizar 3 comidas principales al día.
-          </p>
-  
-          <!-- Recomendación 5 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[4]) && $recomendaciones[4] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Aumentar el consumo de agua simple (la sed es la señal más confiable de que necesita agua).
-          </p>
-  
-          <!-- Recomendación 6 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[5]) && $recomendaciones[5] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Mantener actividad física.
-          </p>
-  
-          <!-- Recomendación 7 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[6]) && $recomendaciones[6] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Iniciar actividad física moderada-ligera (caminar, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos.
-          </p>
-  
-          <!-- Recomendación 8 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[7]) && $recomendaciones[7] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Aumentar actividad física moderada-ligera (caminata, trotar, bicicleta, natación, etc.) por al menos 30 minutos al día 5 días a la semana o el equivalente a 150 minutos a la semana o 75 minutos a la semana de actividad vigorosa (correr, tenis, natación continua, bicicleta de subida) a la semana.
-          </p>
-  
-          <!-- Recomendación 9 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[8]) && $recomendaciones[8] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              A la hora de la comida elegir una opción entre arroz, frijoles, pasta o papa como acompañamiento.
-          </p>
-  
-          <!-- Recomendación 10 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[9]) && $recomendaciones[9] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Disminuir la cantidad de cereales (arroz, tortilla, pan, papa, pasta).
-          </p>
-  
-          <!-- Recomendación 11 -->
-          <p class="ml-2">
-              @if (isset($recomendaciones[10]) && $recomendaciones[10] === true)
-                  <img src="img/check-solid.svg" alt="" style="height: 10px" class="font-light linea-bott mr-2">
-              @else
-                  __
-              @endif
-              Siempre y cuando realice 1 hora o más de ejercicio: consumir una colación antes de la actividad y otra después.
-          </p>
-      </div>
-  </div>
-    <br>
-    <br>
-    <br>
-    <div class="">
-    <div class="diet-title">Una dieta balanceada contiene</div>
-    <div class="paciente paciente-container mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-          <img src="img/icon-proteina.png" alt="Proteína">
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mb-0 text-justify">
-            <strong>Proteína:</strong> Variedad de productos proteicos: todo tipo de carnes, leguminosas (frijol, garbanzo, lenteja, soya, habas), bajo en grasas, es decir, sin freír ni empanizar.
-          </p>
-      </div>
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="professional-info">
+            <div class="professional-name">Nutriólogo: {{ $data->nutriologo }}</div>
+            <div class="professional-cedula">Cédula Profesional: {{ $data->cedula_nutriologo }}</div>
+        </div>
     </div>
-    <div class="paciente paciente-container mt-1 mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-        <div class="diet-icon">
-          <img src="img/icon-lacteos.png" alt="lacteos">
-      </div>
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mt-1 mb-0 text-justify">
-            <strong>Lácteos:</strong> Libres o bajos en grasa.
-          </p>
-      </div>
-    </div>
-    <div class="paciente paciente-container mt-1 mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-        <div class="diet-icon">
-          <img src="img/icon-aceites.png" alt="Proteína">
-      </div>
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mt-1 mb-0 text-justify">
-            <strong>Aceites y grasas:</strong> Vegetales evitando freír los alimentos.
-          </p>
-      </div>
-    </div>
-    <div class="paciente paciente-container mt-1 mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-        <div class="diet-icon">
-          <img src="img/icon-cereales.png" alt="Proteína">
-      </div>
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mt-1 mb-0 text-justify">
-            <strong>Cereales:</strong> Granos y derivados (pan, pasta, avena, arroz, cereal, tortilla, galletas sin azúcar) en cantidades moderadas.
-          </p>
-      </div>
-    </div>
-    <div class="paciente paciente-container mt-1 mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-        <div class="diet-icon">
-          <img src="img/icon-frutas.png" alt="Proteína">
-      </div>
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mt-1 mb-0 text-justify">
-            <strong>Frutas:</strong> Especialmente frutas frescas y variadas en color.
-          </p>
-      </div>
-    </div>
-    <div class="paciente paciente-container mt-1 mb-1">
-      <!-- Columna izquierda: Título -->
-      <div class="paciente-info">
-        <div class="diet-icon">
-          <img src="img/icon-vegetales.png" alt="Proteína">
-      </div>
-      </div>
-  
-      <!-- Columna derecha: Contenido -->
-      <div class="paciente-content">
-          <p class="mt-1 mb-0 text-justify">
-            <strong>Vegetales:</strong> Frescos preferentemente en todas sus variedades, hojas verdes, rojos, naranjas, fibrosos, etc.
-          </p>
-      </div>
-    </div>
-  </div>
 
-  <div class="paciente mt-5">
-    <p  class="f-15 f-bold mb-0">Nutriólogo: <span>{{$data->nutriologo}}</span></p>
-    <p  class="f-15 f-bold mb-0">Cédula: <span>{{$data->cedula_nutriologo}}</span></p>
-  </div>  
-  <div class="medio marg-final">
-  <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
-  </div> 
-
-
-  </body>
+    </div><!-- End content-wrapper -->
+</body>
 </html>

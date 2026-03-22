@@ -20,6 +20,7 @@ use App\Models\PruebaEsfuerzoPulmonar;
 use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
 use App\Models\NotaSeguimientoPulmonar;
+use App\Models\EstratiAacvpr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -33,8 +34,8 @@ class ExpedienteUnificadoController extends Controller
         $user = Auth::user();
         $paciente = Paciente::findOrFail($pacienteId);
 
-        // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
@@ -285,6 +286,21 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 20. Estratificación AACVPR/EAPC
+        $estratiAacvprs = EstratiAacvpr::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $user->clinica_id)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 20,
+                    'fecha' => $item->fecha_estratificacion,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Estratificación AACVPR/EAPC'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -303,7 +319,8 @@ class ExpedienteUnificadoController extends Controller
             ->merge($pruebasEsfuerzoPulmonar)
             ->merge($historiasDentales)
             ->merge($odontogramas)
-            ->merge($notasSeguimientoPulmonar);
+            ->merge($notasSeguimientoPulmonar)
+            ->merge($estratiAacvprs);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

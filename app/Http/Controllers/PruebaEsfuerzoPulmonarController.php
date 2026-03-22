@@ -314,8 +314,9 @@ class PruebaEsfuerzoPulmonarController extends Controller
 
         // Obtener logo de la clínica
         $clinicaLogo = $this->getClinicaLogoBase64($user);
+        $clinica = $user->clinica;
 
-        $pdf = PDF::loadView('pulmonar.pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64', 'clinicaLogo'));
+        $pdf = PDF::loadView('pulmonar.pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64', 'clinicaLogo', 'clinica'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->stream('prueba_esfuerzo_pulmonar_' . $paciente->registro . '.pdf');
@@ -350,8 +351,9 @@ class PruebaEsfuerzoPulmonarController extends Controller
 
         // Obtener logo de la clínica
         $clinicaLogo = $this->getClinicaLogoBase64($user);
+        $clinica = $user->clinica;
 
-        $pdf = PDF::loadView('pulmonar.pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64', 'clinicaLogo'));
+        $pdf = PDF::loadView('pulmonar.pruebaesfuerzopulmonar', compact('data', 'paciente', 'userParaFirma', 'firmaBase64', 'clinicaLogo', 'clinica'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('prueba_esfuerzo_pulmonar_' . $paciente->registro . '.pdf');

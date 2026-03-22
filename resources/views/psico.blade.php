@@ -1,627 +1,892 @@
-
 <!doctype html>
-<html lang="en">
-  <head>
-    <!-- Required meta tags -->
+<html lang="es">
+<head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-    <!-- Bootstrap CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nota Psicológica</title>
     <style>
-        /* Estilo para el logo */
-        .logo-container {
-            height: 36px;
-            overflow: hidden;
-            display: inline-block;
+        /* === RESET & BASE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .logo-container img {
-            height: 36px;
-            width: auto;
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 15px 25px;
+            margin: 0;
         }
-        /* Estilo para la línea de firma */
-        .signature {
-        text-align: center;
-        width: 100%;
-        margin-top: 5rem
-    }
-    .line {
-        display: inline-block;
-        border-top: 1px solid black;
-        width: 20%;
-        margin-top: 4rem;
-        margin-right: 2rem;
-        margin-left: 2rem
-        padding: 1rem;
-    }
-    .text {
-        font-size: 9.5px;
-        text-align: center;
-        width: 100%; /* Espacio entre línea y texto */
-    }
-        .tabla{
-            font-size: 8.5px;
-            margin-bottom: 0;
-            width: 100%
+
+        /* === HEADER === */
+        .header {
+            width: 100%;
+            background: #0A1628;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            padding: 10px 15px;
         }
-        .f-10{
-          font-size: 10px;
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .f-15{
-          font-size: 15px;
+
+        .header-table td {
+            vertical-align: middle;
+            padding: 0;
         }
-        .f-7{
-          font-size: 7px;
+
+        .header-logo-cell {
+            width: 60px;
+            padding-right: 12px !important;
         }
-        .paciente{
-            font-size: 12px
-        }
-        .text-right{
-            text-align: right;
-        }
-        .f-bold{
-            font-weight: bold;
-        }
-        .f-normal{
-            font-weight: normal
-        }
-        .text-lft{
-            text-align: left;
-        }
-        .text-jst{
-            text-align: justify;
-        }
-        .text-ctr{
+
+        .header-logo {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 6px;
+            padding: 5px;
             text-align: center;
         }
 
-        .flex{
-          display: flex;
+        .header-logo img {
+            max-height: 35px;
+            max-width: 35px;
         }
 
-        .container-g {
-        width: 100%;
-    }
-    .table-container-g {
-        width: 40%;
-        float: right;
-    }
-    .text-container-g {
-        width: 50%;
-        float: left;
-    }
-    .table-g {
-        border: 1px solid black;
-        width: 100%;
-    }
-    .border-t{
-      border: 1px solid black;
-    }
-    .border-l{
-      border-left: 1px solid black;
-    }
-    .border-r{
-      border-right: 1px solid black;
-    }
-    .border-b{
-      border-bottom: 1px solid black;
-    }
-    .b-dark{
-      background-color: #000;
-      color: white;
-      
-    }
-    .b-w{
-      background-color: #ffffff;
-      color: black;
-      
-    }
-    .coments{
-      position: absolute;
-        top: 0;
-        left: 0;
-    }
-    .txt{
-      width: 20%;
-      margin-left: 1.5rem;
-      margin-right: 5rem;
-    }
-    .ma-t-0{
-      margin-top: 0px;
-    }
-    .medio{
-      position: relative;
-    }
-  
-  .texto-izquierda {
-    text-align: left; /* Alinear a la izquierda */
-    position: absolute; /* Posicionamiento absoluto */
-    left: 0; /* /* Alinear a la izquierda */
-  }
-  
-  .texto-derecha {
-    text-align: right; /* Alinear a la derecha */
-    position: absolute; /* Posicionamiento absoluto */
-    right: 0;; /* Alinear a la derecha */
-  }
-  .contenedor {
-    position: relative; /* Establece contexto de posición */
-    text-align:justify; /* Alinea contenido al centro horizontalmente */
-    margin-bottom: 0; /* Espacio opcional al final del contenedor */
-  }
-  
-  .titulo {
-    display: inline-block;/* Hace que el título sea un bloque en línea */ /* Opcional: fondo blanco detrás del título */ /* Espaciado opcional alrededor del título */
-    position: relative; /* Establece contexto de posición */
-    z-index: 1; /* Asegura que el título esté por encima de la línea */
-  }
-  .m-t-2{
-    margin-top: -1rem;
-  }
-  .m-t-3{
-    margin-top: -2rem;
-  }
-  .m-t-07{
-    margin-top: -0.7rem;
-  }
-  .m-t-0{
-    margin-top: -1rem;
-  }
-  
-  .linea {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 4rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-des {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 6.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-med {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 16rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-is {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: 0.5rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-ar {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 5.5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-pu {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 7.2rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-mo {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 10.5rem; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0;
-    top: -0.2rem; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-bottom: 3px solid black; /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .linea-t {
-    position: absolute; /* Posicionamiento absoluto con respecto al contenedor */
-    left: 0; /* Comienza desde el borde izquierdo del contenedor */
-    right: 0; /* Termina en el borde derecho del contenedor */ /* Posiciona en el centro verticalmente */ /* Ajusta verticalmente para alinear con el texto */
-    border-top: 2px solid rgb(83, 78, 78); /* Línea sólida negra */
-    z-index: 0; /* Detrás del título */
-  }
-  .backgr-black{
-    background-color: #000
-  }
-  .bck-gray{
-    background-color: #DDDEE1  ;
-  }
-  .paciente-container {
-    width: 100%;
-    overflow: hidden; /* Limpia flotantes */
-}
+        .header-title-cell {
+            padding-left: 10px;
+        }
 
-.paciente-info {
-    float: left; /* Columna izquierda */
-    width: 30%; /* Ocupa el 30% del contenedor */
-    font-weight: bold;
-}
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.5px;
+        }
 
-.paciente-content {
-    float: left; /* Columna derecha */
-    width: 70%; /* Ocupa el 70% restante */
-    text-align: justify;
-}
+        .header-subtitle {
+            font-size: 10px;
+            color: #94a3b8;
+        }
 
-/* Opcional: Limpiar flotantes después del contenedor */
-.paciente-container::after {
-    content: "";
-    display: table;
-    clear: both;
-}
-/* Estilo para la tabla */
-.tabla-cuestionario {
-    width: 100%;
-    border-collapse: collapse; /* Para que las celdas compartan borde */
-    font-family: Arial, sans-serif;
-    font-size: 12px; /* Reducir aún más el tamaño de la fuente */
-}
+        .header-meta-cell {
+            text-align: right;
+            width: 120px;
+        }
 
-.marg-8{
-  margin-top: 12rem;
-}
+        .header-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
 
-.tabla-cuestionario th, .tabla-cuestionario td {
-    border: 1px solid #ccc;
-    padding: 2px 4px; /* Reducir aún más el padding */
-    text-align: left;
-}
+        .header-badge-label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+        }
 
-.tabla-cuestionario th {
-    background-color: #f4f4f4;
-    font-weight: bold;
-}
+        .header-badge-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
 
-.tabla-cuestionario td {
-    background-color: #f9f9f9;
-}
+        .header-date {
+            font-size: 9px;
+            color: #94a3b8;
+        }
+        }
 
-.tabla-cuestionario td[rowspan] {
-    background-color: #e9e9e9;
-    font-weight: bold;
-}
+        .header-badge-label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.7);
+        }
 
-/* Asegura que las filas con rowspan no se vean cortadas */
-.tabla-cuestionario tr td:last-child {
-    border-right: 2px solid #ccc;
-}
+        .header-badge-value {
+            font-size: 12px;
+            font-weight: 700;
+        }
 
-html {
-  margin-top: 0;
-  padding-top: 0;
-}
-.marg-final{
-    margin-top: 7rem
-  }
-  .medio{
-      position: relative;
-    }
+        .header-date {
+            font-size: 9px;
+            color: rgba(255,255,255,0.7);
+        }
 
-    .txt-blue{
-    color: #255FA5;
-  }
-  .txt-r{
-    color: #FB0006;
-  }
+        /* === PATIENT INFO === */
+        .patient-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
 
+        .patient-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
+        .patient-table td {
+            padding: 3px 8px;
+            font-size: 10px;
+        }
 
+        .patient-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0A1628;
+            margin-bottom: 8px;
+        }
 
+        .patient-label {
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+        }
+
+        .patient-value {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .patient-medications {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .patient-medications-label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .patient-medications-value {
+            font-size: 10px;
+            color: #334155;
+        }
+
+        .patient-registro-old {
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .patient-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .patient-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .patient-detail-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .patient-detail-value {
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .patient-medications {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .patient-medications-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .patient-medications-value {
+            font-size: 11px;
+            color: #334155;
+        }
+
+        /* === SECTIONS === */
+        .section {
+            margin-bottom: 10px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0A1628;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-content {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #8b5cf6;
+            border-radius: 0 8px 8px 0;
+            padding: 8px 12px;
+        }
+
+        .section-content p {
+            color: #334155;
+            font-size: 10px;
+            line-height: 1.4;
+            text-align: justify;
+        }
+
+        /* === CLINICAL GRID (compact layout) === */
+        .clinical-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .clinical-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 10px;
+            min-height: 0;
+        }
+
+        .clinical-item.full-width {
+            grid-column: span 2;
+        }
+
+        .clinical-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #8b5cf6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 2px;
+        }
+
+        .clinical-value {
+            font-size: 10px;
+            color: #334155;
+            line-height: 1.3;
+            max-height: 45px;
+            overflow: hidden;
+        }
+
+        .clinical-value.large {
+            max-height: 60px;
+        }
+
+        /* === TWO COLUMNS === */
+        .two-columns {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* === QUESTIONNAIRE TABLE === */
+        .questionnaire-section {
+            margin-top: 0;
+            margin-bottom: 20px;
+            page-break-before: always;
+        }
+
+        .questionnaire-title {
+            background: linear-gradient(135deg, #0A1628 0%, #1e3a5f 100%);
+            color: white;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+
+        .questionnaire-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        .questionnaire-table thead th {
+            background: #f1f5f9;
+            color: #0A1628;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .questionnaire-table tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .questionnaire-table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .questionnaire-table tbody tr:hover {
+            background: #f1f5f9;
+        }
+
+        .category-cell {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .question-cell {
+            color: #334155;
+        }
+
+        .answer-cell {
+            font-weight: 600;
+            color: #0A1628;
+        }
+
+        .answer-cell .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .badge-yes {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-no {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        /* === FOOTER === */
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #0A1628;
+        }
+
+        .professional-info {
+            margin-bottom: 15px;
+        }
+
+        .professional-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0A1628;
+        }
+
+        .professional-cedula {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .clinic-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .clinic-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+
+        .clinic-contact {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .clinic-contact .email {
+            color: #ef4444;
+        }
+
+        /* === PRINT STYLES === */
+        @media print {
+            body {
+                padding: 10px;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+
+            .questionnaire-section {
+                page-break-before: always;
+            }
+
+            .questionnaire-table tbody tr:hover {
+                background: transparent;
+            }
+        }
+
+        /* === PAGE FOOTER === */
+        .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 25px;
+            background: white;
+            border-top: 2px solid #0A1628;
+            font-size: 9px;
+        }
+
+        .page-footer-table {
+            width: 100%;
+        }
+
+        .page-footer .clinic-name {
+            font-weight: 700;
+            color: #8b5cf6;
+        }
+
+        .page-footer .clinic-contact {
+            text-align: right;
+            color: #64748b;
+        }
+
+        .page-footer .email {
+            color: #ef4444;
+        }
+
+        /* Space for fixed footer */
+        .content-wrapper {
+            padding-bottom: 50px;
+        }
+
+        /* === HELPER TEXT === */
+        .empty-text {
+            color: #94a3b8;
+            font-style: italic;
+        }
     </style>
-  </head>
-  <body>
-    <header class="mb-0">
-      <div class="paciente ma-t-0 mb-0">
-        <p class="f-bold f-15 text-center mb-0 mt-0">Nota Psicológica</p>
-        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-        <div class="medio">
-          <p class=" texto-izquierda mb-0 f-bold">Fecha: {{ date('d/m/Y',strtotime($data->created_at))}} </p> <span class="ml-5 text-right texto-derecha f-bold">Registro: {{$paciente->registro}}</span>
-        </div>
-        <br>
-          <p  class="f-bold mt-2 mb-0 text-xl ">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre}}</span><span class="f-bold ml-2">  Peso : <span class="f-normal">{{$paciente->peso}}</span></span> <span class=f-bold"">  Talla: <span  class="f-normal">{{$paciente->talla}}</span></span>
-            <span class="f-bold ml-2">  Edad: <span  class="f-normal">{{$paciente->edad}}</span></span> <span class="f-bold">  Correo: <span  class="f-normal">{{$paciente->email}}</span></span>
-            <span class="f-bold ml-2">  Género: <span  class="f-normal">{{($paciente->genero==1?"Hombre":"Mujer")}}</span></span><span class="f-bold ml-2">  Teléfono: <span  class="f-normal">{{($paciente->telefono)}}</span></span></p>
-          <p class="f-bold mt-0 mb-0">  Medicamentos: <span  class="f-normal">{{$paciente->medicamentos}}</span> </p>
-          <div class="linea-t mt-1"></div>
-      </div>
-    </header>
-    <main class="mt-3">
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Motivo de Consulta:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->motivo_consulta ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Antecedentes Médicos:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->antecedentes_medicos ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Cirugías Previas:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->cirugias_previas ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Tratamiento Actual:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->tratamiento_actual ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Antecedentes Familiares:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->antecedentes_familiares ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Aspectos Sociales:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->aspectos_sociales ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Escalas Utilizadas:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->escalas_utilizadas ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Síntomas Actuales:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->sintomas_actuales ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Plan de Tratamiento:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->plan_tratamiento ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <div class="paciente paciente-container mt-1 mb-1">
-        <!-- Columna izquierda: Título -->
-        <div class="paciente-info">
-            <h2 class="h6 titulo mb-1">Seguimiento:</h2>
-        </div>
-    
-        <!-- Columna derecha: Contenido -->
-        <div class="paciente-content">
-            <p class="mt-1 mb-0 text-justify">
-                {{$data->seguimiento ?? 'Sin Observaciones registradas.'}}
-            </p>
-        </div>
-      </div>
-      <div class="linea-t mt-0 mb-0"></div>
-      <p class="f-bold f-15 text-center mb-0 marg-8">Evaluación de Calidad de vida</p> 
-      <table class="tabla-cuestionario mt-5">
-        <thead>
-          <tr>
-            <th>Sección</th>
-            <th>Pregunta</th>
-            <th>Respuesta</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td rowspan="4">Salud Física</td>
-            <td>¿Cómo calificarías tu estado de salud general?</td>
-            <td>@if($data->calif_salud === "1") <p class="f-bold mb-0 "> Excelente </p>
-              @elseif ($data->calif_salud === "2")<p class="f-bold mb-0 "> Bueno </p>
-              @elseif ($data->calif_salud === "3")<p class="f-bold mb-0 "> Regular </p>
-              @elseif ($data->calif_salud === "4")<p class="f-bold mb-0 "> Malo </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td>¿Realizas ejercicio físico regularmente?</td>
-            <td>@if($data->realizas_ejercicio === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>Si es así, ¿con qué frecuencia?</td>
-            <td>@if($data->ejercicio_frecuencia === "1") <p class="f-bold mb-0 "> Diariamente </p>
-              @elseif ($data->ejercicio_frecuencia === "2")<p class="f-bold mb-0 "> 3-4 veces por semana </p>
-              @elseif ($data->ejercicio_frecuencia === "3")<p class="f-bold mb-0 "> 1-2 veces por semana </p>
-              @elseif ($data->ejercicio_frecuencia === "4")<p class="f-bold mb-0 "> Raramente </p>
-              @else <p class="f-bold mb-0 "> N/A </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td>¿Tienes alguna condición médica crónica?</td>
-            <td>@if($data->condicion_medica === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
+</head>
+<body>
+    <!-- PAGE FOOTER (fixed) -->
+    <div class="page-footer">
+        <table class="page-footer-table">
+            <tr>
+                <td class="clinic-name">{{ $clinica->nombre ?? 'Clínica' }}</td>
+                <td class="clinic-contact">
+                    {{ $clinica->telefono ?? '' }}
+                    @if($clinica->email ?? null)
+                        | <span class="email">{{ $clinica->email }}</span>
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
 
-          <tr>
-            <td rowspan="3">Alimentación</td>
-            <td>¿Cómo describirías tu dieta diaria?</td>
-            <td>@if($data->dieta_diaria === "1") <p class="f-bold mb-0 "> Equilibrada </p>
-              @elseif ($data->dieta_diaria === "2")<p class="f-bold mb-0 "> Altas en grasas </p>
-              @elseif ($data->dieta_diaria === "3")<p class="f-bold mb-0 "> Alta de azucares </p>
-              @elseif ($data->dieta_diaria === "4")<p class="f-bold mb-0 "> Insuficiente </p>
-              @else <p class="f-bold mb-0 "> N/A </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td>¿Comes frutas y verduras diariamente?</td>
-            <td>@if($data->frutas_verduras === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Con qué frecuencia comes fuera de casa?</td>
-            <td>@if($data->frecuencia_comida === "1") <p class="f-bold mb-0 "> Diariamente </p>
-              @elseif ($data->frecuencia_comida === "2")<p class="f-bold mb-0 "> Semanalmente </p>
-              @elseif ($data->frecuencia_comida === "3")<p class="f-bold mb-0 "> Raramente </p>
-              @else <p class="f-bold mb-0 "> N/A </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td rowspan="3">Salud Mental y Emocional</td>
-            <td>En una escala del 1 al 10, ¿cómo calificarías tu nivel de estrés actual?</td>
-            <td>{{$data->estres_nivel ?? 'N/A'}}</td>
-          </tr>
-          <tr>
-            <td>¿Te sientes feliz la mayor parte del tiempo?</td>
-            <td>@if($data->feliz === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Tienes apoyo emocional de amigos o familiares?</td>
-            <td>@if($data->apoyo_emocional === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td rowspan="3">Vida Social</td>
-            <td>¿Con qué frecuencia te reúnes con amigos o familiares?</td>
-            <td>@if($data->frecuencia_reuniones === "1") <p class="f-bold mb-0 "> Diariamente </p>
-              @elseif ($data->frecuencia_reuniones === "2")<p class="f-bold mb-0 "> Semanalmente </p>
-              @elseif ($data->frecuencia_reuniones === "3")<p class="f-bold mb-0 "> Mensualmente </p>
-              @elseif ($data->frecuencia_reuniones === "4")<p class="f-bold mb-0 "> Raramente </p>
-              @else <p class="f-bold mb-0 "> N/A </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td>¿Participas en actividades comunitarias o grupos sociales?</td>
-            <td>@if($data->actividades_comunitarias === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Te sientes parte de tu comunidad?</td>
-            <td>@if($data->comunidad === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td rowspan="3">Bienestar Financiero</td>
-            <td>¿Cómo calificarías tu situación financiera actual?</td>
-            <td>@if($data->situa_financiera === "1") <p class="f-bold mb-0 "> Excelente </p>
-              @elseif ($data->situa_financiera === "2")<p class="f-bold mb-0 "> Bueno </p>
-              @elseif ($data->situa_financiera === "3")<p class="f-bold mb-0 "> Regular </p>
-              @elseif ($data->situa_financiera === "4")<p class="f-bold mb-0 "> Malo </p>
-              @else <p class="f-bold mb-0 "> N/A </p>
-               @endif</td>
-          </tr>
-          <tr>
-            <td>¿Te sientes seguro económicamente?</td>
-            <td>@if($data->seguro_economico === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Tienes suficientes ingresos para cubrir tus necesidades básicas?</td>
-            <td>@if($data->ingresos_suficientes === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td rowspan="3">Trabajo y satisfacción laboral </td>
-            <td>¿Estás satisfecho con tu trabajo actual?</td>
-            <td>@if($data->trabajo_actual === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Consideras que tienes un buen equilibrio entre el trabajo y la vida personal? </td>
-            <td>@if($data->equilibrio_trabajo === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Recibes reconocimiento por tu trabajo?</td>
-            <td>@if($data->reconocimiento === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td rowspan="3">Consumo de Sustancias</td>
-            <td>¿Fumas tabaco o utilizas productos de tabaco?</td>
-            <td>@if($data->tabaco_consumo === 1) <p class="f-bold mb-0 "> Si </p> @else <p class="f-bold mb-0 "> No </p> @endif</td>
-          </tr>
-          <tr>
-            <td>¿Consumes alcohol y, de ser así, con qué frecuencia y en qué cantidades?</td>
-            <td>{{$data->alchol_consumo ?? 'N/A'}}</td>
-          </tr>
-          <tr>
-            <td>¿Utilizas drogas recreativas o tienes un historial de abuso de sustancias?</td>
-            <td>{{$data->drogas_recreativas ?? 'N/A'}}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="paciente mt-5">
-        <p  class="f-15 f-bold mb-0">Psicólogo: <span>{{$data->psicologo}}</span></p>
-        <p  class="f-15 f-bold mb-0">Cédula: <span>{{$data->cedula_psicologo}}</span></p>
-      </div>  
-      <div class="medio marg-final">
-      <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
-    </div> 
-    </main>
-    
-  </body>
+    <div class="content-wrapper">
+    <!-- HEADER -->
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo-cell">
+                    <div class="header-logo">
+                        @if(isset($clinicaLogo) && $clinicaLogo)
+                            <img src="{{ $clinicaLogo }}" alt="Logo">
+                        @else
+                            <span style="font-size: 24px;">🧠</span>
+                        @endif
+                    </div>
+                </td>
+                <td style="padding-left: 10px;">
+                    <div class="header-title">Nota Psicológica</div>
+                    <div class="header-subtitle">Evaluación y seguimiento psicológico</div>
+                </td>
+                <td class="header-meta-cell">
+                    <div class="header-badge">
+                        <div class="header-badge-label">Registro</div>
+                        <div class="header-badge-value">#{{ $paciente->registro }}</div>
+                    </div>
+                    <div class="header-date">{{ date('d/m/Y', strtotime($data->created_at)) }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- PATIENT INFO -->
+    <div class="patient-card">
+        <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
+        <table class="patient-table">
+            <tr>
+                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
+                <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</span></td>
+                <td><span class="patient-label">Peso:</span> <span class="patient-value">{{ $paciente->peso }} kg</span></td>
+                <td><span class="patient-label">Talla:</span> <span class="patient-value">{{ $paciente->talla }} cm</span></td>
+            </tr>
+            <tr>
+                <td><span class="patient-label">Teléfono:</span> <span class="patient-value">{{ $paciente->telefono }}</span></td>
+                <td colspan="3"><span class="patient-label">Email:</span> <span class="patient-value">{{ $paciente->email }}</span></td>
+            </tr>
+        </table>
+        @if($paciente->medicamentos)
+        <div class="patient-medications">
+            <div class="patient-medications-label">Medicamentos</div>
+            <div class="patient-medications-value">{{ $paciente->medicamentos }}</div>
+        </div>
+        @endif
+    </div>
+
+    <!-- CLINICAL SECTIONS (compact grid) -->
+    <div class="clinical-grid">
+        <div class="clinical-item full-width">
+            <div class="clinical-label">Motivo de Consulta</div>
+            <div class="clinical-value large">{{ $data->motivo_consulta ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Antecedentes Médicos</div>
+            <div class="clinical-value">{{ $data->antecedentes_medicos ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Cirugías Previas</div>
+            <div class="clinical-value">{{ $data->cirugias_previas ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Tratamiento Actual</div>
+            <div class="clinical-value">{{ $data->tratamiento_actual ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Antecedentes Familiares</div>
+            <div class="clinical-value">{{ $data->antecedentes_familiares ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Aspectos Sociales</div>
+            <div class="clinical-value">{{ $data->aspectos_sociales ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Escalas Utilizadas</div>
+            <div class="clinical-value">{{ $data->escalas_utilizadas ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item full-width">
+            <div class="clinical-label">Síntomas Actuales</div>
+            <div class="clinical-value">{{ $data->sintomas_actuales ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Plan de Tratamiento</div>
+            <div class="clinical-value">{{ $data->plan_tratamiento ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+
+        <div class="clinical-item">
+            <div class="clinical-label">Seguimiento</div>
+            <div class="clinical-value">{{ $data->seguimiento ?? 'Sin observaciones registradas.' }}</div>
+        </div>
+    </div>
+
+    <!-- QUALITY OF LIFE QUESTIONNAIRE -->
+    <div class="questionnaire-section">
+        <div class="questionnaire-title">Evaluación de Calidad de Vida</div>
+        <table class="questionnaire-table">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Sección</th>
+                    <th style="width: 55%;">Pregunta</th>
+                    <th style="width: 25%;">Respuesta</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Salud Física -->
+                <tr>
+                    <td class="category-cell" rowspan="4">Salud Física</td>
+                    <td class="question-cell">¿Cómo calificarías tu estado de salud general?</td>
+                    <td class="answer-cell">
+                        @if($data->calif_salud === "1") <span class="badge badge-info">Excelente</span>
+                        @elseif($data->calif_salud === "2") <span class="badge badge-info">Bueno</span>
+                        @elseif($data->calif_salud === "3") <span class="badge badge-info">Regular</span>
+                        @elseif($data->calif_salud === "4") <span class="badge badge-info">Malo</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Realizas ejercicio físico regularmente?</td>
+                    <td class="answer-cell">
+                        @if($data->realizas_ejercicio === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">Si es así, ¿con qué frecuencia?</td>
+                    <td class="answer-cell">
+                        @if($data->ejercicio_frecuencia === "1") <span class="badge badge-info">Diariamente</span>
+                        @elseif($data->ejercicio_frecuencia === "2") <span class="badge badge-info">3-4 veces/semana</span>
+                        @elseif($data->ejercicio_frecuencia === "3") <span class="badge badge-info">1-2 veces/semana</span>
+                        @elseif($data->ejercicio_frecuencia === "4") <span class="badge badge-info">Raramente</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Tienes alguna condición médica crónica?</td>
+                    <td class="answer-cell">
+                        @if($data->condicion_medica === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Alimentación -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Alimentación</td>
+                    <td class="question-cell">¿Cómo describirías tu dieta diaria?</td>
+                    <td class="answer-cell">
+                        @if($data->dieta_diaria === "1") <span class="badge badge-info">Equilibrada</span>
+                        @elseif($data->dieta_diaria === "2") <span class="badge badge-info">Alta en grasas</span>
+                        @elseif($data->dieta_diaria === "3") <span class="badge badge-info">Alta en azúcares</span>
+                        @elseif($data->dieta_diaria === "4") <span class="badge badge-info">Insuficiente</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Comes frutas y verduras diariamente?</td>
+                    <td class="answer-cell">
+                        @if($data->frutas_verduras === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Con qué frecuencia comes fuera de casa?</td>
+                    <td class="answer-cell">
+                        @if($data->frecuencia_comida === "1") <span class="badge badge-info">Diariamente</span>
+                        @elseif($data->frecuencia_comida === "2") <span class="badge badge-info">Semanalmente</span>
+                        @elseif($data->frecuencia_comida === "3") <span class="badge badge-info">Raramente</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Salud Mental y Emocional -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Salud Mental y Emocional</td>
+                    <td class="question-cell">En una escala del 1 al 10, ¿cómo calificarías tu nivel de estrés actual?</td>
+                    <td class="answer-cell">
+                        @if($data->estres_nivel)
+                            <span class="badge badge-info">{{ $data->estres_nivel }}/10</span>
+                        @else
+                            <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Te sientes feliz la mayor parte del tiempo?</td>
+                    <td class="answer-cell">
+                        @if($data->feliz === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Tienes apoyo emocional de amigos o familiares?</td>
+                    <td class="answer-cell">
+                        @if($data->apoyo_emocional === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Vida Social -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Vida Social</td>
+                    <td class="question-cell">¿Con qué frecuencia te reúnes con amigos o familiares?</td>
+                    <td class="answer-cell">
+                        @if($data->frecuencia_reuniones === "1") <span class="badge badge-info">Diariamente</span>
+                        @elseif($data->frecuencia_reuniones === "2") <span class="badge badge-info">Semanalmente</span>
+                        @elseif($data->frecuencia_reuniones === "3") <span class="badge badge-info">Mensualmente</span>
+                        @elseif($data->frecuencia_reuniones === "4") <span class="badge badge-info">Raramente</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Participas en actividades comunitarias o grupos sociales?</td>
+                    <td class="answer-cell">
+                        @if($data->actividades_comunitarias === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Te sientes parte de tu comunidad?</td>
+                    <td class="answer-cell">
+                        @if($data->comunidad === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Bienestar Financiero -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Bienestar Financiero</td>
+                    <td class="question-cell">¿Cómo calificarías tu situación financiera actual?</td>
+                    <td class="answer-cell">
+                        @if($data->situa_financiera === "1") <span class="badge badge-info">Excelente</span>
+                        @elseif($data->situa_financiera === "2") <span class="badge badge-info">Buena</span>
+                        @elseif($data->situa_financiera === "3") <span class="badge badge-info">Regular</span>
+                        @elseif($data->situa_financiera === "4") <span class="badge badge-info">Mala</span>
+                        @else <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Te sientes seguro económicamente?</td>
+                    <td class="answer-cell">
+                        @if($data->seguro_economico === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Tienes suficientes ingresos para cubrir tus necesidades básicas?</td>
+                    <td class="answer-cell">
+                        @if($data->ingresos_suficientes === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Trabajo y Satisfacción Laboral -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Trabajo y Satisfacción Laboral</td>
+                    <td class="question-cell">¿Estás satisfecho con tu trabajo actual?</td>
+                    <td class="answer-cell">
+                        @if($data->trabajo_actual === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Consideras que tienes un buen equilibrio entre el trabajo y la vida personal?</td>
+                    <td class="answer-cell">
+                        @if($data->equilibrio_trabajo === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Recibes reconocimiento por tu trabajo?</td>
+                    <td class="answer-cell">
+                        @if($data->reconocimiento === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+
+                <!-- Consumo de Sustancias -->
+                <tr>
+                    <td class="category-cell" rowspan="3">Consumo de Sustancias</td>
+                    <td class="question-cell">¿Fumas tabaco o utilizas productos de tabaco?</td>
+                    <td class="answer-cell">
+                        @if($data->tabaco_consumo === 1) <span class="badge badge-yes">Sí</span>
+                        @else <span class="badge badge-no">No</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Consumes alcohol y, de ser así, con qué frecuencia y en qué cantidades?</td>
+                    <td class="answer-cell">
+                        @if($data->alchol_consumo)
+                            {{ $data->alchol_consumo }}
+                        @else
+                            <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="question-cell">¿Utilizas drogas recreativas o tienes un historial de abuso de sustancias?</td>
+                    <td class="answer-cell">
+                        @if($data->drogas_recreativas)
+                            {{ $data->drogas_recreativas }}
+                        @else
+                            <span class="empty-text">N/A</span>
+                        @endif
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PROFESSIONAL SIGNATURE -->
+    <div class="footer">
+        <div class="professional-info">
+            <div class="professional-name">Psicólogo: {{ $data->psicologo }}</div>
+            <div class="professional-cedula">Cédula Profesional: {{ $data->cedula_psicologo }}</div>
+        </div>
+    </div>
+    </div><!-- end content-wrapper -->
+</body>
 </html>

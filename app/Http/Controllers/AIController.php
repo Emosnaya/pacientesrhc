@@ -154,7 +154,9 @@ class AIController extends Controller
     {
         $request->validate([
             'message' => 'required|string|max:1000',
-            'conversation_history' => 'nullable|array|max:10'
+            'conversation_history' => 'nullable|array|max:10',
+            'tipo_clinica' => 'nullable|string',
+            'clinica_efectiva_id' => 'nullable|integer'
         ]);
 
         $user = Auth::user();
@@ -179,14 +181,26 @@ class AIController extends Controller
         try {
             $message = $request->input('message');
             $history = $request->input('conversation_history', []);
-
-            // Obtener información contextual del usuario y su clínica
-            $clinicaId = $user->clinica_id;
-            $clinica = $user->clinica; // Obtener la clínica completa
             
-            // Citas próximas de la clínica (próximos 7 días) - Usar modelo Eloquent para desencriptar
+            // Usar clínica efectiva (workspace activo) en lugar de clínica principal
+            $clinicaEfectivaId = $request->input('clinica_efectiva_id') ?? $user->clinica_efectiva_id;
+            $tipoClinica = $request->input('tipo_clinica');
+            
+            // Obtener información contextual del workspace activo
+            $clinica = \App\Models\Clinica::find($clinicaEfectivaId);
+            if (!$clinica) {
+                $clinica = $user->clinica; // Fallback a clínica principal
+                $clinicaEfectivaId = $user->clinica_id;
+            }
+            
+            // Si no se envió tipo_clinica, obtenerlo de la clínica efectiva
+            if (!$tipoClinica && $clinica) {
+                $tipoClinica = $clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
+            }
+            
+            // Citas próximas del workspace actual (próximos 7 días) - Usar modelo Eloquent para desencriptar
             $citasProximas = \App\Models\Cita::with('paciente:id,nombre,apellidoPat,apellidoMat')
-                ->where('clinica_id', $clinicaId)
+                ->where('clinica_id', $clinicaEfectivaId)
                 ->where('estado', '!=', 'cancelada')
                 ->where('fecha', '>=', now()->toDateString())
                 ->where('fecha', '<=', now()->addDays(7)->toDateString())
@@ -195,20 +209,21 @@ class AIController extends Controller
                 ->limit(20)
                 ->get();
 
-            // Estadísticas de la clínica
-            $totalPacientes = DB::table('pacientes')
-                ->where('clinica_id', $clinicaId)
+            // Estadísticas del workspace actual (usando tabla pivot)
+            $totalPacientes = DB::table('clinica_paciente')
+                ->where('clinica_id', $clinicaEfectivaId)
                 ->count();
                 
             $citasHoy = DB::table('citas')
-                ->where('clinica_id', $clinicaId)
+                ->where('clinica_id', $clinicaEfectivaId)
                 ->where('fecha', now()->toDateString())
                 ->where('estado', '!=', 'cancelada')
                 ->count();
 
             $contextoClinica = [
-                'clinica_id' => $clinicaId,
-                'tipo_clinica' => $clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar',
+                'clinica_id' => $clinicaEfectivaId,
+                'tipo_clinica' => $tipoClinica,
+                'nombre_clinica' => $clinica->nombre ?? 'Clínica',
                 'total_pacientes' => $totalPacientes,
                 'citas_hoy' => $citasHoy,
                 'citas_proximas' => $citasProximas->map(function($cita) {
@@ -225,20 +240,20 @@ class AIController extends Controller
             // Contexto del paciente (si se envía paciente_id: perfil abierto o conversación sobre ese paciente)
             $pacienteId = $request->input('paciente_id');
             if ($pacienteId) {
-                $paciente = \App\Models\Paciente::with(['citas' => function ($q) {
-                    $q->where('clinica_id', \Illuminate\Support\Facades\Auth::user()->clinica_id)
+                $paciente = \App\Models\Paciente::with(['citas' => function ($q) use ($clinicaEfectivaId) {
+                    $q->where('clinica_id', $clinicaEfectivaId)
                         ->orderBy('fecha', 'desc')->orderBy('hora', 'desc')->limit(15);
                 }, 'pagos' => function ($q) {
                     $q->orderBy('created_at', 'desc')->limit(10);
-                }])->where('clinica_id', $clinicaId)->find($pacienteId);
+                }])->where('clinica_id', $clinicaEfectivaId)->find($pacienteId);
 
                 if ($paciente) {
                     $edad = $paciente->fechaNacimiento
                         ? now()->diffInYears($paciente->fechaNacimiento)
                         : ($paciente->edad ?? null);
                     $nombreCompleto = trim($paciente->nombre . ' ' . $paciente->apellidoPat . ' ' . ($paciente->apellidoMat ?? ''));
-                    $totalCitas = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaId)->count();
-                    $citasPendientes = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaId)
+                    $totalCitas = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaEfectivaId)->count();
+                    $citasPendientes = \App\Models\Cita::where('paciente_id', $paciente->id)->where('clinica_id', $clinicaEfectivaId)
                         ->whereIn('estado', ['pendiente', 'confirmada'])->where('fecha', '>=', now()->toDateString())->count();
                     $ultimasCitas = $paciente->citas->take(5)->map(function ($c) {
                         return $c->fecha . ' ' . substr($c->hora, 0, 5) . ' - ' . $c->estado;
@@ -270,7 +285,8 @@ class AIController extends Controller
 
             Log::info('💬 Chat médico', [
                 'user_id' => $user->id,
-                'clinica_id' => $clinicaId,
+                'clinica_efectiva_id' => $clinicaEfectivaId,
+                'tipo_clinica' => $tipoClinica,
                 'usos_hoy' => $usosHoy
             ]);
 
@@ -316,13 +332,21 @@ class AIController extends Controller
     {
         try {
             $user = Auth::user();
-            $clinicaId = $user->clinica_id;
-            $tipoClinica = $user->clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
+            
+            // Usar clínica efectiva (workspace activo) en lugar de clínica principal
+            $clinicaEfectivaId = $request->input('clinica_efectiva_id') ?? $user->clinica_efectiva_id;
+            $clinica = \App\Models\Clinica::find($clinicaEfectivaId);
+            if (!$clinica) {
+                $clinica = $user->clinica; // Fallback a clínica principal
+                $clinicaEfectivaId = $user->clinica_id;
+            }
+            
+            $tipoClinica = $clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
             
             // Citas de hoy - obtener IDs primero
             $hoy = now()->toDateString();
             $citasHoyIds = DB::table('citas')
-                ->where('citas.clinica_id', $clinicaId)
+                ->where('citas.clinica_id', $clinicaEfectivaId)
                 ->where('citas.fecha', $hoy)
                 ->where('citas.estado', '!=', 'cancelada')
                 ->pluck('id');
@@ -332,7 +356,7 @@ class AIController extends Controller
             // Próxima cita (más cercana) - obtener ID
             $ahora = now();
             $proximaCitaId = DB::table('citas')
-                ->where('citas.clinica_id', $clinicaId)
+                ->where('citas.clinica_id', $clinicaEfectivaId)
                 ->where('citas.estado', '!=', 'cancelada')
                 ->where(function($query) use ($hoy, $ahora) {
                     $query->where('citas.fecha', '>', $hoy)
@@ -376,14 +400,15 @@ class AIController extends Controller
                 default => 30
             };
             
-            // Obtener IDs de pacientes sin visita reciente
-            $pacientesIds = DB::table('pacientes')
-                ->leftJoin('citas', function($join) use ($clinicaId) {
+            // Obtener IDs de pacientes sin visita reciente (usando tabla pivot)
+            $pacientesIds = DB::table('clinica_paciente')
+                ->join('pacientes', 'clinica_paciente.paciente_id', '=', 'pacientes.id')
+                ->leftJoin('citas', function($join) use ($clinicaEfectivaId) {
                     $join->on('pacientes.id', '=', 'citas.paciente_id')
-                         ->where('citas.clinica_id', $clinicaId)
+                         ->where('citas.clinica_id', $clinicaEfectivaId)
                          ->where('citas.estado', 'completada');
                 })
-                ->where('pacientes.clinica_id', $clinicaId)
+                ->where('clinica_paciente.clinica_id', $clinicaEfectivaId)
                 ->select('pacientes.id', DB::raw('MAX(citas.fecha) as ultima_cita'))
                 ->groupBy('pacientes.id')
                 ->havingRaw("MAX(citas.fecha) IS NULL OR MAX(citas.fecha) < DATE_SUB(NOW(), INTERVAL ? DAY)", [$diasSinVisita])
@@ -412,7 +437,7 @@ class AIController extends Controller
             
             // Citas pendientes de confirmar (próximos 3 días)
             $citasPendientes = DB::table('citas')
-                ->where('clinica_id', $clinicaId)
+                ->where('clinica_id', $clinicaEfectivaId)
                 ->where('estado', 'pendiente')
                 ->where('fecha', '>=', $hoy)
                 ->where('fecha', '<=', now()->addDays(3)->toDateString())
@@ -435,7 +460,7 @@ class AIController extends Controller
             
             // Obtener próximas 5 citas para notificaciones
             $citasProximas = \App\Models\Cita::with('paciente')
-                ->where('clinica_id', $clinicaId)
+                ->where('clinica_id', $clinicaEfectivaId)
                 ->where('estado', '!=', 'cancelada')
                 ->where(function($query) use ($hoy, $ahora) {
                     $query->where('fecha', '>', $hoy)
