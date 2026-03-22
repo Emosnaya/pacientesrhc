@@ -18,7 +18,7 @@ return new class extends Migration
         // Migrar usuarios existentes: cada usuario se vincula a su clínica actual
         // Asumimos que el rol viene de users.rol (1=superadmin, 2=admin, 3=doctor, 4=recepcionista)
         DB::statement('
-            INSERT INTO user_clinicas (user_id, clinica_id, rol, es_principal, activa, created_at, updated_at)
+            INSERT INTO user_clinicas (user_id, clinica_id, rol_en_clinica, es_principal, activa, created_at, updated_at)
             SELECT 
                 u.id,
                 u.clinica_id,
