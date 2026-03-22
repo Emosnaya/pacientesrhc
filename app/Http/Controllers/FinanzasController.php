@@ -676,13 +676,13 @@ class FinanzasController extends Controller
     {
         $user = Auth::user();
 
-        // Verificar que el paciente pertenece a la misma clínica
-        $paciente = Paciente::where('clinica_id', $user->clinica_id)
+        // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
+        $paciente = Paciente::where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($pacienteId);
 
         $pagos = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
             ->where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->orderBy('created_at', 'desc')
             ->get();
 

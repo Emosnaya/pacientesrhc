@@ -88,6 +88,15 @@ class EstratiAacvprController extends Controller
         $estratificacion->primeravez_rhc = $data['primeravez_rhc'] ?? null;
         $estratificacion->pe_fecha = $data['pe_fecha'] ?? null;
 
+        // Datos de Prueba de Esfuerzo
+        $estratificacion->fc_basal = $data['fc_basal'] ?? null;
+        $estratificacion->fc_maxima = $data['fc_max'] ?? null;
+        $estratificacion->fc_borg_12 = $data['fc_borg_12'] ?? null;
+        $estratificacion->dp_borg_12 = $data['dp_borg_12'] ?? null;
+        $estratificacion->mets_borg_12 = $data['mets_borg_12'] ?? null;
+        $estratificacion->carga_maxima = $data['carga_maxima'] ?? null;
+        $estratificacion->tolerancia_esfuerzo = $data['tolerancia_esfuerzo'] ?? null;
+
         // Riesgo Alto
         $estratificacion->alto_fevi_disminuida = ($data['alto_fevi_disminuida'] ?? false) == 'true' || ($data['alto_fevi_disminuida'] ?? false) === true;
         $estratificacion->alto_sintomas_reposo = ($data['alto_sintomas_reposo'] ?? false) == 'true' || ($data['alto_sintomas_reposo'] ?? false) === true;
@@ -140,11 +149,13 @@ class EstratiAacvprController extends Controller
         $estratificacion->fc_diana_manual = $data['fc_diana_manual'] ?? null;
         $estratificacion->carga_inicial = $data['carga_inicial'] ?? null;
         
-        // Calcular FC Diana si hay datos de FC
-        if (isset($data['fc_maxima']) && isset($data['fc_basal'])) {
-            $fcMax = floatval($data['fc_maxima']);
-            $fcBasal = floatval($data['fc_basal']);
-            
+        // Calcular FC Diana automáticamente
+        $fcBasal = floatval($data['fc_basal'] ?? 0);
+        $fcMax = floatval($data['fc_max'] ?? 0);
+        $fcBorg12 = floatval($data['fc_borg_12'] ?? 0);
+        $dpBorg12 = floatval($data['dp_borg_12'] ?? 0);
+        
+        if ($fcMax > 0 && $fcBasal > 0) {
             $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
             $blackburn = ($fcMax * 0.8);
             $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $nuevoPaciente->edad)));
@@ -163,20 +174,27 @@ class EstratiAacvprController extends Controller
                 case 'Manual':
                     $fcDiana = $data['fc_diana_manual'] ?? null;
                     break;
-                default:
-                    $fcDiana = $data['fc_borg_12'] ?? null;
+                default: // 'Bo' - Borg
+                    $fcDiana = $fcBorg12;
             }
             $estratificacion->fc_diana = $fcDiana;
+            
+            // Calcular DP Diana automáticamente
+            if ($fcDiana > 0) {
+                $estratificacion->dp_diana = $dpBorg12;
+            }
         } else {
-            $estratificacion->fc_diana = $data['fc_diana'] ?? null;
+            $estratificacion->fc_diana = $data['fc_diana_manual'] ?? null;
+            $estratificacion->dp_diana = $data['dp_diana'] ?? null;
         }
 
         // Comentarios
         $estratificacion->comentarios = $data['comentarios'] ?? null;
 
-        // Asignar el user_id del dueño del paciente
+        // Asignar el user_id del dueño del paciente y clinica_id
         $estratificacion->user_id = $nuevoPaciente->user_id;
         $estratificacion->paciente_id = $nuevoPaciente->id;
+        $estratificacion->clinica_id = $nuevoPaciente->clinica_id;
 
         $estratificacion->save();
 
@@ -219,6 +237,15 @@ class EstratiAacvprController extends Controller
         $expediente->fecha_estratificacion = $request['fecha_estratificacion'];
         $expediente->primeravez_rhc = $request['primeravez_rhc'];
         $expediente->pe_fecha = $request['pe_fecha'];
+
+        // Datos de Prueba de Esfuerzo
+        $expediente->fc_basal = $request['fc_basal'] ?? null;
+        $expediente->fc_maxima = $request['fc_max'] ?? null;
+        $expediente->fc_borg_12 = $request['fc_borg_12'] ?? null;
+        $expediente->dp_borg_12 = $request['dp_borg_12'] ?? null;
+        $expediente->mets_borg_12 = $request['mets_borg_12'] ?? null;
+        $expediente->carga_maxima = $request['carga_maxima'] ?? null;
+        $expediente->tolerancia_esfuerzo = $request['tolerancia_esfuerzo'] ?? null;
 
         // Riesgo Alto
         $expediente->alto_fevi_disminuida = $this->toBool($request['alto_fevi_disminuida']);
@@ -268,10 +295,48 @@ class EstratiAacvprController extends Controller
         $expediente->borg = $request['borg'];
         $expediente->fc_diana_metodo = $request['fc_diana_metodo'];
         $expediente->fc_diana_str = $request['fc_diana_str'];
-        $expediente->fc_diana = $request['fc_diana'];
         $expediente->fc_diana_manual = $request['fc_diana_manual'];
-        $expediente->dp_diana = $request['dp_diana'];
         $expediente->carga_inicial = $request['carga_inicial'];
+        
+        // Recalcular FC Diana automáticamente
+        $fcBasal = floatval($request['fc_basal'] ?? 0);
+        $fcMax = floatval($request['fc_max'] ?? 0);
+        $fcBorg12 = floatval($request['fc_borg_12'] ?? 0);
+        $dpBorg12 = floatval($request['dp_borg_12'] ?? 0);
+        
+        if ($fcMax > 0 && $fcBasal > 0) {
+            $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
+            $blackburn = ($fcMax * 0.8);
+            $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $paciente->edad)));
+
+            switch ($request['fc_diana_metodo'] ?? 'Bo') {
+                case 'K':
+                    $fcDiana = $karvonen;
+                    break;
+                case 'BI':
+                    $fcDiana = $blackburn;
+                    break;
+                case 'N':
+                    $fcDiana = $narita;
+                    break;
+                case 'UISQ':
+                case 'Manual':
+                    $fcDiana = $request['fc_diana_manual'] ?? null;
+                    break;
+                default: // 'Bo' - Borg
+                    $fcDiana = $fcBorg12;
+            }
+            $expediente->fc_diana = $fcDiana;
+            
+            // Calcular DP Diana automáticamente
+            if ($fcDiana > 0) {
+                $expediente->dp_diana = $dpBorg12;
+            }
+        } else {
+            $expediente->fc_diana = $request['fc_diana'] ?? null;
+            $expediente->dp_diana = $request['dp_diana'] ?? null;
+        }
+        
         $expediente->comentarios = $request['comentarios'];
 
         $expediente->save();

@@ -18,18 +18,21 @@ class PacienteController extends Controller
      */
     public function index(Request $request){
         $user = Auth::user();
+        $clinicaId = $user->clinica_efectiva_id;
         
-        // Obtener pacientes de la misma clínica
-        $query = Paciente::whereHas('user', function($q) use ($user) {
-            $q->where('clinica_id', $user->clinica_id);
+        // Obtener pacientes vinculados a la clínica/workspace activo mediante la tabla pivot
+        $query = Paciente::whereHas('clinicas', function($q) use ($clinicaId) {
+            $q->where('clinica_id', $clinicaId);
         });
         
-        // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
-        // Si no viene en el request, usar la del usuario
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+        // Resolver sucursal: validar que pertenezca a la clínica efectiva
+        $sucursalId = $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         
         if ($sucursalId) {
-            $query->where('sucursal_id', $sucursalId);
+            $query->whereHas('clinicas', function($q) use ($clinicaId, $sucursalId) {
+                $q->where('clinica_id', $clinicaId)
+                  ->where('sucursal_id', $sucursalId);
+            });
         }
         
         $pacientes = $query->get();
@@ -66,12 +69,13 @@ class PacienteController extends Controller
         }
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_efectiva_id;
         
         // Determinar sucursal_id
         if ($user->isSuperAdmin && $request->has('sucursal_id') && $request->sucursal_id) {
-            // SuperAdmin puede asignar a cualquier sucursal de su clínica
+            // Validar que la sucursal pertenezca a la clínica efectiva (no a la original)
             $sucursal = \App\Models\Sucursal::where('id', $request->sucursal_id)
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $clinicaId)
                 ->first();
             
             if (!$sucursal) {
@@ -80,18 +84,18 @@ class PacienteController extends Controller
             
             $sucursalId = $sucursal->id;
         } else {
-            // Usuarios normales y cuando no viene sucursal_id
-            $sucursalId = $user->sucursal_id;
+            // Usuarios normales: usar sucursal del usuario si pertenece a la clínica efectiva
+            $sucursalId = $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         }
 
         // Calcular el siguiente registro según la clínica
-        if ($user->clinica_id == 1) {
+        if ($clinicaId == 1) {
             // Clínica original: mantener comportamiento actual (recibe registro del request)
             $paciente->registro = $request->registro;
         } else {
             // Otras clínicas: registro secuencial por sucursal
             if (!$request->registro) {
-                $ultimoRegistro = Paciente::where('clinica_id', $user->clinica_id)
+                $ultimoRegistro = Paciente::where('clinica_id', $clinicaId)
                     ->where('sucursal_id', $sucursalId)
                     ->max('registro');
                 $paciente->registro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
@@ -132,10 +136,14 @@ class PacienteController extends Controller
         $paciente->color = $request->color ?? null;
         
         // Determinar el dueño del paciente (simplificado)
-        // Si envían user_id específico, validar que sea de la misma clínica
+        // Si envían user_id específico, validar que sea de la misma clínica efectiva
         if ($request->has('user_id') && $request->user_id) {
             $doctor = \App\Models\User::where('id', $request->user_id)
-                ->where('clinica_id', $user->clinica_id)
+                ->where(function($q) use ($clinicaId, $user) {
+                    // Aceptar si pertenece a la clínica efectiva directamente o por pivot
+                    $q->where('clinica_id', $clinicaId)
+                      ->orWhere('id', $user->id);
+                })
                 ->first();
             
             if (!$doctor) {
@@ -148,10 +156,17 @@ class PacienteController extends Controller
             $paciente->user_id = $user->id;
         }
 
-        $paciente->clinica_id = $user->clinica_id;
+        $paciente->clinica_id = $clinicaId;
         $paciente->sucursal_id = $sucursalId;
 
         $paciente->save();
+        
+        // Crear la vinculación en la tabla pivot
+        $paciente->clinicas()->attach($clinicaId, [
+            'sucursal_id' => $sucursalId,
+            'user_id' => $user->id,
+            'vinculado_at' => now()
+        ]);
 
         return [
             'message' => 'Paciente Guardado',
@@ -170,9 +185,8 @@ class PacienteController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el paciente pertenece a la misma clínica
-        $pacienteOwner = $paciente->user;
-        if (!$pacienteOwner || $pacienteOwner->clinica_id !== $user->clinica_id) {
+        // Verificar que el paciente pertenece al workspace activo
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos para ver este paciente'], 403);
         }
 
@@ -191,9 +205,8 @@ class PacienteController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el paciente pertenece a la misma clínica
-        $pacienteOwner = $paciente->user;
-        if (!$pacienteOwner || $pacienteOwner->clinica_id !== $user->clinica_id) {
+        // Verificar que el paciente pertenece al workspace activo
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos para editar este paciente'], 403);
         }
 
@@ -254,19 +267,22 @@ class PacienteController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el paciente pertenece a la misma clínica
-        $pacienteOwner = $paciente->user;
-        if (!$pacienteOwner || $pacienteOwner->clinica_id !== $user->clinica_id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar este paciente'], 403);
+        // Solo super admin o admin pueden desvincular pacientes
+        if (!$user->isSuperAdmin && !$user->isAdmin) {
+            return response()->json(['error' => 'Solo administradores pueden desvincular pacientes'], 403);
         }
         
-        // Solo admin o dueño puede eliminar
-        if (!$user->isAdmin() && $paciente->user_id !== $user->id) {
-            return response()->json(['error' => 'Solo el dueño del paciente o un administrador puede eliminarlo'], 403);
+        $clinicaId = $user->clinica_efectiva_id;
+        
+        // Verificar que el paciente esté vinculado al workspace activo
+        if (!$paciente->clinicas()->where('clinica_id', $clinicaId)->exists()) {
+            return response()->json(['error' => 'No tienes permisos para desvincular este paciente'], 403);
         }
         
-        $paciente->delete();
-        return response()->json(['message' => 'Paciente eliminado exitosamente'], 204);
+        // Desvincular paciente de la clínica (eliminar registro pivot, NO eliminar paciente)
+        $paciente->clinicas()->detach($clinicaId);
+        
+        return response()->json(['message' => 'Paciente desvinculado exitosamente de la clínica'], 200);
     }
 
     /**
@@ -280,10 +296,11 @@ class PacienteController extends Controller
     public function createExpress(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_efectiva_id;
         
         // Validar que sea una clínica dental
-        $clinica = $user->clinica;
-        if ($clinica->tipo_clinica !== 'dental') {
+        $clinica = \App\Models\Clinica::find($clinicaId);
+        if (!$clinica || $clinica->tipo_clinica !== 'dental') {
             return response()->json([
                 'message' => 'El flujo Express solo está disponible para clínicas dentales'
             ], 403);
@@ -299,10 +316,10 @@ class PacienteController extends Controller
         // Determinar sucursal_id
         $sucursalId = $request->has('sucursal_id') && $user->isSuperAdmin 
             ? $request->sucursal_id 
-            : $user->sucursal_id;
+            : $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         
         // Generar registro secuencial por sucursal
-        $ultimoRegistro = Paciente::where('clinica_id', $user->clinica_id)
+        $ultimoRegistro = Paciente::where('clinica_id', $clinicaId)
             ->where('sucursal_id', $sucursalId)
             ->max('registro');
         $nuevoRegistro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
@@ -324,7 +341,7 @@ class PacienteController extends Controller
             'motivo_consulta' => $request->motivo_consulta,
             'tipo_paciente' => $request->tipo_paciente ?? 'dental',
             'user_id' => $user->id,
-            'clinica_id' => $user->clinica_id,
+            'clinica_id' => $clinicaId,
             'sucursal_id' => $sucursalId,
             // Cumplimiento LFPDPPP: Aviso de privacidad aceptado implícitamente en urgencias
             'aviso_privacidad_aceptado_at' => now(),
@@ -336,7 +353,7 @@ class PacienteController extends Controller
             'paciente_id' => $paciente->id,
             'admin_id' => $user->id,
             'user_id' => $user->id,
-            'clinica_id' => $user->clinica_id,
+            'clinica_id' => $clinicaId,
             'sucursal_id' => $sucursalId,
             'fecha' => now()->toDateString(),
             'hora' => now()->toTimeString(),
@@ -350,6 +367,31 @@ class PacienteController extends Controller
             'paciente' => $paciente,
             'cita' => $cita,
         ], 201);
+    }
+
+    /**
+     * Resolver sucursal_id validando que pertenezca a la clínica efectiva.
+     * Evita que el frontend pase una sucursal del workspace anterior (caché stale).
+     */
+    private function resolveEffectiveSucursalId($user, $request, int $clinicaId): ?int
+    {
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $request->sucursal_id)
+                ->where('clinica_id', $clinicaId)
+                ->exists();
+            if ($valida) return (int) $request->sucursal_id;
+            // sucursal_id no pertenece al workspace activo — ignorar
+        }
+
+        // Usar user->sucursal_id solo si pertenece a la clínica efectiva
+        if ($user->sucursal_id) {
+            $valida = \App\Models\Sucursal::where('id', $user->sucursal_id)
+                ->where('clinica_id', $clinicaId)
+                ->exists();
+            if ($valida) return $user->sucursal_id;
+        }
+
+        return null; // Sin filtro de sucursal = todos los de la clínica efectiva
     }
 }
 

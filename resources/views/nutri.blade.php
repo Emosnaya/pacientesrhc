@@ -764,20 +764,20 @@
         <div class="diagnosis-title">Diagnóstico Nutricional</div>
         <table class="diagnosis-table">
             <tr>
-                <td><span class="diagnosis-check @if($data->diagnostico === "1") active @endif">@if($data->diagnostico === "1")✓@endif</span> Paciente en Obesidad que cumple criterios para Síndrome Metabólico.</td>
-                <td><span class="diagnosis-check @if($data->diagnostico === "2") active @endif">@if($data->diagnostico === "2")✓@endif</span> Paciente en Sobrepeso que cumple criterios para Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "1") active @endif">@if($data->diagnostico === "1")✔@endif</span> Paciente en Obesidad que cumple criterios para Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "2") active @endif">@if($data->diagnostico === "2")✔@endif</span> Paciente en Sobrepeso que cumple criterios para Síndrome Metabólico.</td>
             </tr>
             <tr>
-                <td><span class="diagnosis-check @if($data->diagnostico === "3") active @endif">@if($data->diagnostico === "3")✓@endif</span> Paciente en Sobrepeso sin Síndrome Metabólico.</td>
-                <td><span class="diagnosis-check @if($data->diagnostico === "4") active @endif">@if($data->diagnostico === "4")✓@endif</span> Paciente en Obesidad sin Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "3") active @endif">@if($data->diagnostico === "3")✔@endif</span> Paciente en Sobrepeso sin Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "4") active @endif">@if($data->diagnostico === "4")✔@endif</span> Paciente en Obesidad sin Síndrome Metabólico.</td>
             </tr>
             <tr>
-                <td><span class="diagnosis-check @if($data->diagnostico === "5") active @endif">@if($data->diagnostico === "5")✓@endif</span> Paciente en Normopeso.</td>
-                <td><span class="diagnosis-check @if($data->diagnostico === "6") active @endif">@if($data->diagnostico === "6")✓@endif</span> Paciente en Normopeso que cumple criterios para Síndrome Metabólico.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "5") active @endif">@if($data->diagnostico === "5")✔@endif</span> Paciente en Normopeso.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "6") active @endif">@if($data->diagnostico === "6")✔@endif</span> Paciente en Normopeso que cumple criterios para Síndrome Metabólico.</td>
             </tr>
             <tr>
-                <td><span class="diagnosis-check @if($data->diagnostico === "7") active @endif">@if($data->diagnostico === "7")✓@endif</span> Paciente en Infrapeso, se recomienda visita con Nutrición.</td>
-                <td><span class="diagnosis-check @if($data->diagnostico === "8") active @endif">@if($data->diagnostico === "8")✓@endif</span> Paciente en Obesidad Mórbida.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "7") active @endif">@if($data->diagnostico === "7")✔@endif</span> Paciente en Infrapeso, se recomienda visita con Nutrición.</td>
+                <td><span class="diagnosis-check @if($data->diagnostico === "8") active @endif">@if($data->diagnostico === "8")✔@endif</span> Paciente en Obesidad Mórbida.</td>
             </tr>
         </table>
     </div>
@@ -796,47 +796,47 @@
         <div class="recommendations-header">Recomendaciones Específicas</div>
         <div class="recommendations-list">
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[0]) && $recomendaciones[0] === true) active @endif">@if(isset($recomendaciones[0]) && $recomendaciones[0] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[0]) && $recomendaciones[0] === true) active @endif">@if(isset($recomendaciones[0]) && $recomendaciones[0] === true)✔@endif</div>
                 <span>Evitar el consumo de azúcares (azúcar de mesa, mascabado, mieles, mermeladas, cajeta, lechera) así como productos con azúcares simples.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[1]) && $recomendaciones[1] === true) active @endif">@if(isset($recomendaciones[1]) && $recomendaciones[1] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[1]) && $recomendaciones[1] === true) active @endif">@if(isset($recomendaciones[1]) && $recomendaciones[1] === true)✔@endif</div>
                 <span>Evitar el consumo de bebidas azucaradas e intercambiarlo por agua simple.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[2]) && $recomendaciones[2] === true) active @endif">@if(isset($recomendaciones[2]) && $recomendaciones[2] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[2]) && $recomendaciones[2] === true) active @endif">@if(isset($recomendaciones[2]) && $recomendaciones[2] === true)✔@endif</div>
                 <span>Formar horarios para las tres principales comidas del día.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[3]) && $recomendaciones[3] === true) active @endif">@if(isset($recomendaciones[3]) && $recomendaciones[3] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[3]) && $recomendaciones[3] === true) active @endif">@if(isset($recomendaciones[3]) && $recomendaciones[3] === true)✔@endif</div>
                 <span>Realizar 3 comidas principales al día.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[4]) && $recomendaciones[4] === true) active @endif">@if(isset($recomendaciones[4]) && $recomendaciones[4] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[4]) && $recomendaciones[4] === true) active @endif">@if(isset($recomendaciones[4]) && $recomendaciones[4] === true)✔@endif</div>
                 <span>Aumentar el consumo de agua simple (la sed es la señal más confiable de que necesita agua).</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[5]) && $recomendaciones[5] === true) active @endif">@if(isset($recomendaciones[5]) && $recomendaciones[5] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[5]) && $recomendaciones[5] === true) active @endif">@if(isset($recomendaciones[5]) && $recomendaciones[5] === true)✔@endif</div>
                 <span>Mantener actividad física.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[6]) && $recomendaciones[6] === true) active @endif">@if(isset($recomendaciones[6]) && $recomendaciones[6] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[6]) && $recomendaciones[6] === true) active @endif">@if(isset($recomendaciones[6]) && $recomendaciones[6] === true)✔@endif</div>
                 <span>Iniciar actividad física moderada-ligera (caminar, trotar, bicicleta, natación) por al menos 30 minutos al día 5 días a la semana.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[7]) && $recomendaciones[7] === true) active @endif">@if(isset($recomendaciones[7]) && $recomendaciones[7] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[7]) && $recomendaciones[7] === true) active @endif">@if(isset($recomendaciones[7]) && $recomendaciones[7] === true)✔@endif</div>
                 <span>Aumentar actividad física moderada-ligera por al menos 150 minutos a la semana o 75 minutos de actividad vigorosa.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[8]) && $recomendaciones[8] === true) active @endif">@if(isset($recomendaciones[8]) && $recomendaciones[8] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[8]) && $recomendaciones[8] === true) active @endif">@if(isset($recomendaciones[8]) && $recomendaciones[8] === true)✔@endif</div>
                 <span>A la hora de la comida elegir una opción entre arroz, frijoles, pasta o papa como acompañamiento.</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[9]) && $recomendaciones[9] === true) active @endif">@if(isset($recomendaciones[9]) && $recomendaciones[9] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[9]) && $recomendaciones[9] === true) active @endif">@if(isset($recomendaciones[9]) && $recomendaciones[9] === true)✔@endif</div>
                 <span>Disminuir la cantidad de cereales (arroz, tortilla, pan, papa, pasta).</span>
             </div>
             <div class="recommendation-item">
-                <div class="recommendation-check @if(isset($recomendaciones[10]) && $recomendaciones[10] === true) active @endif">@if(isset($recomendaciones[10]) && $recomendaciones[10] === true)✓@endif</div>
+                <div class="recommendation-check @if(isset($recomendaciones[10]) && $recomendaciones[10] === true) active @endif">@if(isset($recomendaciones[10]) && $recomendaciones[10] === true)✔@endif</div>
                 <span>Siempre y cuando realice 1 hora o más de ejercicio: consumir una colación antes de la actividad y otra después.</span>
             </div>
         </div>
@@ -848,34 +848,34 @@
         <table class="diet-table">
             <tr>
                 <td>
-                    <span class="diet-icon">🥩</span>
+                    <span class="diet-icon" style="background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">P</span>
                     <span class="diet-name">Proteína</span>
                     <div class="diet-desc">Variedad de carnes, leguminosas, sin freír ni empanizar.</div>
                 </td>
                 <td>
-                    <span class="diet-icon">🥛</span>
+                    <span class="diet-icon" style="background: #3b82f6; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">L</span>
                     <span class="diet-name">Lácteos</span>
                     <div class="diet-desc">Libres o bajos en grasa.</div>
                 </td>
                 <td>
-                    <span class="diet-icon">🫒</span>
+                    <span class="diet-icon" style="background: #f59e0b; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">A</span>
                     <span class="diet-name">Aceites</span>
                     <div class="diet-desc">Vegetales, evitando freír.</div>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <span class="diet-icon">🌾</span>
+                    <span class="diet-icon" style="background: #8b5cf6; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">C</span>
                     <span class="diet-name">Cereales</span>
                     <div class="diet-desc">Granos y derivados en cantidades moderadas.</div>
                 </td>
                 <td>
-                    <span class="diet-icon">🍎</span>
+                    <span class="diet-icon" style="background: #ec4899; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">F</span>
                     <span class="diet-name">Frutas</span>
                     <div class="diet-desc">Frescas y variadas en color.</div>
                 </td>
                 <td>
-                    <span class="diet-icon">🥬</span>
+                    <span class="diet-icon" style="background: #10b981; color: white; border-radius: 50%; width: 20px; height: 20px; display: inline-block; text-align: center; line-height: 20px; font-size: 10px; font-weight: bold;">V</span>
                     <span class="diet-name">Vegetales</span>
                     <div class="diet-desc">Frescos en todas sus variedades.</div>
                 </td>

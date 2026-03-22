@@ -21,9 +21,13 @@ class MultiTenantMiddleware
         // Solo aplicar el middleware si el usuario está autenticado
         if (Auth::check()) {
             $user = Auth::user();
-            
-            // Verificar que el usuario tenga una clínica asignada
-            if (!$user->clinica_id) {
+
+            // Resolver qué clínica está activa:
+            // clinica_activa_id si el usuario está usando un workspace alternativo (consultorio privado),
+            // de lo contrario la clinica_id asignada originalmente.
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
+
+            if (!$clinicaId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usuario no tiene clínica asignada'
@@ -31,7 +35,7 @@ class MultiTenantMiddleware
             }
 
             // Verificar que la clínica esté activa
-            $clinica = Clinica::find($user->clinica_id);
+            $clinica = Clinica::find($clinicaId);
             if (!$clinica || !$clinica->activa) {
                 return response()->json([
                     'success' => false,
@@ -48,7 +52,7 @@ class MultiTenantMiddleware
                 ], 403);
             }
 
-            // Agregar información de la clínica al request para uso posterior
+            // Inyectar la clínica efectiva al request para que los controllers la usen
             $request->merge(['current_clinica' => $clinica]);
         }
 

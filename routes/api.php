@@ -32,8 +32,11 @@ use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
 use App\Http\Controllers\RadiografiaDentalController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
-use App\Http\Controllers\RecetaController;
+use App\Http\Controllers\ConsultorioController;
 use App\Http\Controllers\FinanzasController;
+use App\Http\Controllers\RecetaController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SuscripcionConsultorioController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -50,9 +53,29 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// ═══════════════════════════════════════════════════════════════════
+// RUTAS PÚBLICAS - Auto-registro de CONSULTORIOS PRIVADOS
+// Las CLÍNICAS se registran manualmente por el equipo administrativo
+// ═══════════════════════════════════════════════════════════════════
+Route::prefix('registro')->group(function() {
+    Route::get('/planes', [SubscriptionController::class, 'getPlans']);
+    Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
+    Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
+});
+
+// Webhook de Stripe (sin autenticación, Stripe valida con signature)
+Route::post('/registro/webhook/stripe', [SubscriptionController::class, 'handleWebhook']);
+
+// ═══════════════════════════════════════════════════════════════════
+// RUTAS AUTENTICADAS
+// ═══════════════════════════════════════════════════════════════════
 Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
+    
+    // Comprar consultorio adicional (addon)
+    Route::post('/consultorio/comprar-adicional', [SubscriptionController::class, 'comprarConsultorioAdicional']);
+    Route::get('/consultorio/comprar-adicional/usage', [SubscriptionController::class, 'getConsultorioUsage']);
     Route::get('/user', function (Request $request) {
-        return $request->user()->load(['sucursal', 'clinica']);
+        return $request->user()->load(['sucursal', 'clinica', 'clinicaActiva']);
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     
@@ -299,6 +322,33 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::get('/{id}/print', [PruebaEsfuerzoPulmonarController::class, 'generatePDF']);
         Route::get('/{id}/download', [PruebaEsfuerzoPulmonarController::class, 'downloadPDF']);
     });
+    // ==========================================
+    // MÓDULO CONSULTORIO PRIVADO
+    // ==========================================
+    Route::prefix('consultorio')->group(function () {
+        Route::post('/setup', [ConsultorioController::class, 'setup']);
+        Route::get('/mis-clinicas', [ConsultorioController::class, 'misClinicas']);
+        Route::post('/cambiar-workspace', [ConsultorioController::class, 'cambiarWorkspace']);
+        Route::post('/invitar', [ConsultorioController::class, 'invitar']);
+        // Aceptar / rechazar invitación (requiere auth, el front redirige tras login)
+        Route::post('/invitacion/{token}/aceptar', [ConsultorioController::class, 'aceptarInvitacion']);
+        Route::post('/invitacion/{token}/rechazar', [ConsultorioController::class, 'rechazarInvitacion']);
+        Route::get('/{clinicaId}/colaboradores', [ConsultorioController::class, 'listarColaboradores']);
+        Route::delete('/{clinicaId}/colaboradores/{userId}', [ConsultorioController::class, 'eliminarColaborador']);
+        Route::get('/{clinicaId}/invitaciones', [ConsultorioController::class, 'invitacionesPendientes']);
+    });
+
+    // MÓDULO SUSCRIPCIONES PARA CONSULTORIOS PRIVADOS
+    // ==========================================
+    Route::prefix('suscripcion-consultorio')->group(function () {
+        Route::get('/estado', [SuscripcionConsultorioController::class, 'estado']);
+        Route::get('/planes', [SuscripcionConsultorioController::class, 'planes']);
+        Route::post('/iniciar-trial', [SuscripcionConsultorioController::class, 'iniciarTrial']);
+        Route::post('/crear-suscripcion', [SuscripcionConsultorioController::class, 'crearSuscripcion']);
+        Route::post('/comprar-consultorio-adicional', [SuscripcionConsultorioController::class, 'comprarConsultorioAdicional']);
+        Route::post('/cancelar', [SuscripcionConsultorioController::class, 'cancelar']);
+    });
+
 });
 
 // Rutas para gestión de usuarios y permisos (solo administradores)
@@ -328,6 +378,9 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
 
+// Invitación consultorio — pública para preview antes de login
+Route::get('/consultorio/invitacion/{token}', [ConsultorioController::class, 'verInvitacion']);
+
 // Rutas para registro de clínicas (públicas)
 Route::get('/clinicas/tipos', [\App\Http\Controllers\ClinicaController::class, 'getTipos']);
 Route::post('/clinicas', [\App\Http\Controllers\ClinicaController::class, 'store']);
@@ -337,5 +390,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function () {
     Route::get('/clinicas/{id}', [\App\Http\Controllers\ClinicaController::class, 'show']);
     Route::get('/clinica/current', [\App\Http\Controllers\ClinicaController::class, 'getCurrentClinica']);
     Route::put('/clinica/update', [\App\Http\Controllers\ClinicaController::class, 'updateCurrentClinica']);
+    Route::put('/clinica/{id}', [\App\Http\Controllers\ClinicaController::class, 'update']);
     Route::post('/clinica/upload-logo', [\App\Http\Controllers\ClinicaController::class, 'uploadLogo']);
+    Route::post('/clinica/{id}/upload-logo', [\App\Http\Controllers\ClinicaController::class, 'uploadLogo']);
+    Route::delete('/clinica/{id}/delete-logo', [\App\Http\Controllers\ClinicaController::class, 'deleteLogo']);
 });

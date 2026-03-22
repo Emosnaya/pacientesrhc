@@ -17,13 +17,19 @@ class HistoriaClinicaDentalController extends Controller
     {
         $user = Auth::user();
         
-        // Filtrar por sucursal_id
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        
-        $historias = HistoriaClinicaDental::where('sucursal_id', $sucursalId)
+        // Filtrar siempre por clinica_id del usuario autenticado (aislamiento multi-tenant)
+        $query = HistoriaClinicaDental::where('clinica_id', $user->clinica_id)
             ->with(['paciente', 'user', 'odontogramas'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        // Filtro adicional por sucursal si se especifica
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        } elseif ($user->sucursal_id) {
+            $query->where('sucursal_id', $user->sucursal_id);
+        }
+
+        $historias = $query->get();
         
         return response()->json($historias);
     }
@@ -51,12 +57,19 @@ class HistoriaClinicaDentalController extends Controller
         }
 
         try {
+            // Verificar que el paciente pertenezca a la misma clínica
+            $paciente = Paciente::find($request->paciente_id);
+            if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+            }
+
             // Determinar sucursal_id
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             $historia = HistoriaClinicaDental::create([
                 'paciente_id' => $request->paciente_id,
                 'sucursal_id' => $sucursalId,
+                'clinica_id' => $user->clinica_id,
                 'user_id' => $user->id,
                 'fecha' => $request->fecha ?? now(),
                 'nombre_doctor' => $request->nombre_doctor ?? $user->nombre . ' ' . $user->apellidoPat,
@@ -156,7 +169,13 @@ class HistoriaClinicaDentalController extends Controller
      */
     public function show(string $id)
     {
+        $user = Auth::user();
         $historia = HistoriaClinicaDental::with(['paciente', 'user', 'odontogramas'])->findOrFail($id);
+
+        if ($historia->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a esta historia clínica'], 403);
+        }
+
         return response()->json($historia);
     }
 
@@ -177,9 +196,17 @@ class HistoriaClinicaDentalController extends Controller
             ], 422);
         }
 
+        $user = Auth::user();
+
         try {
             $historia = HistoriaClinicaDental::findOrFail($id);
-            $historia->update($request->all());
+
+            if ($historia->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a esta historia clínica'], 403);
+            }
+
+            // Nunca permitir cambiar clinica_id ni sucursal_id desde el request
+            $historia->update($request->except(['clinica_id', 'sucursal_id', 'paciente_id']));
 
             return response()->json([
                 'success' => true,
@@ -201,8 +228,19 @@ class HistoriaClinicaDentalController extends Controller
      */
     public function destroy(string $id)
     {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar historias clínicas'], 403);
+        }
+
         try {
             $historia = HistoriaClinicaDental::findOrFail($id);
+
+            if ($historia->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a esta historia clínica'], 403);
+            }
+
             $historia->delete();
 
             return response()->json([
@@ -225,14 +263,19 @@ class HistoriaClinicaDentalController extends Controller
     public function getByPaciente(Request $request, $pacienteId)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        
+
+        // Verificar que el paciente pertenezca a la misma clínica
+        $paciente = Paciente::find($pacienteId);
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
+        }
+
         $historias = HistoriaClinicaDental::where('paciente_id', $pacienteId)
-            ->where('sucursal_id', $sucursalId)
+            ->where('clinica_id', $user->clinica_id)
             ->with(['user', 'odontogramas'])
             ->orderBy('fecha', 'desc')
             ->get();
-        
+
         return response()->json($historias);
     }
 }

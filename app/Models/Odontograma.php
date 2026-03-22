@@ -14,6 +14,7 @@ class Odontograma extends Model
     protected $fillable = [
         'paciente_id',
         'sucursal_id',
+        'clinica_id',
         'historia_clinica_dental_id',
         'fecha',
         'dientes',

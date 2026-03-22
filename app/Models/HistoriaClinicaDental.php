@@ -16,6 +16,7 @@ class HistoriaClinicaDental extends Model
     protected $fillable = [
         'paciente_id',
         'sucursal_id',
+        'clinica_id',
         'user_id',
         'fecha',
         'nombre_doctor',

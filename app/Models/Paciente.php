@@ -132,6 +132,16 @@ class Paciente extends Model
     }
 
     /**
+     * Relación muchos a muchos con clínicas (para pasaporte de salud)
+     */
+    public function clinicas()
+    {
+        return $this->belongsToMany(Clinica::class, 'clinica_paciente')
+            ->withPivot('sucursal_id', 'user_id', 'vinculado_at')
+            ->withTimestamps();
+    }
+
+    /**
      * Relación con los permisos otorgados sobre este paciente
      */
     public function permissions()

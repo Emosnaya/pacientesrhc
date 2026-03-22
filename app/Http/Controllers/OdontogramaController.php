@@ -15,12 +15,18 @@ class OdontogramaController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        
-        $odontogramas = Odontograma::where('sucursal_id', $sucursalId)
+
+        $query = Odontograma::where('clinica_id', $user->clinica_id)
             ->with(['paciente', 'historiaClinicaDental'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        if ($request->has('sucursal_id') && $request->sucursal_id) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        } elseif ($user->sucursal_id) {
+            $query->where('sucursal_id', $user->sucursal_id);
+        }
+
+        $odontogramas = $query->get();
         
         return response()->json($odontogramas);
     }
@@ -47,6 +53,12 @@ class OdontogramaController extends Controller
         }
 
         try {
+            // Verificar que el paciente pertenezca a la misma clínica
+            $paciente = \App\Models\Paciente::find($request->paciente_id);
+            if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
+            }
+
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Si no se envían dientes, inicializar con estructura vacía
@@ -55,6 +67,7 @@ class OdontogramaController extends Controller
             $odontograma = Odontograma::create([
                 'paciente_id' => $request->paciente_id,
                 'sucursal_id' => $sucursalId,
+                'clinica_id' => $user->clinica_id,
                 'historia_clinica_dental_id' => $request->historia_clinica_dental_id,
                 'fecha' => $request->fecha ?? now(),
                 'dientes' => $dientes,
@@ -106,7 +119,13 @@ class OdontogramaController extends Controller
      */
     public function show(string $id)
     {
+        $user = Auth::user();
         $odontograma = Odontograma::with(['paciente', 'historiaClinicaDental'])->findOrFail($id);
+
+        if ($odontograma->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a este odontograma'], 403);
+        }
+
         return response()->json($odontograma);
     }
 
@@ -128,9 +147,16 @@ class OdontogramaController extends Controller
             ], 422);
         }
 
+        $user = Auth::user();
+
         try {
             $odontograma = Odontograma::findOrFail($id);
-            $odontograma->update($request->all());
+
+            if ($odontograma->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a este odontograma'], 403);
+            }
+
+            $odontograma->update($request->except(['clinica_id', 'sucursal_id', 'paciente_id']));
 
             return response()->json([
                 'success' => true,
@@ -152,8 +178,19 @@ class OdontogramaController extends Controller
      */
     public function destroy(string $id)
     {
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return response()->json(['error' => 'Solo los administradores pueden eliminar odontogramas'], 403);
+        }
+
         try {
             $odontograma = Odontograma::findOrFail($id);
+
+            if ($odontograma->clinica_id !== $user->clinica_id) {
+                return response()->json(['error' => 'No tienes acceso a este odontograma'], 403);
+            }
+
             $odontograma->delete();
 
             return response()->json([
@@ -176,14 +213,18 @@ class OdontogramaController extends Controller
     public function getByPaciente(Request $request, $pacienteId)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        
+
+        $paciente = \App\Models\Paciente::find($pacienteId);
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
+        }
+
         $odontogramas = Odontograma::where('paciente_id', $pacienteId)
-            ->where('sucursal_id', $sucursalId)
+            ->where('clinica_id', $user->clinica_id)
             ->with(['historiaClinicaDental'])
             ->orderBy('fecha', 'desc')
             ->get();
-        
+
         return response()->json($odontogramas);
     }
 
@@ -193,21 +234,25 @@ class OdontogramaController extends Controller
     public function getLatestByPaciente(Request $request, $pacienteId)
     {
         $user = Auth::user();
-        $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
-        
+
+        $paciente = \App\Models\Paciente::find($pacienteId);
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+            return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
+        }
+
         $odontograma = Odontograma::where('paciente_id', $pacienteId)
-            ->where('sucursal_id', $sucursalId)
+            ->where('clinica_id', $user->clinica_id)
             ->with(['historiaClinicaDental'])
             ->orderBy('fecha', 'desc')
             ->first();
-        
+
         if (!$odontograma) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se encontró odontograma para este paciente'
             ], 404);
         }
-        
+
         return response()->json($odontograma);
     }
 }

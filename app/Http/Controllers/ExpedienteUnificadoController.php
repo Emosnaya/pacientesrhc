@@ -34,8 +34,8 @@ class ExpedienteUnificadoController extends Controller
         $user = Auth::user();
         $paciente = Paciente::findOrFail($pacienteId);
 
-        // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 

@@ -19,6 +19,14 @@ class EstratiAacvpr extends Model
         'fecha_estratificacion',
         'primeravez_rhc',
         'pe_fecha',
+        // Datos de Prueba de Esfuerzo
+        'fc_basal',
+        'fc_maxima',
+        'fc_borg_12',
+        'dp_borg_12',
+        'mets_borg_12',
+        'carga_maxima',
+        'tolerancia_esfuerzo',
         // Riesgo Alto
         'alto_fevi_disminuida',
         'alto_sintomas_reposo',

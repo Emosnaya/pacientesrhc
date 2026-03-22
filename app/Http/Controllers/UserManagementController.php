@@ -35,6 +35,7 @@ class UserManagementController extends Controller
             'password' => 'required|string|min:8',
             'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
             'isAdmin' => 'boolean',
+            'isSuperAdmin' => 'boolean',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
@@ -43,10 +44,15 @@ class UserManagementController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Validar que la sucursal pertenezca a la clínica del admin
+        // Solo super admin puede crear otros super admins
+        if ($request->has('isSuperAdmin') && $request->isSuperAdmin && !$user->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo un super administrador puede crear otros super administradores'], 403);
+        }
+
+        // Validar que la sucursal pertenezca a la clínica efectiva
         if ($request->sucursal_id) {
             $sucursal = \App\Models\Sucursal::find($request->sucursal_id);
-            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_id) {
+            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json(['error' => 'La sucursal no pertenece a tu clínica'], 403);
             }
         }
@@ -60,10 +66,11 @@ class UserManagementController extends Controller
             'password' => Hash::make($request->password),
             'rol' => $request->rol ?: null,
             'isAdmin' => $request->isAdmin ?? false,
-            'email_verified' => true, // Admin created users are pre-verified
+            'isSuperAdmin' => $request->isSuperAdmin ?? false,
+            'email_verified' => true,
             'email_verified_at' => now(),
-            'clinica_id' => $user->clinica_id, // Asignar a la misma clínica que el admin
-            'sucursal_id' => $request->sucursal_id // Asignar sucursal si se proporciona
+            'clinica_id' => $user->clinica_efectiva_id,
+            'sucursal_id' => $request->sucursal_id
         ]);
 
         // Enviar correo con credenciales
@@ -95,9 +102,9 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
     
-        // Filtrar usuarios por la misma clínica que el usuario autenticado
+        // Filtrar usuarios por la clínica/workspace activo
         $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->where('isAdmin', true)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -108,9 +115,18 @@ class UserManagementController extends Controller
     public function listAllUsers(Request $request): JsonResponse
     {
         $user = $request->user();
+        $clinicaId = $user->clinica_efectiva_id;
+
+        // Obtener usuarios con clinica_id directo + miembros por pivot (consultorios privados)
+        $userIds = User::where('clinica_id', $clinicaId)->pluck('id');
+        $pivotIds = \App\Models\UserClinica::where('clinica_id', $clinicaId)
+            ->where('activa', true)
+            ->pluck('user_id');
+        $todosIds = $userIds->merge($pivotIds)->unique();
+
         $users = User::with('sucursal:id,nombre,es_principal')
             ->select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'isAdmin', 'sucursal_id', 'created_at')
-            ->where('clinica_id', $user->clinica_id)
+            ->whereIn('id', $todosIds)
             ->orderBy('created_at', 'desc')
             ->get();
         return response()->json(['users' => $users]);
@@ -132,14 +148,31 @@ class UserManagementController extends Controller
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        // Verificar que el usuario pertenece a la misma clínica
-        if ($targetUser->clinica_id !== $user->clinica_id) {
-            return response()->json(['error' => 'No tienes permisos para actualizar usuarios de otras clínicas'], 403);
+        // Verificar que el usuario pertenece a la misma clínica efectiva
+        if ($targetUser->clinica_id !== $user->clinica_efectiva_id) {
+            // Verificar también vía pivot (miembro de consultorio)
+            $esMiembro = \App\Models\UserClinica::where('user_id', $targetUser->id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
+                ->where('activa', true)
+                ->exists();
+            if (!$esMiembro) {
+                return response()->json(['error' => 'No tienes permisos para actualizar usuarios de otras clínicas'], 403);
+            }
         }
 
-        // No permitir que un admin quite el admin a otro admin
-        if ($targetUser->isAdmin() && $request->has('isAdmin') && !$request->isAdmin) {
-            return response()->json(['error' => 'No puedes quitarle el privilegio de administrador a otro administrador'], 403);
+        // Solo super admin puede quitar el privilegio de administrador a otro admin
+        if ($targetUser->isAdmin() && $request->has('isAdmin') && !$request->isAdmin && !$user->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo el super administrador puede quitarle el privilegio de administrador a otro administrador'], 403);
+        }
+
+        // No se puede quitar el privilegio de super admin entre super admins
+        if ($targetUser->isSuperAdmin && $request->has('isSuperAdmin') && !$request->isSuperAdmin) {
+            return response()->json(['error' => 'No se puede quitar el privilegio de super administrador a otro super administrador'], 403);
+        }
+
+        // Solo super admin puede promover a otros usuarios a super admin
+        if ($request->has('isSuperAdmin') && $request->isSuperAdmin && !$user->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo un super administrador puede promover a otros usuarios a super administrador'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -151,6 +184,7 @@ class UserManagementController extends Controller
             'password' => 'nullable|string|min:8',
             'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
             'isAdmin' => 'boolean',
+            'isSuperAdmin' => 'boolean',
             'sucursal_id' => 'nullable|exists:sucursales,id'
         ]);
 
@@ -158,10 +192,10 @@ class UserManagementController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Validar que la sucursal pertenezca a la clínica del admin
+        // Validar que la sucursal pertenezca a la clínica efectiva
         if ($request->has('sucursal_id') && $request->sucursal_id) {
             $sucursal = \App\Models\Sucursal::find($request->sucursal_id);
-            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_id) {
+            if (!$sucursal || $sucursal->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json(['error' => 'La sucursal no pertenece a tu clínica'], 403);
             }
         }
@@ -173,7 +207,8 @@ class UserManagementController extends Controller
             'cedula' => $request->cedula,
             'email' => $request->email,
             'rol' => $request->rol ?: null,
-            'isAdmin' => $request->isAdmin ?? false
+            'isAdmin' => $request->isAdmin ?? false,
+            'isSuperAdmin' => $request->isSuperAdmin ?? false
         ];
 
         // Actualizar sucursal si se proporciona
@@ -210,14 +245,30 @@ class UserManagementController extends Controller
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        // Verificar que el usuario pertenece a la misma clínica
-        if ($targetUser->clinica_id !== $user->clinica_id) {
-            return response()->json(['error' => 'No tienes permisos para eliminar usuarios de otras clínicas'], 403);
+        // Verificar que el usuario pertenece a la misma clínica efectiva
+        if ($targetUser->clinica_id !== $user->clinica_efectiva_id) {
+            $esMiembro = \App\Models\UserClinica::where('user_id', $targetUser->id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
+                ->where('activa', true)
+                ->exists();
+            if (!$esMiembro) {
+                return response()->json(['error' => 'No tienes permisos para eliminar usuarios de otras clínicas'], 403);
+            }
         }
 
         // No permitir que un admin se elimine a sí mismo
         if ($targetUser->id === $user->id) {
             return response()->json(['error' => 'No puedes eliminar tu propia cuenta'], 403);
+        }
+
+        // Solo super admin puede eliminar a otros administradores
+        if ($targetUser->isAdmin() && !$user->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo el super administrador puede eliminar otros administradores'], 403);
+        }
+
+        // No se puede eliminar a un super administrador
+        if ($targetUser->isSuperAdmin()) {
+            return response()->json(['error' => 'No se puede eliminar a un super administrador'], 403);
         }
 
         // Eliminar permisos asociados

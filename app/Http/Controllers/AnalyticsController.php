@@ -16,6 +16,25 @@ use App\Models\Estratificacion;
 
 class AnalyticsController extends Controller
 {
+    /**
+     * Helper para construir query de pacientes usando pivot table
+     */
+    private function pacientesQuery($clinicaId, $sucursalId = null)
+    {
+        $query = Paciente::whereHas('clinicas', function($q) use ($clinicaId) {
+            $q->where('clinica_id', $clinicaId);
+        });
+        
+        if ($sucursalId) {
+            $query->whereHas('clinicas', function($q) use ($clinicaId, $sucursalId) {
+                $q->where('clinica_id', $clinicaId)
+                  ->where('sucursal_id', $sucursalId);
+            });
+        }
+        
+        return $query;
+    }
+    
     public function index(Request $request)
     {
         try {
@@ -36,9 +55,8 @@ class AnalyticsController extends Controller
                 $endDate = Carbon::now()->addDay()->format('Y-m-d');
             }
 
-            // Cualquier usuario puede ver las analíticas de su clínica
-            // Filtrar todas las consultas por clínica del usuario
-            $clinicaId = $user->clinica_id;
+            // Usar la clínica efectiva (consultorio activo o clínica original)
+            $clinicaId = $user->clinica_efectiva_id;
 
             // Métricas básicas - filtradas por clínica y sucursal
             if ($allTime) {
@@ -50,9 +68,7 @@ class AnalyticsController extends Controller
                 if ($sucursalId) $query->where('sucursal_id', $sucursalId);
                 $totalCitas = $query->whereBetween('fecha', [$startDate, $endDate])->count();
             }
-            $pacientesQuery = Paciente::where('clinica_id', $clinicaId);
-            if ($sucursalId) $pacientesQuery->where('sucursal_id', $sucursalId);
-            $totalPacientes = $pacientesQuery->count();
+            $totalPacientes = $this->pacientesQuery($clinicaId, $sucursalId)->count();
             
             if ($allTime) {
                 $citasQuery = Cita::where('clinica_id', $clinicaId);
@@ -190,9 +206,7 @@ class AnalyticsController extends Controller
 
     private function getTotalPacientes($clinicaId, $sucursalId = null)
     {
-        $query = Paciente::where('clinica_id', $clinicaId);
-        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        return $query->count();
+        return $this->pacientesQuery($clinicaId, $sucursalId)->count();
     }
 
     private function getCitasByStatus($status, $startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)
@@ -391,13 +405,8 @@ class AnalyticsController extends Controller
 
     private function getPacientesPorGenero($clinicaId, $sucursalId = null)
     {
-        $queryM = Paciente::where('clinica_id', $clinicaId)->where('genero', 1);
-        if ($sucursalId) $queryM->where('sucursal_id', $sucursalId);
-        $masculino = $queryM->count();
-        
-        $queryF = Paciente::where('clinica_id', $clinicaId)->where('genero', 0);
-        if ($sucursalId) $queryF->where('sucursal_id', $sucursalId);
-        $femenino = $queryF->count();
+        $masculino = $this->pacientesQuery($clinicaId, $sucursalId)->where('genero', 1)->count();
+        $femenino = $this->pacientesQuery($clinicaId, $sucursalId)->where('genero', 0)->count();
 
         return [
             'labels' => ['Masculino', 'Femenino'],
@@ -407,21 +416,10 @@ class AnalyticsController extends Controller
 
     private function getPacientesPulmonares($clinicaId, $sucursalId = null)
     {
-        $queryC = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'cardiaca');
-        if ($sucursalId) $queryC->where('sucursal_id', $sucursalId);
-        $cardiaca = $queryC->count();
-        
-        $queryP = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'pulmonar');
-        if ($sucursalId) $queryP->where('sucursal_id', $sucursalId);
-        $pulmonar = $queryP->count();
-        
-        $queryA = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'ambos');
-        if ($sucursalId) $queryA->where('sucursal_id', $sucursalId);
-        $ambos = $queryA->count();
-        
-        $queryF = Paciente::where('clinica_id', $clinicaId)->where('tipo_paciente', 'fisioterapia');
-        if ($sucursalId) $queryF->where('sucursal_id', $sucursalId);
-        $fisioterapia = $queryF->count();
+        $cardiaca = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'cardiaca')->count();
+        $pulmonar = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'pulmonar')->count();
+        $ambos = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'ambos')->count();
+        $fisioterapia = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'fisioterapia')->count();
 
         return [
             'labels' => ['Cardíaca', 'Pulmonar', 'Ambos', 'Fisioterapia'],
@@ -442,9 +440,7 @@ class AnalyticsController extends Controller
         $data = [];
 
         foreach ($rangos as $rango) {
-            $query = Paciente::where('clinica_id', $clinicaId);
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-            $count = $query->whereBetween('edad', $rango)->count();
+            $count = $this->pacientesQuery($clinicaId, $sucursalId)->whereBetween('edad', $rango)->count();
             $data[] = $count;
         }
 
@@ -606,10 +602,9 @@ class AnalyticsController extends Controller
     private function getTasaTermino($clinicaId, $sucursalId = null)
     {
         // Solo pacientes cardíacos o cardiopulmonares (ambos)
-        $query = Paciente::where('clinica_id', $clinicaId)
-            ->whereIn('tipo_paciente', ['cardiaca', 'ambos']);
-        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        $totalPacientes = $query->count();
+        $totalPacientes = $this->pacientesQuery($clinicaId, $sucursalId)
+            ->whereIn('tipo_paciente', ['cardiaca', 'ambos'])
+            ->count();
         
         if ($totalPacientes == 0) {
             return 0;
@@ -628,10 +623,9 @@ class AnalyticsController extends Controller
     private function getPacientesConExpedienteFinal($clinicaId, $sucursalId = null)
     {
         // Obtener IDs de pacientes cardíacos o cardiopulmonares de la clínica
-        $query = Paciente::where('clinica_id', $clinicaId)
-            ->whereIn('tipo_paciente', ['cardiaca', 'ambos']);
-        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        $pacientesIds = $query->pluck('id');
+        $pacientesIds = $this->pacientesQuery($clinicaId, $sucursalId)
+            ->whereIn('tipo_paciente', ['cardiaca', 'ambos'])
+            ->pluck('id');
         
         // Contar pacientes que tienen reporte final (expediente final)
         return ReporteFinal::where('clinica_id', $clinicaId)
@@ -647,15 +641,14 @@ class AnalyticsController extends Controller
      */
     private function getPromedioIncrementoMets($clinicaId, $sucursalId = null)
     {
+        // Obtener IDs de pacientes vinculados
+        $pacienteIds = $this->pacientesQuery($clinicaId, $sucursalId)->pluck('id');
+        
         $promedio = ReporteFinal::query()
-            ->join('pacientes', 'reporte_finals.paciente_id', '=', 'pacientes.id')
             ->join('esfuerzos as esfuerzo_inicial', 'reporte_finals.pe_1', '=', 'esfuerzo_inicial.id')
             ->join('esfuerzos as esfuerzo_final', 'reporte_finals.pe_2', '=', 'esfuerzo_final.id')
             ->where('reporte_finals.clinica_id', $clinicaId)
-            ->where('pacientes.clinica_id', $clinicaId)
-            ->when($sucursalId, function ($query) use ($sucursalId) {
-                $query->where('pacientes.sucursal_id', $sucursalId);
-            })
+            ->whereIn('reporte_finals.paciente_id', $pacienteIds)
             ->whereNotNull('esfuerzo_inicial.mets_max')
             ->whereNotNull('esfuerzo_final.mets_max')
             ->selectRaw('AVG(esfuerzo_final.mets_max - esfuerzo_inicial.mets_max) as promedio_incremento_mets')
@@ -671,9 +664,7 @@ class AnalyticsController extends Controller
     private function getDuracionPrograma($clinicaId, $sucursalId = null)
     {
         // Obtener IDs de pacientes de la clínica/sucursal
-        $query = Paciente::where('clinica_id', $clinicaId);
-        if ($sucursalId) $query->where('sucursal_id', $sucursalId);
-        $pacienteIds = $query->pluck('id');
+        $pacienteIds = $this->pacientesQuery($clinicaId, $sucursalId)->pluck('id');
         
         // Obtener la última estratificación de cada paciente (para tener el valor más reciente)
         $estratificaciones = Estratificacion::where('clinica_id', $clinicaId)
@@ -736,16 +727,12 @@ class AnalyticsController extends Controller
      */
     private function getMedicamentos($clinicaId, $sucursalId = null)
     {
+        // Obtener IDs de pacientes vinculados
+        $pacienteIds = $this->pacientesQuery($clinicaId, $sucursalId)->pluck('id');
+        
         // Obtener todos los clínicos de la clínica
-        $query = DB::table('clinicos')
-            ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
-            ->where('pacientes.clinica_id', $clinicaId);
-            
-        if ($sucursalId) {
-            $query->where('pacientes.sucursal_id', $sucursalId);
-        }
-            
-        $clinicos = $query->select([
+        $clinicos = DB::table('clinicos')
+            ->whereIn('paciente_id', $pacienteIds)->select([
                 DB::raw('SUM(CASE WHEN betabloqueador = 1 THEN 1 ELSE 0 END) as betabloqueador'),
                 DB::raw('SUM(CASE WHEN nitratos = 1 THEN 1 ELSE 0 END) as nitratos'),
                 DB::raw('SUM(CASE WHEN calcioantagonista = 1 THEN 1 ELSE 0 END) as calcioantagonista'),
@@ -813,17 +800,12 @@ class AnalyticsController extends Controller
      */
     private function getPacientesPorAnio($clinicaId, $sucursalId = null)
     {
-        $query = Paciente::select(
+        $pacientes = $this->pacientesQuery($clinicaId, $sucursalId)
+            ->select(
                 DB::raw('YEAR(created_at) as anio'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('clinica_id', $clinicaId);
-            
-        if ($sucursalId) {
-            $query->where('sucursal_id', $sucursalId);
-        }
-            
-        $pacientes = $query->groupBy('anio')
+            ->groupBy('anio')
             ->orderBy('anio', 'ASC')
             ->get();
 
@@ -848,21 +830,17 @@ class AnalyticsController extends Controller
      */
     private function getPacientesConExpedientePorAnio($clinicaId, $sucursalId = null)
     {
+        // Obtener IDs de pacientes vinculados
+        $pacienteIds = $this->pacientesQuery($clinicaId, $sucursalId)->pluck('id');
+        
         // Obtener pacientes con al menos un expediente clínico (tabla clinicos)
         // Agrupados por año de la fecha del expediente
-        $query = DB::table('clinicos')
-            ->join('pacientes', 'clinicos.paciente_id', '=', 'pacientes.id')
+        $expedientes = DB::table('clinicos')
             ->select(
                 DB::raw('YEAR(clinicos.fecha) as anio'),
                 DB::raw('COUNT(DISTINCT clinicos.paciente_id) as total')
             )
-            ->where('pacientes.clinica_id', $clinicaId);
-            
-        if ($sucursalId) {
-            $query->where('pacientes.sucursal_id', $sucursalId);
-        }
-            
-        $expedientes = $query->whereNotNull('clinicos.fecha')
+            ->whereIn('clinicos.paciente_id', $pacienteIds)->whereNotNull('clinicos.fecha')
             ->groupBy('anio')
             ->orderBy('anio', 'ASC')
             ->get();
@@ -887,20 +865,14 @@ class AnalyticsController extends Controller
      */
     private function getPacientesPorCategoriaPago($clinicaId, $sucursalId = null)
     {
-        $queryParticular = Paciente::where('clinica_id', $clinicaId)
+        $particular = $this->pacientesQuery($clinicaId, $sucursalId)
             ->where(function ($q) {
                 $q->where('categoria_pago', 'particular')->orWhereNull('categoria_pago');
-            });
-        if ($sucursalId) {
-            $queryParticular->where('sucursal_id', $sucursalId);
-        }
-        $particular = $queryParticular->count();
+            })->count();
 
-        $queryAseguradora = Paciente::where('clinica_id', $clinicaId)->where('categoria_pago', 'aseguradora');
-        if ($sucursalId) {
-            $queryAseguradora->where('sucursal_id', $sucursalId);
-        }
-        $aseguradora = $queryAseguradora->count();
+        $aseguradora = $this->pacientesQuery($clinicaId, $sucursalId)
+            ->where('categoria_pago', 'aseguradora')
+            ->count();
 
         return [
             'labels' => ['Particular', 'Aseguradora'],
@@ -914,17 +886,12 @@ class AnalyticsController extends Controller
      */
     private function getPacientesPorAseguradora($clinicaId, $sucursalId = null)
     {
-        $query = Paciente::select('aseguradora', DB::raw('COUNT(*) as total'))
-            ->where('clinica_id', $clinicaId)
+        $rows = $this->pacientesQuery($clinicaId, $sucursalId)
+            ->select('aseguradora', DB::raw('COUNT(*) as total'))
             ->where('categoria_pago', 'aseguradora')
             ->whereNotNull('aseguradora')
-            ->where('aseguradora', '!=', '');
-
-        if ($sucursalId) {
-            $query->where('sucursal_id', $sucursalId);
-        }
-
-        $rows = $query->groupBy('aseguradora')
+            ->where('aseguradora', '!=', '')
+            ->groupBy('aseguradora')
             ->orderBy('total', 'desc')
             ->get();
 

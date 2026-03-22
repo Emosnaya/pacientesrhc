@@ -13,3 +13,12 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+
+# Documentación técnica sensible
+*.md
+
+# Scripts de utilidad/migración sensibles
+*.sh
+check_citas.php
+extract_new_patient.php
+generate_*.php

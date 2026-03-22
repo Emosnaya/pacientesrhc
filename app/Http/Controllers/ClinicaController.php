@@ -200,10 +200,10 @@ class ClinicaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:255',
+            'tipo_clinica' => 'nullable|string|in:' . implode(',', array_keys(config('clinica_tipos.tipos'))),
             'email' => 'required|email|unique:clinicas,email,' . $id,
             'telefono' => 'nullable|string|max:20',
             'direccion' => 'nullable|string|max:500',
-            'plan' => 'required|in:mensual,trimestral,anual',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'pagado' => 'boolean',
             'activa' => 'boolean',
@@ -217,7 +217,7 @@ class ClinicaController extends Controller
         }
 
         try {
-            $data = $request->only(['nombre', 'email', 'telefono', 'direccion', 'plan', 'pagado', 'activa']);
+            $data = $request->only(['nombre', 'tipo_clinica', 'email', 'telefono', 'direccion', 'pagado', 'activa']);
 
             // Manejar logo si se subió
             if ($request->hasFile('logo')) {
@@ -304,20 +304,23 @@ class ClinicaController extends Controller
     }
 
     /**
-     * Obtener la clínica del usuario autenticado
+     * Obtener la clínica del usuario autenticado (usa clínica activa si está configurada)
      */
     public function getCurrentClinica(Request $request)
     {
         $user = $request->user();
         
-        if (!$user->clinica_id) {
+        // Usar clinica_efectiva_id (que prioriza clinica_activa_id sobre clinica_id)
+        $clinicaId = $user->clinica_efectiva_id;
+        
+        if (!$clinicaId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Usuario no tiene clínica asignada'
             ], 404);
         }
 
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($clinicaId);
         
         if (!$clinica) {
             return response()->json([
@@ -435,19 +438,22 @@ class ClinicaController extends Controller
     /**
      * Subir logo de la clínica
      */
-    public function uploadLogo(Request $request)
+    public function uploadLogo(Request $request, $id = null)
     {
         try {
             $user = $request->user();
             
-            if (!$user->clinica_id) {
+            // Si se proporciona ID, usar ese, sino usar clínica activa
+            $clinicaId = $id ?? $user->clinica_activa_id ?? $user->clinica_id;
+            
+            if (!$clinicaId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no tiene clínica asignada'
+                    'message' => 'No hay clínica activa'
                 ], 404);
             }
 
-            $clinica = Clinica::find($user->clinica_id);
+            $clinica = Clinica::find($clinicaId);
             
             if (!$clinica) {
                 return response()->json([
@@ -543,6 +549,40 @@ class ClinicaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al subir el logo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar logo de la clínica
+     */
+    public function deleteLogo(Request $request, $id)
+    {
+        try {
+            $clinica = Clinica::findOrFail($id);
+            
+            if ($clinica->logo) {
+                try {
+                    Storage::disk('public')->delete($clinica->logo);
+                } catch (\Exception $e) {
+                    \Log::warning('No se pudo eliminar el logo: ' . $e->getMessage());
+                }
+                
+                $clinica->update(['logo' => null]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logo eliminado exitosamente',
+                'data' => $clinica->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar logo: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el logo'
             ], 500);
         }
     }
