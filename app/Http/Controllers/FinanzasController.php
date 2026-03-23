@@ -271,8 +271,9 @@ class FinanzasController extends Controller
     {
         try {
             $user = $request->user();
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
             
-            $query = Egreso::where('clinica_id', $user->clinica_id)
+            $query = Egreso::where('clinica_id', $clinicaId)
                 ->where('sucursal_id', $user->sucursal_id)
                 ->with(['usuario', 'sucursal']);
 
@@ -368,9 +369,10 @@ class FinanzasController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $query = Pago::with(['paciente', 'usuario', 'cita'])
-            ->where('clinica_id', $user->clinica_id);
+            ->where('clinica_id', $clinicaId);
 
         // Filtros
         if ($request->filled('sucursal_id')) {
@@ -411,9 +413,10 @@ class FinanzasController extends Controller
     public function show($id)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->findOrFail($id);
 
         return response()->json($pago);
@@ -425,6 +428,7 @@ class FinanzasController extends Controller
     public function corteCajaDiario(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $periodo = $request->input('periodo', 'dia');
         $fecha = $request->input('fecha', Carbon::today()->toDateString());
         $mes = $request->input('mes');
@@ -448,7 +452,7 @@ class FinanzasController extends Controller
         }
 
         // Total por método de pago (ingresos)
-        $totalesPorMetodo = Pago::where('clinica_id', $user->clinica_id)
+        $totalesPorMetodo = Pago::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
@@ -456,11 +460,11 @@ class FinanzasController extends Controller
             ->select('metodo_pago', DB::raw('COUNT(*) as cantidad'))
             ->groupBy('metodo_pago')
             ->get()
-            ->map(function($item) use ($user, $request, $fechaInicio, $fechaFin) {
+            ->map(function($item) use ($clinicaId, $request, $fechaInicio, $fechaFin) {
                 // Obtener el monto total desencriptado para este método
                 $pagos = Pago::where('metodo_pago', $item->metodo_pago)
                     ->betweenDates($fechaInicio, $fechaFin)
-                    ->where('clinica_id', $user->clinica_id)
+                    ->where('clinica_id', $clinicaId)
                     ->when($request->filled('sucursal_id'), function($q) use ($request) {
                         $q->where('sucursal_id', $request->sucursal_id);
                     })
@@ -478,7 +482,7 @@ class FinanzasController extends Controller
             });
 
         // Total general de ingresos (pagos)
-        $todosPagos = Pago::where('clinica_id', $user->clinica_id)
+        $todosPagos = Pago::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
@@ -492,7 +496,7 @@ class FinanzasController extends Controller
         $cantidadPagos = $todosPagos->count();
 
         // Total de egresos del período
-        $todosEgresos = Egreso::where('clinica_id', $user->clinica_id)
+        $todosEgresos = Egreso::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
@@ -510,7 +514,7 @@ class FinanzasController extends Controller
 
         // Últimos pagos del período
         $ultimosPagos = Pago::with(['paciente', 'usuario', 'clinica', 'sucursal'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
@@ -521,7 +525,7 @@ class FinanzasController extends Controller
 
         // Últimos egresos del período
         $ultimosEgresos = Egreso::with(['usuario', 'clinica', 'sucursal'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
@@ -553,13 +557,14 @@ class FinanzasController extends Controller
     public function estadisticas(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         
         // Período (por defecto mes actual)
         $fechaInicio = $request->input('fecha_inicio', Carbon::now()->startOfMonth()->toDateString());
         $fechaFin = $request->input('fecha_fin', Carbon::now()->endOfMonth()->toDateString());
 
         $pagos = Pago::with('paciente')
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -572,7 +577,7 @@ class FinanzasController extends Controller
         });
 
         // Obtener egresos del mismo período
-        $egresos = Egreso::where('clinica_id', $user->clinica_id)
+        $egresos = Egreso::where('clinica_id', $clinicaId)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -715,8 +720,9 @@ class FinanzasController extends Controller
         }
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->findOrFail($request->pago_id);
 
         $clinica = $pago->clinica ?? $user->clinica;
@@ -768,8 +774,9 @@ class FinanzasController extends Controller
     public function verReciboPdf($id)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $clinicaId)
             ->findOrFail($id);
 
         $clinica = $pago->clinica ?? $user->clinica;
@@ -940,12 +947,13 @@ class FinanzasController extends Controller
         ]);
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $tipo = $request->tipo;
         $fecha = Carbon::parse($request->fecha);
         $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
 
         // Construir la consulta base
-        $query = Pago::where('clinica_id', $user->clinica_id)
+        $query = Pago::where('clinica_id', $clinicaId)
             ->with(['paciente', 'usuario', 'sucursal']);
 
         if ($sucursalId) {
@@ -984,7 +992,7 @@ class FinanzasController extends Controller
         $pagos = $query->orderBy('created_at', 'asc')->get();
 
         // Construir consulta de egresos
-        $queryEgresos = Egreso::where('clinica_id', $user->clinica_id)
+        $queryEgresos = Egreso::where('clinica_id', $clinicaId)
             ->with(['usuario', 'sucursal']);
 
         if ($sucursalId) {
@@ -1055,12 +1063,13 @@ class FinanzasController extends Controller
         ]);
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $tipo = $request->tipo;
         $fecha = Carbon::parse($request->fecha);
         $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
 
         // Construir la consulta base
-        $query = Pago::where('clinica_id', $user->clinica_id)
+        $query = Pago::where('clinica_id', $clinicaId)
             ->with(['paciente', 'usuario', 'sucursal']);
 
         if ($sucursalId) {
@@ -1160,7 +1169,7 @@ class FinanzasController extends Controller
             fputcsv($file, ['TOTAL INGRESOS', $pagos->count(), number_format($totalIngresos, 2, '.', '')]);
 
             // Obtener egresos del mismo período
-            $queryEgresos = Egreso::where('clinica_id', $user->clinica_id);
+            $queryEgresos = Egreso::where('clinica_id', $clinicaId);
             
             if ($sucursalId) {
                 $queryEgresos->where('sucursal_id', $sucursalId);
