@@ -277,6 +277,7 @@ class FinanzasController extends Controller
     {
         try {
             $user = $request->user();
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
             
             $query = Egreso::where('clinica_id', $user->clinica_efectiva_id)
                 ->where('sucursal_id', $user->sucursal_id)
@@ -374,6 +375,7 @@ class FinanzasController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $query = Pago::with(['paciente', 'usuario', 'cita'])
             ->where('clinica_id', $user->clinica_efectiva_id);
@@ -417,6 +419,7 @@ class FinanzasController extends Controller
     public function show($id)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal'])
             ->where('clinica_id', $user->clinica_efectiva_id)
@@ -566,6 +569,7 @@ class FinanzasController extends Controller
     public function estadisticas(Request $request)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         
         // Período (por defecto mes actual)
         $fechaInicio = $request->input('fecha_inicio', Carbon::now()->startOfMonth()->toDateString());
@@ -728,6 +732,7 @@ class FinanzasController extends Controller
         }
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($request->pago_id);
@@ -781,6 +786,7 @@ class FinanzasController extends Controller
     public function verReciboPdf($id)
     {
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
@@ -953,6 +959,7 @@ class FinanzasController extends Controller
         ]);
 
         $user = Auth::user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $tipo = $request->tipo;
         $fecha = Carbon::parse($request->fecha);
         $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
