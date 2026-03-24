@@ -29,7 +29,7 @@ class DashboardInsightsController extends Controller
             Log::info('📊 Generando insights del dashboard...');
 
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_efectiva_id;
 
             // Obtener pacientes de la clínica
             $pacientes = Paciente::where('clinica_id', $clinicaId)
@@ -78,7 +78,7 @@ class DashboardInsightsController extends Controller
     {
         try {
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_efectiva_id;
 
             // Pacientes totales
             $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
@@ -141,7 +141,7 @@ class DashboardInsightsController extends Controller
     {
         try {
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_efectiva_id;
 
             // Pacientes sin actividad en 14+ días
             $pacientesSeguimiento = Paciente::where('clinica_id', $clinicaId)

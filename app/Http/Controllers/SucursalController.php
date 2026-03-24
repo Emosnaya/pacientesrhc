@@ -22,9 +22,9 @@ class SucursalController extends Controller
         if ($request->has('clinica_id')) {
             $query->where('clinica_id', $request->clinica_id);
         } 
-        // Si no es super admin, filtrar por clínica del usuario
-        elseif (!$user->isSuperAdmin) {
-            $query->where('clinica_id', $user->clinica_id);
+        // Si no es super admin, filtrar por clínica efectiva del usuario (workspace activo)
+        elseif (!$user->isSuperAdmin()) {
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         }
         
         if ($request->has('activa')) {
@@ -48,8 +48,8 @@ class SucursalController extends Controller
     {
         $user = Auth::user();
         
-        // Verificar que el usuario tenga acceso a esta clínica
-        if (!$user->isSuperAdmin && $user->clinica_id != $clinicaId) {
+        // Verificar que el usuario tenga acceso a esta clínica (workspace activo o miembro)
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $clinicaId) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -71,8 +71,8 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::with('clinica')->findOrFail($id);
         
-        // Verificar acceso
-        if (!$user->isSuperAdmin && $user->clinica_id != $sucursal->clinica_id) {
+        // Verificar acceso (workspace activo)
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -100,10 +100,8 @@ class SucursalController extends Controller
             'notas' => 'nullable|string'
         ]);
         
-        // Usar la clínica del usuario autenticado
-        $validated['clinica_id'] = $user->clinica_id;
-        // Usar la clínica del usuario autenticado
-        $validated['clinica_id'] = $user->clinica_id;
+        // Usar la clínica efectiva del usuario (workspace activo)
+        $validated['clinica_id'] = $user->clinica_efectiva_id;
         
         // Verificar si la clínica puede crear más sucursales
         $clinica = Clinica::findOrFail($validated['clinica_id']);
@@ -143,8 +141,8 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::findOrFail($id);
         
-        // Verificar acceso
-        if (!$user->isSuperAdmin && $user->clinica_id != $sucursal->clinica_id) {
+        // Verificar acceso (workspace activo)
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -187,8 +185,8 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::findOrFail($id);
         
-        // Verificar acceso
-        if (!$user->isSuperAdmin && $user->clinica_id != $sucursal->clinica_id) {
+        // Verificar acceso (workspace activo)
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -228,8 +226,8 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::findOrFail($validated['sucursal_id']);
         
-        // Verificar que la sucursal pertenezca a la clínica del usuario
-        if (!$user->isSuperAdmin && $user->clinica_id != $sucursal->clinica_id) {
+        // Verificar que la sucursal pertenezca a la clínica efectiva del usuario
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -252,8 +250,8 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::findOrFail($id);
         
-        // Verificar acceso
-        if (!$user->isSuperAdmin && $user->clinica_id != $sucursal->clinica_id) {
+        // Verificar acceso (workspace activo)
+        if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         

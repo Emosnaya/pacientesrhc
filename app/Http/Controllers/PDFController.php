@@ -33,24 +33,43 @@ use Illuminate\Support\Facades\Auth;
 class PDFController extends Controller
 {
     /**
-     * Quien firma el PDF. Por seguridad NUNCA se acepta doctor_firma_id del request:
-     * solo la firma del usuario actual o sin firma.
-     * - Usuario actual con firma digital cargada → se usa su firma.
-     * - Sin firma cargada o no logueado → null (PDF sin apartado de doctor/firma).
+     * Quien firma el PDF. Solo profesionales de salud con cédula Y firma digital pueden firmar.
+     * Por seguridad NUNCA se acepta doctor_firma_id del request.
+     * 
+     * Requisitos para firmar:
+     * 1. Usuario autenticado
+     * 2. Rol de profesional de salud (definido en config/roles.php -> roles_firmantes)
+     * 3. Cédula profesional cargada
+     * 4. Firma digital cargada
+     * 
+     * Si no cumple todos los requisitos → null (PDF sin firma).
      */
     private function getDoctorParaFirma(Request $request, $creadorUserId)
     {
         $usuarioActual = Auth::user();
         if (!$usuarioActual) {
-            return User::with('sucursal')->find($creadorUserId);
+            // Si no hay usuario autenticado, devolver creador solo para datos (sin firma)
+            return null;
         }
 
-        // Si el usuario actual tiene firma digital cargada, firmar con su propia firma (sin depender del rol)
-        if ($usuarioActual->firma_digital) {
-            return $usuarioActual;
+        // Verificar los 3 requisitos para firmar:
+        // 1. Debe ser rol firmante (profesional de salud)
+        if (!$usuarioActual->isFirmante()) {
+            return null;
         }
 
-        return null;
+        // 2. Debe tener cédula profesional cargada
+        if (empty($usuarioActual->cedula) || trim($usuarioActual->cedula) === '') {
+            return null;
+        }
+
+        // 3. Debe tener firma digital cargada
+        if (empty($usuarioActual->firma_digital) || trim($usuarioActual->firma_digital) === '') {
+            return null;
+        }
+
+        // Cumple todos los requisitos: puede firmar con su propia firma
+        return $usuarioActual;
     }
 
     /**
@@ -683,8 +702,28 @@ class PDFController extends Controller
         $sucursal = $user->sucursal;
 
         $firmaBase64 = $this->getFirmaBase64($userFirma);
+        
+        // Datos de e.firma si la receta está firmada electrónicamente
+        $efirmaData = null;
+        if ($data->firma_digital && $data->firmada_at) {
+            // Obtener datos de la e.firma del usuario que firmó
+            $efirma = \App\Models\Efirma::where('user_id', $data->user_id)
+                ->where('tipo', 'personal')
+                ->first();
+            
+            $efirmaData = [
+                'firmada_at' => $data->firmada_at,
+                'numero_serie' => $data->numero_serie_certificado,
+                'rfc' => $efirma->rfc ?? null,
+                'nombre_titular' => $efirma->nombre_titular ?? $user->nombre_completo,
+                // Sello digital completo (requerido por COFEPRIS)
+                'sello_digital' => $data->firma_digital,
+                // Cadena original completa (requerido por COFEPRIS)
+                'cadena_original' => $data->cadena_original,
+            ];
+        }
 
-        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica', 'universidadLogo', 'sucursal'));
+        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica', 'universidadLogo', 'sucursal', 'efirmaData'));
         return $pdf->stream('Receta_Medica.pdf');
     }
 

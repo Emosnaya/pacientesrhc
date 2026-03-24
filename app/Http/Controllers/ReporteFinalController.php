@@ -24,7 +24,7 @@ class ReporteFinalController extends Controller
         
         // Todos los usuarios pueden ver los expedientes de su clínica
         $expedientes = ReporteFinal::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new ReporteFinalCollection($expedientes);
@@ -49,7 +49,7 @@ class ReporteFinalController extends Controller
         $paciente = $esfuerzo->paciente;
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
@@ -86,7 +86,7 @@ class ReporteFinalController extends Controller
         // Asignar el user_id del dueño del paciente
         $reporteFinal->user_id = $paciente->user_id;
         $reporteFinal->paciente_id = $esfuerzo->paciente_id;
-        $reporteFinal->clinica_id = $user->clinica_id;
+        $reporteFinal->clinica_id = $user->clinica_efectiva_id;
         $reporteFinal->sucursal_id = $paciente->sucursal_id;
         
         $reporteFinal->save();
@@ -106,7 +106,7 @@ class ReporteFinalController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -126,10 +126,10 @@ class ReporteFinalController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
-        $reporteFinal->clinica_id = $user->clinica_id;
+        $reporteFinal->clinica_id = $user->clinica_efectiva_id;
 
         // Aquí iría la lógica de actualización del expediente
         return response()->json(['message' => 'Expediente actualizado exitosamente']);
@@ -145,14 +145,14 @@ class ReporteFinalController extends Controller
     {
         $user = Auth::user();
         
-        // Solo los administradores pueden eliminar
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         

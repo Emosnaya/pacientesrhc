@@ -197,7 +197,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 14. Cualidades Físicas No Aeróbicas
         $cualidadesFisicas = CualidadFisica::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get()
             ->map(function($item) {
                 return [
@@ -215,7 +215,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 15. Reporte Final Pulmonar
         $reportesFinalesPulmonares = ReporteFinalPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get()
             ->map(function($item) {
                 return [
@@ -230,7 +230,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 16. Prueba de Esfuerzo Pulmonar
         $pruebasEsfuerzoPulmonar = PruebaEsfuerzoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get()
             ->map(function($item) {
                 return [
@@ -273,7 +273,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 19. Notas de Seguimiento Pulmonar
         $notasSeguimientoPulmonar = NotaSeguimientoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get()
             ->map(function($item) {
                 return [
@@ -288,7 +288,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 20. Estratificación AACVPR/EAPC
         $estratiAacvprs = EstratiAacvpr::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get()
             ->map(function($item) {
                 return [

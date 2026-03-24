@@ -19,7 +19,7 @@ class EstratiAacvprController extends Controller
         
         // Todos los usuarios pueden ver las estratificaciones AACVPR de su clínica
         $estratificaciones = EstratiAacvpr::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return response()->json($estratificaciones);
@@ -69,7 +69,7 @@ class EstratiAacvprController extends Controller
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
             $nuevoPaciente->user_id = $user->id;
-            $nuevoPaciente->clinica_id = $user->clinica_id;
+            $nuevoPaciente->clinica_id = $user->clinica_efectiva_id;
             $nuevoPaciente->sucursal_id = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             $nuevoPaciente->save();
@@ -78,7 +78,7 @@ class EstratiAacvprController extends Controller
             $nuevoPaciente = Paciente::find($id);
             
             // Verificar que el paciente pertenece a la misma clínica
-            if ($nuevoPaciente->clinica_id !== $user->clinica_id) {
+            if ($nuevoPaciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
         }
@@ -210,7 +210,7 @@ class EstratiAacvprController extends Controller
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estrati_aacvpr->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -226,12 +226,12 @@ class EstratiAacvprController extends Controller
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estrati_aacvpr->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
-        $expediente = EstratiAacvpr::find($request->id);
-        $paciente = Paciente::find($request->paciente_id);
+        // Usar el modelo inyectado por Route Model Binding
+        $expediente = $estrati_aacvpr;
 
         // Fechas
         $expediente->fecha_estratificacion = $request['fecha_estratificacion'];
@@ -351,14 +351,14 @@ class EstratiAacvprController extends Controller
     {
         $user = Auth::user();
         
-        // Solo los administradores pueden eliminar
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estrati_aacvpr->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         

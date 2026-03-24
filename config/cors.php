@@ -27,6 +27,7 @@ return [
         'https://pacientesrhc.com',
         'https://www.pacientesrhc.com',
         'https://api.pacientesrhc.com',
+        'https://app.pacientesrhc.com',
     ],
 
     'allowed_origins_patterns' => ['/localhost.*/'],

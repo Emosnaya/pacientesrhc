@@ -47,11 +47,13 @@ class CheckPermission
             return response()->json(['error' => 'Recurso no encontrado'], 404);
         }
 
-        // Los administradores solo pueden acceder a sus propios recursos
+        // Los administradores DE LA CLÍNICA ACTIVA pueden acceder a recursos de esa clínica
         if ($user->isAdmin()) {
-            if ($resource === 'paciente' && $resourceModel->user_id !== $user->id) {
+            $clinicaEfectiva = $user->clinica_efectiva_id;
+            
+            if ($resource === 'paciente' && $resourceModel->clinica_id !== $clinicaEfectiva) {
                 return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);
-            } elseif ($resource === 'expediente' && $resourceModel->user_id !== $user->id) {
+            } elseif ($resource === 'expediente' && $resourceModel->user->clinica_efectiva_id !== $clinicaEfectiva) {
                 return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);
             }
             return $next($request);

@@ -374,20 +374,21 @@ class ClinicaController extends Controller
     }
 
     /**
-     * Actualizar clínica del usuario autenticado
+     * Actualizar clínica del usuario autenticado (workspace activo)
      */
     public function updateCurrentClinica(Request $request)
     {
         $user = $request->user();
+        $clinicaId = $user->clinica_efectiva_id;
         
-        if (!$user->clinica_id) {
+        if (!$clinicaId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Usuario no tiene clínica asignada'
             ], 404);
         }
 
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($clinicaId);
         
         if (!$clinica) {
             return response()->json([
@@ -415,7 +416,7 @@ class ClinicaController extends Controller
             $data = $request->only(['nombre', 'email', 'telefono', 'direccion']);
             
             // Solo superAdmin puede cambiar el plan
-            if ($user->isSuperAdmin && $request->has('plan')) {
+            if ($user->isSuperAdmin() && $request->has('plan')) {
                 $data['plan'] = $request->plan;
             }
 

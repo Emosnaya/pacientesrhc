@@ -26,7 +26,7 @@ class ReporteFisioController extends Controller
         }
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
         
@@ -51,7 +51,7 @@ class ReporteFisioController extends Controller
         $paciente = Paciente::Find($request['paciente_id']);
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
@@ -64,7 +64,7 @@ class ReporteFisioController extends Controller
         $fisio->archivo = $validated['archivo'];
         $fisio->tipo_exp = 7;
         // Asignar el user_id del dueño del paciente
-        $fisio->clinica_id = $user->clinica_id;
+        $fisio->clinica_id = $user->clinica_efectiva_id;
         $fisio->sucursal_id = $paciente->sucursal_id;
         $fisio->save();
 
@@ -84,7 +84,7 @@ class ReporteFisioController extends Controller
         $paciente = $expediente->paciente;
         
         // Verificar que el expediente pertenece a la misma clínica
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         
@@ -114,8 +114,8 @@ class ReporteFisioController extends Controller
     {
         $user = Auth::user();
         
-        // Solo los administradores pueden eliminar
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
@@ -123,7 +123,7 @@ class ReporteFisioController extends Controller
         $paciente = $expediente->paciente;
         
         // Verificar que el expediente pertenece a la misma clínica
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 

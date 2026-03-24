@@ -19,7 +19,7 @@ class EventoController extends Controller
             $query = Evento::query();
 
             // Filtrar por clínica del usuario autenticado
-            $query->forClinica($user->clinica_id);
+            $query->forClinica($user->clinica_efectiva_id);
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
@@ -67,7 +67,7 @@ class EventoController extends Controller
             $mes = $request->get('mes', now()->month);
             $año = $request->get('año', now()->year);
 
-            $query = Evento::forClinica($user->clinica_id)
+            $query = Evento::forClinica($user->clinica_efectiva_id)
                 ->byMonth($mes, $año);
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
@@ -138,7 +138,7 @@ class EventoController extends Controller
 
             $evento = Evento::create([
                 'user_id' => $user->id,
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $sucursalId,
                 'tipo' => $data['tipo'],
                 'titulo' => $data['titulo'],
@@ -171,7 +171,7 @@ class EventoController extends Controller
     {
         try {
             $user = Auth::user();
-            $evento = Evento::forClinica($user->clinica_id)->findOrFail($id);
+            $evento = Evento::forClinica($user->clinica_efectiva_id)->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -192,7 +192,7 @@ class EventoController extends Controller
     {
         try {
             $user = Auth::user();
-            $evento = Evento::forClinica($user->clinica_id)->findOrFail($id);
+            $evento = Evento::forClinica($user->clinica_efectiva_id)->findOrFail($id);
 
             // Convertir hora vacía a null para evitar error de validación
             $data = $request->all();
@@ -250,7 +250,7 @@ class EventoController extends Controller
     {
         try {
             $user = Auth::user();
-            $evento = Evento::forClinica($user->clinica_id)->findOrFail($id);
+            $evento = Evento::forClinica($user->clinica_efectiva_id)->findOrFail($id);
             $evento->delete();
 
             return response()->json([

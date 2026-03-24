@@ -44,12 +44,30 @@ class PacienteController extends Controller
      * Store a newly created resource in storage.
      * - Si es admin: se asigna a sí mismo
      * - Si no es admin: debe enviar user_id del doctor a asignar
+     * - Si el email ya existe, responde con error indicando que debe usar verificación OTP
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
+        // Verificar si el email ya existe (si se proporcionó)
+        if ($request->email) {
+            $email = strtolower(trim($request->email));
+            $existingPaciente = Paciente::where('email', $email)->first();
+            
+            if ($existingPaciente) {
+                return response()->json([
+                    'error' => 'Este email ya está registrado en el sistema',
+                    'paciente_existente' => [
+                        'id' => $existingPaciente->id,
+                        'nombre' => $existingPaciente->nombre,
+                        'apellidoPat' => $existingPaciente->apellidoPat,
+                    ]
+                ], 409);
+            }
+        }
+
         $paciente = new Paciente;
         $peso = $request->peso ?? 0;
         $talla = $request->talla ?? 0;
@@ -72,7 +90,7 @@ class PacienteController extends Controller
         $clinicaId = $user->clinica_efectiva_id;
         
         // Determinar sucursal_id
-        if ($user->isSuperAdmin && $request->has('sucursal_id') && $request->sucursal_id) {
+        if ($user->isSuperAdmin() && $request->has('sucursal_id') && $request->sucursal_id) {
             // Validar que la sucursal pertenezca a la clínica efectiva (no a la original)
             $sucursal = \App\Models\Sucursal::where('id', $request->sucursal_id)
                 ->where('clinica_id', $clinicaId)
@@ -268,7 +286,7 @@ class PacienteController extends Controller
         $user = Auth::user();
         
         // Solo super admin o admin pueden desvincular pacientes
-        if (!$user->isSuperAdmin && !$user->isAdmin) {
+        if (!$user->isSuperAdmin() && !$user->isAdmin()) {
             return response()->json(['error' => 'Solo administradores pueden desvincular pacientes'], 403);
         }
         
@@ -314,7 +332,7 @@ class PacienteController extends Controller
         ]);
         
         // Determinar sucursal_id
-        $sucursalId = $request->has('sucursal_id') && $user->isSuperAdmin 
+        $sucursalId = $request->has('sucursal_id') && $user->isSuperAdmin() 
             ? $request->sucursal_id 
             : $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         

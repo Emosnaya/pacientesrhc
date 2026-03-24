@@ -22,7 +22,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden crear usuarios
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para crear usuarios'], 403);
         }
 
@@ -65,12 +66,24 @@ class UserManagementController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'rol' => $request->rol ?: null,
-            'isAdmin' => $request->isAdmin ?? false,
-            'isSuperAdmin' => $request->isSuperAdmin ?? false,
+            'isAdmin' => $request->isAdmin ?? false, // DEPRECATED: usar user_clinicas
+            'isSuperAdmin' => $request->isSuperAdmin ?? false, // DEPRECATED: usar user_clinicas
             'email_verified' => true,
             'email_verified_at' => now(),
             'clinica_id' => $user->clinica_efectiva_id,
+            'clinica_activa_id' => $user->clinica_efectiva_id,
             'sucursal_id' => $request->sucursal_id
+        ]);
+
+        // Crear relación en user_clinicas con permisos
+        \App\Models\UserClinica::create([
+            'user_id' => $newUser->id,
+            'clinica_id' => $user->clinica_efectiva_id,
+            'rol_en_clinica' => ($request->isAdmin || $request->isSuperAdmin) ? 'propietario' : 'colaborador',
+            'isAdmin' => $request->isAdmin ?? false,
+            'isSuperAdmin' => $request->isSuperAdmin ?? false,
+            'activa' => true,
+            'invitado_por' => $user->id,
         ]);
 
         // Enviar correo con credenciales
@@ -96,18 +109,40 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Listar todos los usuarios (solo administradores)
+     * Listar todos los usuarios administradores (solo administradores)
+     * Filtra por clínica activa y consulta permisos desde user_clinicas
      */
     public function listDoctors(Request $request): JsonResponse
     {
         $user = $request->user();
+        $clinicaId = $user->clinica_efectiva_id;
     
-        // Filtrar usuarios por la clínica/workspace activo
-        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'isAdmin', 'created_at')
-            ->where('clinica_id', $user->clinica_efectiva_id)
-            ->where('isAdmin', true)
+        // Obtener IDs de usuarios que son admin en esta clínica (desde user_clinicas)
+        $adminIds = \DB::table('user_clinicas')
+            ->where('clinica_id', $clinicaId)
+            ->where('activa', true)
+            ->where(function($q) {
+                $q->where('isAdmin', true)
+                  ->orWhere('isSuperAdmin', true);
+            })
+            ->pluck('user_id');
+
+        $users = User::select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'created_at')
+            ->whereIn('id', $adminIds)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function($u) use ($clinicaId) {
+                // Agregar permisos desde user_clinicas para display
+                $permisos = \DB::table('user_clinicas')
+                    ->where('user_id', $u->id)
+                    ->where('clinica_id', $clinicaId)
+                    ->first();
+                
+                $u->isAdmin = $permisos ? (bool) $permisos->isAdmin : false;
+                $u->isSuperAdmin = $permisos ? (bool) $permisos->isSuperAdmin : false;
+                $u->rol_en_clinica = $permisos ? $permisos->rol_en_clinica : 'colaborador';
+                return $u;
+            });
 
         return response()->json(['users' => $users]);
     }
@@ -117,18 +152,31 @@ class UserManagementController extends Controller
         $user = $request->user();
         $clinicaId = $user->clinica_efectiva_id;
 
-        // Obtener usuarios con clinica_id directo + miembros por pivot (consultorios privados)
-        $userIds = User::where('clinica_id', $clinicaId)->pluck('id');
-        $pivotIds = \App\Models\UserClinica::where('clinica_id', $clinicaId)
+        // Obtener usuarios vinculados a esta clínica vía user_clinicas (multi-tenant)
+        $userIds = \DB::table('user_clinicas')
+            ->where('clinica_id', $clinicaId)
             ->where('activa', true)
             ->pluck('user_id');
-        $todosIds = $userIds->merge($pivotIds)->unique();
 
         $users = User::with('sucursal:id,nombre,es_principal')
-            ->select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'isAdmin', 'sucursal_id', 'created_at')
-            ->whereIn('id', $todosIds)
+            ->select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'email', 'rol', 'sucursal_id', 'created_at')
+            ->whereIn('id', $userIds)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function($u) use ($clinicaId) {
+                // Agregar permisos desde user_clinicas para display
+                $permisos = \DB::table('user_clinicas')
+                    ->where('user_id', $u->id)
+                    ->where('clinica_id', $clinicaId)
+                    ->where('activa', true)
+                    ->first();
+                
+                $u->isAdmin = $permisos ? (bool) $permisos->isAdmin : false;
+                $u->isSuperAdmin = $permisos ? (bool) $permisos->isSuperAdmin : false;
+                $u->rol_en_clinica = $permisos ? $permisos->rol_en_clinica : 'colaborador';
+                return $u;
+            });
+
         return response()->json(['users' => $users]);
     }
 
@@ -139,7 +187,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden actualizar usuarios
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para actualizar usuarios'], 403);
         }
 
@@ -166,7 +215,7 @@ class UserManagementController extends Controller
         }
 
         // No se puede quitar el privilegio de super admin entre super admins
-        if ($targetUser->isSuperAdmin && $request->has('isSuperAdmin') && !$request->isSuperAdmin) {
+        if ($targetUser->isSuperAdmin() && $request->has('isSuperAdmin') && !$request->isSuperAdmin) {
             return response()->json(['error' => 'No se puede quitar el privilegio de super administrador a otro super administrador'], 403);
         }
 
@@ -223,6 +272,21 @@ class UserManagementController extends Controller
 
         $targetUser->update($updateData);
 
+        // ═══════════════════════════════════════════════════════════════════
+        // SINCRONIZAR PERMISOS EN user_clinicas (fuente de verdad multi-tenant)
+        // ═══════════════════════════════════════════════════════════════════
+        $clinicaEfectivaId = $user->clinica_efectiva_id;
+        
+        \DB::table('user_clinicas')
+            ->where('user_id', $targetUser->id)
+            ->where('clinica_id', $clinicaEfectivaId)
+            ->update([
+                'isAdmin' => $request->isAdmin ?? false,
+                'isSuperAdmin' => $request->isSuperAdmin ?? false,
+                'rol_en_clinica' => ($request->isSuperAdmin || $request->isAdmin) ? 'propietario' : 'colaborador',
+                'updated_at' => now(),
+            ]);
+
         return response()->json([
             'message' => 'Usuario actualizado exitosamente',
             'user' => $targetUser->fresh()
@@ -236,7 +300,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar usuarios
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para eliminar usuarios'], 403);
         }
 
@@ -288,7 +353,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden asignar permisos
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para asignar permisos'], 403);
         }
 
@@ -369,7 +435,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden asignar permisos masivos
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para asignar permisos'], 403);
         }
 
@@ -442,7 +509,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden revocar permisos
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para revocar permisos'], 403);
         }
 
@@ -477,7 +545,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden revocar permisos
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para revocar permisos'], 403);
         }
 
@@ -523,7 +592,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden ver permisos de usuarios
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para ver permisos de usuarios'], 403);
         }
 
@@ -546,7 +616,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden ver sus recursos
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden ver sus recursos'], 403);
         }
 

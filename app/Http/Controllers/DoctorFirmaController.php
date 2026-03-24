@@ -16,7 +16,7 @@ class DoctorFirmaController extends Controller
     {
         $user = Auth::user();
         
-        $doctores = User::where('clinica_id', $user->clinica_id)
+        $doctores = User::where('clinica_id', $user->clinica_efectiva_id)
             ->whereNotNull('firma_digital')
             ->select('id', 'nombre', 'apellidoPat', 'apellidoMat', 'cedula', 'firma_digital')
             ->orderBy('nombre')

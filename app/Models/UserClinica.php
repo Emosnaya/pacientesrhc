@@ -18,12 +18,16 @@ class UserClinica extends Pivot
         'user_id',
         'clinica_id',
         'rol_en_clinica',   // propietario | colaborador | visor
+        'isAdmin',          // Permisos de admin EN ESTA CLÍNICA
+        'isSuperAdmin',     // Permisos de superadmin EN ESTA CLÍNICA
         'activa',
         'invitado_por',
     ];
 
     protected $casts = [
         'activa' => 'boolean',
+        'isAdmin' => 'boolean',
+        'isSuperAdmin' => 'boolean',
     ];
 
     // ──────────────────────────────── Relaciones ────────────────────────────────
@@ -53,5 +57,15 @@ class UserClinica extends Pivot
     public function esColaborador(): bool
     {
         return $this->rol_en_clinica === 'colaborador';
+    }
+
+    public function esAdmin(): bool
+    {
+        return (bool) $this->isAdmin;
+    }
+
+    public function esSuperAdmin(): bool
+    {
+        return (bool) $this->isSuperAdmin;
     }
 }

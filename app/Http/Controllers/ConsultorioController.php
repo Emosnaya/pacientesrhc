@@ -281,7 +281,8 @@ class ConsultorioController extends Controller
         $clinicaId = (int) $request->clinica_id;
 
         // Verificar que el usuario es propietario o admin de esa clínica
-        $esAdmin = $user->clinica_id === $clinicaId && $user->isAdmin();
+        // isAdmin($clinicaId) consulta user_clinicas para permisos multi-tenant
+        $esAdmin = $user->isAdmin($clinicaId);
         $esPropietario = $user->clinicas()
             ->wherePivot('rol_en_clinica', 'propietario')
             ->where('clinica_id', $clinicaId)
@@ -509,7 +510,8 @@ class ConsultorioController extends Controller
             ->wherePivot('rol_en_clinica', 'propietario')
             ->where('clinica_id', $clinicaId)
             ->exists();
-        $esAdmin = $user->clinica_id === $clinicaId && $user->isAdmin();
+        // isAdmin($clinicaId) consulta user_clinicas para permisos multi-tenant
+        $esAdmin = $user->isAdmin($clinicaId);
 
         if (!$esPropietario && !$esAdmin) {
             return response()->json(['success' => false, 'message' => 'Sin permiso.'], 403);
@@ -544,7 +546,8 @@ class ConsultorioController extends Controller
             ->wherePivot('rol_en_clinica', 'propietario')
             ->where('clinica_id', $clinicaId)
             ->exists();
-        $esAdmin = $user->clinica_id === $clinicaId && $user->isAdmin();
+        // isAdmin($clinicaId) consulta user_clinicas para permisos multi-tenant
+        $esAdmin = $user->isAdmin($clinicaId);
 
         if (!$esPropietario && !$esAdmin) {
             return response()->json(['success' => false, 'message' => 'Sin acceso.'], 403);
