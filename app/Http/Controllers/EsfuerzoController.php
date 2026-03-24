@@ -37,7 +37,7 @@ class EsfuerzoController extends Controller
         
         // Todos los usuarios pueden ver los esfuerzos de su clínica
         $esfuerzos = Esfuerzo::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new EsfuerzoCollection($esfuerzos);
@@ -91,7 +91,7 @@ class EsfuerzoController extends Controller
             $nuevoPaciente->edad = $edad;
             $nuevoPaciente->imc = $imc;
             $nuevoPaciente->user_id = $user->id;
-            $nuevoPaciente->clinica_id = $user->clinica_id;
+            $nuevoPaciente->clinica_id = $user->clinica_efectiva_id;
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $nuevoPaciente->sucursal_id = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
@@ -101,7 +101,7 @@ class EsfuerzoController extends Controller
             $id = intval($request->input('id'));
             $nuevoPaciente = Paciente::find($id);
             
-            if ($nuevoPaciente->clinica_id !== $user->clinica_id) {
+            if ($nuevoPaciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
 
@@ -411,7 +411,7 @@ class EsfuerzoController extends Controller
         // Asignar el user_id del dueño del paciente
         $pesfuerzo->user_id = $nuevoPaciente->user_id;
         $pesfuerzo->tipo_exp = 1;
-        $pesfuerzo->clinica_id = $user->clinica_id;
+        $pesfuerzo->clinica_id = $user->clinica_efectiva_id;
         $pesfuerzo->sucursal_id = $nuevoPaciente->sucursal_id;
 
         $pesfuerzo->paciente_id = $nuevoPaciente->id;
@@ -432,7 +432,7 @@ class EsfuerzoController extends Controller
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
@@ -452,7 +452,7 @@ class EsfuerzoController extends Controller
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
@@ -763,7 +763,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->fecha =  $data['fecha'];
         $pesfuerzo->recup_tas = $this->safeDivide($tas3ermin, $tas1ermin, 0);
         $pesfuerzo->tipo_exp = 1;
-        $pesfuerzo->clinica_id = $user->clinica_id;
+        $pesfuerzo->clinica_id = $user->clinica_efectiva_id;
         
         $pesfuerzo->save();
 
@@ -780,14 +780,14 @@ class EsfuerzoController extends Controller
     {
         $user = Auth::user();
         
-        // Solo los administradores pueden eliminar
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
         

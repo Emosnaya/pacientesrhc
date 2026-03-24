@@ -21,7 +21,7 @@ class ReporteNutriController extends Controller
         
         // Todos los usuarios pueden ver los reportes nutricionales de su clínica
         $reportes = ReporteNutri::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_id);
+            $query->where('clinica_id', $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new ReporteNutriCollection($reportes);
@@ -42,7 +42,7 @@ class ReporteNutriController extends Controller
         $paciente = Paciente::find($id);
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
         
@@ -79,7 +79,7 @@ class ReporteNutriController extends Controller
         
         // Asignar el user_id del dueño del paciente
         $reporteNutri->user_id = $paciente->user_id;
-        $reporteNutri->clinica_id = $user->clinica_id;
+        $reporteNutri->clinica_id = $user->clinica_efectiva_id;
         $reporteNutri->sucursal_id = $paciente->sucursal_id;
         $reporteNutri->nutriologo = $data['nutriologo'];
         $reporteNutri->cedula_nutriologo = $data['cedula_nutriologo'];
@@ -99,7 +99,7 @@ class ReporteNutriController extends Controller
         $user = Auth::user();
         
         $paciente = $nutri->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
 
@@ -119,7 +119,7 @@ class ReporteNutriController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $nutri->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         
@@ -156,7 +156,7 @@ class ReporteNutriController extends Controller
         $reporteNutri->tipo_exp = 6;
         $reporteNutri->nutriologo = $data['nutriologo'];
         $reporteNutri->cedula_nutriologo = $data['cedula_nutriologo'];
-        $reporteNutri->clinica_id = $user->clinica_id;
+        $reporteNutri->clinica_id = $user->clinica_efectiva_id;
         $reporteNutri->save();
 
         return response('Actualizado',204);
@@ -172,14 +172,14 @@ class ReporteNutriController extends Controller
     {
         $user = Auth::user();
         
-        // Solo los administradores pueden eliminar
-        if (!$user->isAdmin()) {
+        // Solo admin o superadmin pueden eliminar
+        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'Solo los administradores pueden eliminar reportes nutricionales'], 403);
         }
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $nutri->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este reporte nutricional'], 403);
         }
         

@@ -11,11 +11,34 @@ use Illuminate\Support\Facades\Validator;
 class RecetaController extends Controller
 {
     /**
+     * Roles permitidos para acceder a recetas
+     */
+    private const ROLES_RECETAS = ['doctor', 'doctora'];
+
+    /**
+     * Verificar si el usuario puede acceder a recetas
+     */
+    private function canAccessRecetas($user): bool
+    {
+        return $user && $user->rol && in_array(strtolower($user->rol), self::ROLES_RECETAS);
+    }
+
+    /**
      * Listar recetas (todas de la sucursal o por paciente).
+     * Solo accesible para doctores.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
+        
+        // Verificar que el usuario sea doctor/doctora
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden acceder a las recetas médicas'
+            ], 403);
+        }
+        
         $clinicaId = $user->clinica_efectiva_id;
         // Validar que la sucursal pertenezca a la clínica efectiva
         $sucursalId = null;
@@ -30,6 +53,7 @@ class RecetaController extends Controller
         }
 
         $query = Receta::where('clinica_id', $clinicaId)
+            ->where('user_id', $user->id) // Solo recetas creadas por el usuario autenticado
             ->with(['paciente', 'user', 'medicamentos'])
             ->orderBy('fecha', 'desc')
             ->orderBy('created_at', 'desc');
@@ -48,10 +72,20 @@ class RecetaController extends Controller
 
     /**
      * Recetas de un paciente.
+     * Solo accesible para doctores.
      */
     public function getByPaciente(Request $request, $pacienteId)
     {
         $user = Auth::user();
+        
+        // Verificar que el usuario sea doctor/doctora
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden acceder a las recetas médicas'
+            ], 403);
+        }
+        
         $clinicaId = $user->clinica_efectiva_id;
         $sucursalId = null;
         if ($request->has('sucursal_id') && $request->sucursal_id) {
@@ -80,10 +114,20 @@ class RecetaController extends Controller
 
     /**
      * Ver una receta.
+     * Solo accesible para doctores.
      */
     public function show($id)
     {
         $user = Auth::user();
+        
+        // Verificar que el usuario sea doctor/doctora
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden acceder a las recetas médicas'
+            ], 403);
+        }
+        
         $receta = Receta::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'user', 'sucursal', 'medicamentos'])
             ->findOrFail($id);
@@ -92,10 +136,19 @@ class RecetaController extends Controller
 
     /**
      * Crear receta.
+     * Solo usuarios con rol "doctor" o "doctora" pueden crear recetas.
      */
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        // Verificar que el usuario sea doctor/doctora
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden crear recetas médicas'
+            ], 403);
+        }
 
         $validator = Validator::make($request->all(), [
             'paciente_id' => 'required|exists:pacientes,id',

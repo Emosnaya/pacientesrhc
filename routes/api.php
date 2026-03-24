@@ -35,6 +35,8 @@ use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Http\Controllers\ConsultorioController;
 use App\Http\Controllers\FinanzasController;
 use App\Http\Controllers\RecetaController;
+use App\Http\Controllers\EfirmaController;
+use App\Http\Controllers\FacturacionController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuscripcionConsultorioController;
 use App\Models\ReporteFisio;
@@ -75,7 +77,26 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/consultorio/comprar-adicional', [SubscriptionController::class, 'comprarConsultorioAdicional']);
     Route::get('/consultorio/comprar-adicional/usage', [SubscriptionController::class, 'getConsultorioUsage']);
     Route::get('/user', function (Request $request) {
-        return $request->user()->load(['sucursal', 'clinica', 'clinicaActiva']);
+        $user = $request->user()->load(['sucursal', 'clinica', 'clinicaActiva']);
+        
+        // Cargar permisos de la clínica activa desde user_clinicas
+        $clinicaEfectivaId = $user->clinica_efectiva_id;
+        if ($clinicaEfectivaId) {
+            $relacion = \DB::table('user_clinicas')
+                ->where('user_id', $user->id)
+                ->where('clinica_id', $clinicaEfectivaId)
+                ->where('activa', true)
+                ->first();
+            
+            if ($relacion) {
+                // Agregar permisos al objeto user para compatibilidad con frontend
+                $user->isAdmin = (bool) ($relacion->isAdmin ?? false);
+                $user->isSuperAdmin = (bool) ($relacion->isSuperAdmin ?? false);
+                $user->rol_en_clinica = $relacion->rol_en_clinica;
+            }
+        }
+        
+        return $user;
     });
     Route::post('/logout', [AuthController::class, 'logout']);
     
@@ -87,6 +108,13 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/profile/{id}/upload-universidad-logo', [ProfileController::class, 'uploadUniversidadLogo']);
     Route::delete('/profile/{id}/delete-image', [ProfileController::class, 'deleteImage']);
     Route::delete('/profile/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
+
+    // Verificación de pacientes existentes (importación con OTP)
+    Route::prefix('pacientes/verificacion')->group(function() {
+        Route::post('/check-email', [\App\Http\Controllers\PacienteVerificationController::class, 'checkEmail']);
+        Route::post('/request-otp', [\App\Http\Controllers\PacienteVerificationController::class, 'requestOtp']);
+        Route::post('/verify-otp', [\App\Http\Controllers\PacienteVerificationController::class, 'verifyOtp']);
+    });
 
     // Almacenar ordenes
     Route::apiResource('/pacientes', PacienteController::class);
@@ -132,6 +160,55 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::put('/recetas/config/pdf', [RecetaController::class, 'updatePdfConfig']);
     Route::get('/recetas/{id}', [RecetaController::class, 'show']);
     Route::post('/recetas', [RecetaController::class, 'store']);
+    Route::post('/recetas/{id}/firmar', [EfirmaController::class, 'firmarReceta']);
+    Route::get('/recetas/{id}/verificar-firma', [EfirmaController::class, 'verificarFirma']);
+
+    // E.firma (firma electrónica avanzada SAT)
+    // E.firma personal del usuario (para firmar recetas - requisito COFEPRIS)
+    Route::get('/efirma', [EfirmaController::class, 'show']);
+    Route::post('/efirma', [EfirmaController::class, 'store']);
+    Route::patch('/efirma/usos', [EfirmaController::class, 'updateUsos']);
+    Route::delete('/efirma', [EfirmaController::class, 'destroy']);
+    
+    // E.firma fiscal personal del usuario (para facturar individualmente en consultorio compartido)
+    Route::get('/efirma/fiscal', [EfirmaController::class, 'showFiscalPersonal']);
+    Route::post('/efirma/fiscal', [EfirmaController::class, 'storeFiscalPersonal']);
+    Route::delete('/efirma/fiscal', [EfirmaController::class, 'destroyFiscalPersonal']);
+    
+    // E.firma fiscal de la clínica (solo admin/superadmin - para facturas de la clínica)
+    Route::get('/efirma/clinica', [EfirmaController::class, 'showClinica']);
+    Route::post('/efirma/clinica', [EfirmaController::class, 'storeClinica']);
+    Route::delete('/efirma/clinica', [EfirmaController::class, 'destroyClinica']);
+
+    // ==========================================
+    // MÓDULO DE FACTURACIÓN
+    // ==========================================
+    Route::prefix('facturacion')->group(function() {
+        // Catálogos SAT
+        Route::get('/catalogos/regimenes', [FacturacionController::class, 'catalogoRegimenes']);
+        Route::get('/catalogos/usos-cfdi', [FacturacionController::class, 'catalogoUsosCfdi']);
+        
+        // Datos fiscales del paciente
+        Route::get('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'getDatosFiscales']);
+        Route::post('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'storeDatosFiscales']);
+        Route::delete('/datos-fiscales/{id}', [FacturacionController::class, 'deleteDatosFiscales']);
+        
+        // Solicitudes de factura
+        Route::get('/solicitudes', [FacturacionController::class, 'listSolicitudes']);
+        Route::post('/solicitudes', [FacturacionController::class, 'createSolicitud']);
+        Route::get('/solicitudes/{id}', [FacturacionController::class, 'showSolicitud']);
+        Route::post('/solicitudes/{id}/cancelar', [FacturacionController::class, 'cancelSolicitud']);
+        Route::post('/solicitudes/{id}/reintentar', [FacturacionController::class, 'retrySolicitud']);
+        
+        // Timbrado y gestión de CFDI (preparado para integración con PAC)
+        Route::post('/solicitudes/{id}/timbrar', [FacturacionController::class, 'timbrarFactura']);
+        Route::post('/solicitudes/{id}/cancelar-cfdi', [FacturacionController::class, 'cancelarCfdi']);
+        
+        // Descargas y reenvío
+        Route::get('/solicitudes/{id}/xml', [FacturacionController::class, 'downloadXml']);
+        Route::get('/solicitudes/{id}/pdf', [FacturacionController::class, 'downloadPdf']);
+        Route::post('/solicitudes/{id}/reenviar', [FacturacionController::class, 'reenviarFactura']);
+    });
 
     // ==========================================
     // MÓDULO DE FINANZAS - Motor Financiero

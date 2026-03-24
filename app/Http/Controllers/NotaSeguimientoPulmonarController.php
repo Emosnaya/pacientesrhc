@@ -26,12 +26,12 @@ class NotaSeguimientoPulmonarController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
         $notas = NotaSeguimientoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['user', 'paciente', 'expedientePulmonar'])
             ->orderBy('fecha_consulta', 'desc')
             ->orderBy('hora_consulta', 'desc')
@@ -61,12 +61,12 @@ class NotaSeguimientoPulmonarController extends Controller
         ]);
 
         $paciente = Paciente::findOrFail($validated['paciente_id']);
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
         $validated['user_id'] = $user->id;
-        $validated['clinica_id'] = $user->clinica_id;
+        $validated['clinica_id'] = $user->clinica_efectiva_id;
         $validated['tipo_exp'] = 19;
 
         $nota = NotaSeguimientoPulmonar::create($validated);
@@ -83,7 +83,7 @@ class NotaSeguimientoPulmonarController extends Controller
         $user = Auth::user();
         $nota = NotaSeguimientoPulmonar::with(['user', 'paciente', 'expedientePulmonar'])->findOrFail($id);
 
-        if ($nota->clinica_id !== $user->clinica_id) {
+        if ($nota->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -98,7 +98,7 @@ class NotaSeguimientoPulmonarController extends Controller
         $user = Auth::user();
         $nota = NotaSeguimientoPulmonar::findOrFail($id);
 
-        if ($nota->clinica_id !== $user->clinica_id) {
+        if ($nota->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -128,7 +128,7 @@ class NotaSeguimientoPulmonarController extends Controller
         $user = Auth::user();
         $nota = NotaSeguimientoPulmonar::findOrFail($id);
 
-        if ($nota->clinica_id !== $user->clinica_id) {
+        if ($nota->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 

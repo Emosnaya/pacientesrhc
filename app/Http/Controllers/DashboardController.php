@@ -28,7 +28,7 @@ class DashboardController extends Controller
     {
         try {
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
@@ -91,7 +91,7 @@ class DashboardController extends Controller
     {
         try {
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
@@ -144,7 +144,7 @@ class DashboardController extends Controller
             Log::info('📊 Generando insights del dashboard...');
 
             $user = $request->user();
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;

@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -186,11 +187,74 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario es administrador
+     * Verificar si el usuario es administrador EN LA CLÍNICA ACTIVA.
+     * Nueva arquitectura: Los permisos de admin son POR CLÍNICA (en user_clinicas).
+     * 
+     * @param int|null $clinicaId Si se especifica, verifica en esa clínica. Si no, usa clinica_efectiva_id.
      */
-    public function isAdmin(): bool
+    public function isAdmin(?int $clinicaId = null): bool
     {
-        return $this->isAdmin ?? false;
+        $targetClinicaId = $clinicaId ?? $this->clinica_efectiva_id;
+        
+        if (!$targetClinicaId) {
+            return false;
+        }
+
+        // Buscar en pivot user_clinicas
+        $relacion = DB::table('user_clinicas')
+            ->where('user_id', $this->id)
+            ->where('clinica_id', $targetClinicaId)
+            ->where('activa', true)
+            ->first();
+
+        return $relacion ? (bool) ($relacion->isAdmin ?? false) : false;
+    }
+
+    /**
+     * Verificar si el usuario es super administrador EN LA CLÍNICA ACTIVA.
+     * Nueva arquitectura: Los permisos de superadmin son POR CLÍNICA (en user_clinicas).
+     * 
+     * @param int|null $clinicaId Si se especifica, verifica en esa clínica. Si no, usa clinica_efectiva_id.
+     */
+    public function isSuperAdmin(?int $clinicaId = null): bool
+    {
+        $targetClinicaId = $clinicaId ?? $this->clinica_efectiva_id;
+        
+        if (!$targetClinicaId) {
+            return false;
+        }
+
+        // Buscar en pivot user_clinicas
+        $relacion = DB::table('user_clinicas')
+            ->where('user_id', $this->id)
+            ->where('clinica_id', $targetClinicaId)
+            ->where('activa', true)
+            ->first();
+
+        return $relacion ? (bool) ($relacion->isSuperAdmin ?? false) : false;
+    }
+
+    /**
+     * Verificar si el usuario puede eliminar/desvincular recursos.
+     * Según la jerarquía: SuperAdmin puede todo, Admin puede eliminar/desvincular.
+     * Usuarios normales solo pueden editar (los cambios se trackean en logs).
+     * 
+     * @param int|null $clinicaId Si se especifica, verifica en esa clínica. Si no, usa clinica_efectiva_id.
+     */
+    public function canDelete(?int $clinicaId = null): bool
+    {
+        return $this->isAdmin($clinicaId) || $this->isSuperAdmin($clinicaId);
+    }
+
+    /**
+     * Verificar si el usuario tiene acceso administrativo (admin o superadmin).
+     * Útil para validar acceso a gestión de usuarios, finanzas, etc.
+     * 
+     * @param int|null $clinicaId Si se especifica, verifica en esa clínica. Si no, usa clinica_efectiva_id.
+     */
+    public function hasAdminAccess(?int $clinicaId = null): bool
+    {
+        return $this->isAdmin($clinicaId) || $this->isSuperAdmin($clinicaId);
     }
 
     /**

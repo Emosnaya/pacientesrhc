@@ -24,7 +24,7 @@ class ReporteFinalPulmonarController extends Controller
         }
 
         $reportes = ReporteFinalPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['user', 'paciente'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -50,7 +50,7 @@ class ReporteFinalPulmonarController extends Controller
         $paciente = $pruebaInicial->paciente;
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
@@ -63,7 +63,7 @@ class ReporteFinalPulmonarController extends Controller
         $reporte = new ReporteFinalPulmonar();
         $reporte->paciente_id = $paciente->id;
         $reporte->user_id = $user->id;
-        $reporte->clinica_id = $user->clinica_id;
+        $reporte->clinica_id = $user->clinica_efectiva_id;
         $reporte->tipo_exp = 15;
         
         // Fechas
@@ -158,7 +158,7 @@ class ReporteFinalPulmonarController extends Controller
         $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
         $validated['user_id'] = $user->id;
-        $validated['clinica_id'] = $user->clinica_id;
+        $validated['clinica_id'] = $user->clinica_efectiva_id;
         $validated['sucursal_id'] = $sucursalId;
         $validated['tipo_exp'] = 15;
 
@@ -175,7 +175,7 @@ class ReporteFinalPulmonarController extends Controller
         $user = Auth::user();
 
         $reporte = ReporteFinalPulmonar::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['user', 'paciente'])
             ->firstOrFail();
 
@@ -190,7 +190,7 @@ class ReporteFinalPulmonarController extends Controller
         $user = Auth::user();
 
         $reporte = ReporteFinalPulmonar::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $validated = $request->validate([
@@ -243,7 +243,7 @@ class ReporteFinalPulmonarController extends Controller
         $user = Auth::user();
 
         $reporte = ReporteFinalPulmonar::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $reporte->delete();
@@ -260,7 +260,7 @@ class ReporteFinalPulmonarController extends Controller
         $doctorFirmaId = $request->query('doctor_firma_id');
 
         $data = ReporteFinalPulmonar::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $paciente = Paciente::findOrFail($data->paciente_id);
@@ -308,7 +308,7 @@ class ReporteFinalPulmonarController extends Controller
         $doctorFirmaId = $request->query('doctor_firma_id');
 
         $data = ReporteFinalPulmonar::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $paciente = Paciente::findOrFail($data->paciente_id);

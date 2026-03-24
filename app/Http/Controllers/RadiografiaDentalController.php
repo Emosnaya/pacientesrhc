@@ -19,7 +19,7 @@ class RadiografiaDentalController extends Controller
         
         // Verificar que el paciente pertenece a la misma clínica
         $paciente = Paciente::find($pacienteId);
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos para ver este paciente'], 403);
         }
 
@@ -49,7 +49,7 @@ class RadiografiaDentalController extends Controller
         
         // Verificar que el paciente pertenece a la misma clínica
         $paciente = Paciente::find($request->paciente_id);
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_id) {
+        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos'], 403);
         }
 
@@ -62,7 +62,7 @@ class RadiografiaDentalController extends Controller
         $radiografia = RadiografiaDental::create([
             'paciente_id' => $request->paciente_id,
             'user_id' => $user->id,
-            'clinica_id' => $user->clinica_id,
+            'clinica_id' => $user->clinica_efectiva_id,
             'titulo' => $request->titulo,
             'descripcion' => $request->descripcion,
             'ruta_archivo' => $ruta,
@@ -94,7 +94,7 @@ class RadiografiaDentalController extends Controller
         }
 
         // Verificar que pertenece a la misma clínica
-        if ($radiografia->clinica_id !== $user->clinica_id) {
+        if ($radiografia->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos'], 403);
         }
 
@@ -137,7 +137,7 @@ class RadiografiaDentalController extends Controller
         }
 
         // Verificar que pertenece a la misma clínica
-        if ($radiografia->clinica_id !== $user->clinica_id) {
+        if ($radiografia->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes permisos'], 403);
         }
 
@@ -181,7 +181,7 @@ class RadiografiaDentalController extends Controller
         }
 
         // Verificar que pertenece a la misma clínica
-        if ($radiografia->clinica_id !== $user->clinica_id) {
+        if ($radiografia->clinica_id !== $user->clinica_efectiva_id) {
             abort(403, 'No tienes permisos para ver esta radiografía');
         }
 

@@ -41,7 +41,7 @@ class FisioterapiaController extends Controller
         $user = auth()->user();
         $data = $request->all();
         $data['user_id'] = $user->id;
-        $data['clinica_id'] = $user->clinica_id;
+        $data['clinica_id'] = $user->clinica_efectiva_id;
         $data['sucursal_id'] = $user->sucursal_id;
 
         $historia = HistoriaClinicaFisioterapia::create($data);
@@ -189,7 +189,7 @@ class FisioterapiaController extends Controller
         $user = auth()->user();
         $data = $request->all();
         $data['user_id'] = $user->id;
-        $data['clinica_id'] = $user->clinica_id;
+        $data['clinica_id'] = $user->clinica_efectiva_id;
         $data['sucursal_id'] = $user->sucursal_id;
 
         $nota = NotaAltaFisioterapia::create($data);

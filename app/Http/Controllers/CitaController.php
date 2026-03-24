@@ -27,7 +27,7 @@ class CitaController extends Controller
             $query = Cita::with(['paciente', 'admin']);
 
             // Filtrar por clínica del usuario autenticado
-            $query->forClinica($user->clinica_id);
+            $query->forClinica($user->clinica_efectiva_id);
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             // Si no viene en el request, usar la del usuario
@@ -108,7 +108,7 @@ class CitaController extends Controller
                 $paciente = Paciente::findOrFail($request->paciente_id);
 
                 // Verificar que el paciente pertenece a la misma clínica
-                if ($paciente->clinica_id !== $user->clinica_id) {
+                if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
                     return response()->json([
                         'success' => false,
                         'message' => 'No tienes acceso a este paciente'
@@ -182,7 +182,7 @@ class CitaController extends Controller
                     $doctorId = $pacienteData['user_id'];
                     // Verificar que el doctor existe y pertenece a la misma clínica
                     $doctor = User::where('id', $doctorId)
-                        ->where('clinica_id', $user->clinica_id)
+                        ->where('clinica_id', $user->clinica_efectiva_id)
                         ->first();
                     
                     if (!$doctor) {
@@ -198,7 +198,7 @@ class CitaController extends Controller
                     $nuevoPaciente->user_id = $user->id;
                 }
                 
-                $nuevoPaciente->clinica_id = $user->clinica_id;
+                $nuevoPaciente->clinica_id = $user->clinica_efectiva_id;
                 $nuevoPaciente->sucursal_id = $user->sucursal_id; // Asignar sucursal del usuario
                 $nuevoPaciente->save();
                 
@@ -232,7 +232,7 @@ class CitaController extends Controller
             $horaCita = $request->hora;
             
             $bloqueos = Evento::where('tipo', 'bloqueo')
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->where('sucursal_id', $sucursalId)
                 ->whereDate('fecha', $fechaCita)
                 ->get();
@@ -274,7 +274,7 @@ class CitaController extends Controller
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
                 'user_id' => $userId,
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $sucursalId,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
@@ -327,7 +327,7 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar que la cita pertenece a la misma clínica del usuario
-            if ($cita->clinica_id !== $user->clinica_id) {
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a esta cita'
@@ -379,7 +379,7 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar que la cita pertenece a la misma clínica del usuario
-            if ($cita->clinica_id !== $user->clinica_id) {
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a esta cita'
@@ -421,7 +421,7 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar que la cita pertenece a la misma clínica del usuario
-            if ($cita->clinica_id !== $user->clinica_id) {
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a esta cita'
@@ -463,7 +463,7 @@ class CitaController extends Controller
             $user = Auth::user();
 
             // Verificar que la cita pertenece a la misma clínica del usuario
-            if ($cita->clinica_id !== $user->clinica_id) {
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a esta cita'
@@ -509,7 +509,7 @@ class CitaController extends Controller
             $ano = $request->get('año', now()->year);
 
             $query = Cita::with(['paciente', 'admin'])
-                        ->forClinica($user->clinica_id)
+                        ->forClinica($user->clinica_efectiva_id)
                         ->byMonth($mes, $ano);
             
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
@@ -577,7 +577,7 @@ class CitaController extends Controller
             ]);
 
             // Verificar que la cita pertenece a la misma clínica del usuario
-            if ($cita->clinica_id !== $user->clinica_id) {
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a esta cita'
@@ -640,7 +640,7 @@ class CitaController extends Controller
             $paciente = Paciente::findOrFail($request->paciente_id);
 
             // Verificar que el paciente pertenece a la misma clínica
-            if ($paciente->clinica_id !== $user->clinica_id) {
+            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a este paciente'
@@ -659,7 +659,7 @@ class CitaController extends Controller
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,
-                    'clinica_id' => $user->clinica_id,
+                    'clinica_id' => $user->clinica_efectiva_id,
                     'sucursal_id' => $sucursalId,
                     'fecha' => $citaData['fecha'],
                     'hora' => $citaData['hora'],

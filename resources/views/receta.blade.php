@@ -30,12 +30,14 @@
         .clinic-logo-wrap { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; display: block; margin: 0 auto; }
         .clinic-logo-wrap img { max-height: 35px; max-width: 35px; display: block; margin: 0 auto; }
         /* === FOOTER FIJO === */
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 5px 18px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 18px; background: white; border-top: 2px solid #0A1628; font-size: 8px; }
         .page-footer-table { width: 100%; border-collapse: collapse; }
         .page-footer-table td { border: none; padding: 0; vertical-align: middle; }
-        .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
-        .page-footer .clinic-contact { text-align: right; color: #64748b; }
-        .content-wrapper { padding-bottom: 38px; }
+        .page-footer .clinic-name { font-weight: 700; color: #0A1628; font-size: 9px; }
+        .page-footer .clinic-contact { color: #64748b; }
+        .page-footer .clinic-address { color: #94a3b8; font-size: 7px; }
+        .page-footer .sucursal-name { color: #3b82f6; font-size: 8px; }
+        .content-wrapper { padding-bottom: 50px; }
         .titulo-doc {
             text-align: center;
             margin: 14px 0 16px;
@@ -204,6 +206,156 @@
             font-size: 7px;
             color: #94a3b8;
         }
+        
+        /* Sección de Validación COFEPRIS */
+        .validacion-cofepris {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            page-break-inside: avoid;
+        }
+        .validacion-header {
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .validacion-badge {
+            background: #16a34a;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: 700;
+        }
+        .validacion-titulo {
+            font-size: 9px;
+            color: #166534;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .validacion-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7px;
+        }
+        .validacion-table td {
+            padding: 2px 0;
+            vertical-align: top;
+            border: none;
+        }
+        .validacion-table .lbl {
+            color: #64748b;
+            font-weight: 600;
+            width: 22%;
+            padding-right: 8px;
+        }
+        .validacion-table .val {
+            color: #1e293b;
+        }
+        .validacion-table .mono {
+            font-family: monospace;
+            font-size: 6px;
+        }
+        .cadena-box {
+            background: #f1f5f9;
+            padding: 4px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 5px;
+            color: #475569;
+            max-height: 36px;
+            overflow: hidden;
+        }
+        .validacion-footer {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #e2e8f0;
+            font-size: 6px;
+            color: #94a3b8;
+            text-align: center;
+        }
+        /* E.firma badge compacto junto a firma */
+        .efirma-inline {
+            text-align: center;
+            margin-top: 6px;
+        }
+        .efirma-inline-badge {
+            display: inline-block;
+            background: #16a34a;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 7px;
+            font-weight: 700;
+        }
+        /* Folio y fecha en header */
+        .header-folio-fecha {
+            text-align: right;
+            padding-left: 10px;
+        }
+        .header-folio {
+            font-size: 9px;
+            font-weight: 700;
+            color: #f59e0b;
+            margin: 0;
+        }
+        .header-fecha {
+            font-size: 8px;
+            color: #94a3b8;
+            margin: 2px 0 0 0;
+        }
+        /* E.firma compacta inline */
+        .efirma-compact {
+            margin-top: 16px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        .efirma-compact-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .efirma-compact-badge {
+            background: #16a34a;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 7px;
+            font-weight: 700;
+        }
+        .efirma-compact-title {
+            font-size: 8px;
+            color: #166534;
+            font-weight: 600;
+        }
+        .efirma-compact-data {
+            font-size: 7px;
+            color: #374151;
+            line-height: 1.5;
+        }
+        .efirma-compact-data strong {
+            color: #1f2937;
+        }
+        .efirma-sello {
+            margin-top: 4px;
+            padding: 3px 6px;
+            background: #f1f5f9;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 5px;
+            color: #64748b;
+            word-break: break-all;
+            max-height: 24px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -212,8 +364,22 @@
         <table class="page-footer-table">
             <tr>
                 <td class="clinic-name">{{ $clinica->nombre ?? '' }}</td>
-                <td class="clinic-contact">{{ $clinica->telefono ?? '' }}{{ (!empty($clinica->telefono) && !empty($clinica->email)) ? ' | ' : '' }}{{ $clinica->email ?? '' }}</td>
+                <td class="clinic-contact" style="text-align: right;">{{ $clinica->telefono ?? '' }}{{ (!empty($clinica->telefono) && !empty($clinica->email)) ? ' | ' : '' }}{{ $clinica->email ?? '' }}</td>
             </tr>
+            @if(!empty($sucursal))
+            <tr>
+                <td class="sucursal-name">Sucursal: {{ $sucursal->nombre }}</td>
+                <td class="clinic-address" style="text-align: right;">{{ $sucursal->direccion ?? ($clinica->direccion ?? '') }}</td>
+            </tr>
+            @endif
+            @php
+                $direccionMostrar = !empty($sucursal) ? ($sucursal->direccion ?? $clinica->direccion ?? '') : ($clinica->direccion ?? '');
+            @endphp
+            @if(!empty($direccionMostrar) && empty($sucursal))
+            <tr>
+                <td colspan="2" class="clinic-address">{{ $direccionMostrar }}</td>
+            </tr>
+            @endif
         </table>
     </div>
     <div class="content-wrapper">
@@ -234,7 +400,7 @@
                     </div>
                 </td>
                 @endif
-                <!-- Izquierda: Doctor -->
+                <!-- Centro: Doctor -->
                 <td class="doctor-cell">
                     <div class="doctor-info">
                         <div class="doctor-name">{{ $user->nombre_con_titulo ?? '' }}</div>
@@ -251,20 +417,12 @@
                         </div>
                     </div>
                 </td>
-                <!-- Derecha: Clínica -->
-                <td class="clinic-cell">
-                    <div class="clinic-info-wrap">
-                        <div class="clinic-name-hdr">{{ $clinica->nombre ?? 'Clínica' }}</div>
-                        @if(!empty($sucursal))
-                            <div class="clinic-meta-hdr" style="color: #93c5fd;">Sucursal: {{ $sucursal->nombre }}</div>
-                        @endif
-                        @if(!empty($clinica->telefono) || !empty($clinica->email))
-                            <div class="clinic-meta-hdr">{{ $clinica->telefono ?? '' }}{{ (!empty($clinica->telefono) && !empty($clinica->email)) ? ' · ' : '' }}{{ $clinica->email ?? '' }}</div>
-                        @endif
-                        @if(!empty($clinica->direccion))
-                            <div class="clinic-meta-hdr">{{ $clinica->direccion }}</div>
-                        @endif
-                    </div>
+                <!-- Folio y Fecha -->
+                <td class="header-folio-fecha">
+                    @if(!empty($data->folio))
+                    <p class="header-folio">FOLIO: {{ str_pad($data->folio, 4, '0', STR_PAD_LEFT) }}</p>
+                    @endif
+                    <p class="header-fecha">{{ $data->fecha ? \Carbon\Carbon::parse($data->fecha)->format('d/m/Y') : date('d/m/Y') }}</p>
                 </td>
                 <!-- Logo universidad (extremo derecho) -->
                 @if(isset($universidadLogo) && $universidadLogo)
@@ -280,12 +438,7 @@
     @endif
 
     @if($seccion === 'titulo')
-    <div class="titulo-doc">
-        @if(!empty($data->folio))
-            <p style="margin: 4px 0 0 0; font-size: 10px; color: #0A1628; font-weight: 600;">FOLIO: {{ str_pad($data->folio, 4, '0', STR_PAD_LEFT) }}</p>
-        @endif
-        <p class="fecha">{{ $data->fecha ? \Carbon\Carbon::parse($data->fecha)->format('d/m/Y') : date('d/m/Y') }}</p>
-    </div>
+    {{-- Folio y fecha ya están en el header --}}
     @endif
 
     @if($seccion === 'paciente')
@@ -367,22 +520,48 @@
             <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
             <div class="firma-line"></div>
             <p class="firma-label">Firma del médico</p>
+            @if(isset($efirmaData) && $efirmaData)
+            <div class="efirma-inline">
+                <span class="efirma-inline-badge">✓ FIRMADA ELECTRÓNICAMENTE</span>
+            </div>
+            @endif
         </div>
     </div>
     
-    <!-- Espacio de seguridad después de la firma -->
+    @if(isset($efirmaData) && $efirmaData)
+    <!-- Validación e.firma compacta -->
+    <div style="text-align: center; margin-top: 12px;">
+        <div class="efirma-compact">
+            <div class="efirma-compact-header">
+                <span class="efirma-compact-badge">✓ e.firma</span>
+                <span class="efirma-compact-title">Receta electrónica válida</span>
+            </div>
+            <div class="efirma-compact-data">
+                <strong>{{ $efirmaData['nombre_titular'] ?? '' }}</strong> · RFC: {{ $efirmaData['rfc'] ?? 'N/A' }}<br>
+                Certificado: {{ $efirmaData['numero_serie'] ?? 'N/A' }} · {{ \Carbon\Carbon::parse($efirmaData['firmada_at'])->format('d/m/Y H:i') }}
+            </div>
+            <div class="efirma-sello">{{ Str::limit($efirmaData['sello_digital'] ?? '', 120) }}</div>
+        </div>
+    </div>
+    <p style="text-align: center; font-size: 6px; color: #94a3b8; margin-top: 6px;">Firmado con e.firma del SAT · NOM-024-SSA3-2012 · Vigencia: 30 días</p>
+    @else
+    <!-- Espacio de seguridad después de la firma (sin e.firma) -->
     <div class="lineas-seguridad"></div>
     
     <div class="sello-seguridad">
         <p>✓ Receta médica validada</p>
         <p>No se acepta si presenta tachaduras o enmendaduras</p>
-        <p>{{ $clinica->nombre ?? 'Clínica' }} · {{ date('d/m/Y H:i') }}</p>
     </div>
+    @endif
     @endif
 @endforeach
 
 <div class="pie-receta">
-    <p>Este documento es válido únicamente con firma y sello del médico tratante · No se aceptan fotocopias</p>
+    @if(isset($efirmaData) && $efirmaData)
+    <p>Receta electrónica válida · Verificable en plataformas oficiales · No requiere firma autógrafa</p>
+    @else
+    <p>Este documento es válido únicamente con firma del médico tratante · No se aceptan fotocopias ni tachaduras</p>
+    @endif
 </div>
     </div><!-- end content-wrapper -->
 

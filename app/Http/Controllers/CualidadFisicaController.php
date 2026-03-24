@@ -24,7 +24,7 @@ class CualidadFisicaController extends Controller
         }
 
         $cualidadesFisicas = CualidadFisica::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -44,12 +44,12 @@ class CualidadFisicaController extends Controller
 
         // Verificar que el paciente pertenece a la misma clínica
         $paciente = Paciente::where('id', $validated['paciente_id'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $data = $request->all();
         $data['user_id'] = $user->id;
-        $data['clinica_id'] = $user->clinica_id;
+        $data['clinica_id'] = $user->clinica_efectiva_id;
 
         $cualidadFisica = CualidadFisica::create($data);
 
@@ -64,7 +64,7 @@ class CualidadFisicaController extends Controller
         $user = Auth::user();
         
         $cualidadFisica = CualidadFisica::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'user'])
             ->firstOrFail();
 
@@ -79,7 +79,7 @@ class CualidadFisicaController extends Controller
         $user = Auth::user();
         
         $cualidadFisica = CualidadFisica::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $cualidadFisica->update($request->all());
@@ -95,7 +95,7 @@ class CualidadFisicaController extends Controller
         $user = Auth::user();
         
         $cualidadFisica = CualidadFisica::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
         $cualidadFisica->delete();
@@ -116,7 +116,7 @@ class CualidadFisicaController extends Controller
         }
 
         $cualidadFisica = CualidadFisica::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->latest()
             ->first();
 
@@ -132,7 +132,7 @@ class CualidadFisicaController extends Controller
         $doctorId = $request->query('doctor_id');
         
         $cualidadFisica = CualidadFisica::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'user'])
             ->firstOrFail();
 
@@ -142,7 +142,7 @@ class CualidadFisicaController extends Controller
         $selectedUser = $user;
         if ($doctorId) {
             $doctor = User::where('id', $doctorId)
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->first();
             if ($doctor) {
                 $selectedUser = $doctor;
@@ -181,7 +181,7 @@ class CualidadFisicaController extends Controller
         $doctorId = $request->query('doctor_id');
         
         $cualidadFisica = CualidadFisica::where('id', $id)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'user'])
             ->firstOrFail();
 
@@ -191,7 +191,7 @@ class CualidadFisicaController extends Controller
         $selectedUser = $user;
         if ($doctorId) {
             $doctor = User::where('id', $doctorId)
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->first();
             if ($doctor) {
                 $selectedUser = $doctor;

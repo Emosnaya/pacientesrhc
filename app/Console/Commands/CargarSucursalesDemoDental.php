@@ -42,7 +42,9 @@ class CargarSucursalesDemoDental extends Command
         }
 
         $doctor = $clinica->users()->where('rol', 'doctor')->first();
-        $admin = $clinica->users()->where('isAdmin', true)->first();
+        // Buscar admin desde user_clinicas (fuente de verdad multi-tenant)
+        $admin = $clinica->users()->wherePivot('isAdmin', true)->first()
+              ?? $clinica->users()->where('isAdmin', true)->first(); // Fallback legacy
         if (!$doctor || !$admin) {
             $this->warn('Faltan usuario doctor o admin en la clínica demo.');
             return self::FAILURE;

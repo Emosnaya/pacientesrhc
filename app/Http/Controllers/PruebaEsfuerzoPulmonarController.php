@@ -24,7 +24,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
         }
 
         $pruebas = PruebaEsfuerzoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['user', 'paciente'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -41,12 +41,12 @@ class PruebaEsfuerzoPulmonarController extends Controller
         
         // Verificar que el paciente existe y pertenece a la misma clínica
         $paciente = Paciente::findOrFail($pacienteId);
-        if ($paciente->clinica_id !== $user->clinica_id) {
+        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
         $pruebas = PruebaEsfuerzoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->with(['user', 'paciente'])
             ->orderBy('fecha_realizacion', 'desc')
             ->get();
@@ -142,7 +142,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
         ]);
 
         $validated['user_id'] = $user->id;
-        $validated['clinica_id'] = $user->clinica_id;
+        $validated['clinica_id'] = $user->clinica_efectiva_id;
         $validated['sucursal_id'] = $user->sucursal_id;
         $validated['tipo_exp'] = 16;
 
@@ -164,7 +164,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
     {
         $user = Auth::user();
 
-        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_id) {
+        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -178,7 +178,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
     {
         $user = Auth::user();
 
-        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_id) {
+        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -276,7 +276,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
     {
         $user = Auth::user();
 
-        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_id) {
+        if ($pruebaEsfuerzoPulmonar->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -294,7 +294,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
         
         $prueba = PruebaEsfuerzoPulmonar::with(['paciente', 'user'])->findOrFail($id);
 
-        if ($prueba->clinica_id !== $user->clinica_id) {
+        if ($prueba->clinica_id !== $user->clinica_efectiva_id) {
             abort(403, 'Unauthorized');
         }
 
@@ -331,7 +331,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
         
         $prueba = PruebaEsfuerzoPulmonar::with(['paciente', 'user'])->findOrFail($id);
 
-        if ($prueba->clinica_id !== $user->clinica_id) {
+        if ($prueba->clinica_id !== $user->clinica_efectiva_id) {
             abort(403, 'Unauthorized');
         }
 

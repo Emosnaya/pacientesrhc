@@ -19,10 +19,16 @@ class Receta extends Model
         'fecha',
         'diagnostico_principal',
         'indicaciones_generales',
+        // Campos de firma electrónica
+        'firma_digital',
+        'cadena_original',
+        'firmada_at',
+        'numero_serie_certificado',
     ];
 
     protected $casts = [
         'fecha' => 'date',
+        'firmada_at' => 'datetime',
         'diagnostico_principal' => 'encrypted',
         'indicaciones_generales' => 'encrypted',
     ];

@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 
 class FinanzasController extends Controller
 {
@@ -22,7 +28,7 @@ class FinanzasController extends Controller
     public function registrarPago(Request $request)
     {
         $user = Auth::user();
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($user->clinica_efectiva_id);
         // Para rehabilitación cardiopulmonar la firma del paciente no es obligatoria en el recibo de pago
         $firmaObligatoria = !$clinica || $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar';
 
@@ -43,7 +49,7 @@ class FinanzasController extends Controller
         if ($request->filled('paciente_id')) {
             // Verificar que el paciente pertenece a la misma clínica
             $paciente = Paciente::findOrFail($request->paciente_id);
-            if ($paciente->clinica_id !== $user->clinica_id) {
+            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'message' => 'No tienes permiso para registrar pagos de este paciente'
                 ], 403);
@@ -68,10 +74,10 @@ class FinanzasController extends Controller
             }
         }
 
-        $clinicaId = $paciente ? $paciente->clinica_id : $user->clinica_id;
+        $clinicaId = $paciente ? $paciente->clinica_id : $user->clinica_efectiva_id;
         $sucursalId = $paciente
             ? $paciente->sucursal_id
-            : ($user->isSuperAdmin && $request->filled('sucursal_id') ? $request->sucursal_id : $user->sucursal_id);
+            : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $user->sucursal_id);
 
         // Crear el pago
         $pago = Pago::create([
@@ -104,20 +110,20 @@ class FinanzasController extends Controller
     public function updatePago(Request $request, $id)
     {
         $user = Auth::user();
-        $clinica = Clinica::find($user->clinica_id);
+        $clinica = Clinica::find($user->clinica_efectiva_id);
         $firmaObligatoria = !$clinica || $clinica->tipo_clinica !== 'rehabilitacion_cardiopulmonar';
 
         $pago = Pago::findOrFail($id);
 
         // Verificar permisos: solo el usuario que creó el pago o superadmin puede editar
-        if ($pago->user_id !== $user->id && !$user->isSuperAdmin) {
+        if ($pago->user_id !== $user->id && !$user->isSuperAdmin()) {
             return response()->json([
                 'message' => 'No tienes permiso para editar este pago'
             ], 403);
         }
 
         // Verificar que el pago pertenece a la misma clínica
-        if ($pago->clinica_id !== $user->clinica_id) {
+        if ($pago->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json([
                 'message' => 'No tienes permiso para editar pagos de esta clínica'
             ], 403);
@@ -139,7 +145,7 @@ class FinanzasController extends Controller
         $paciente = null;
         if ($request->filled('paciente_id')) {
             $paciente = Paciente::findOrFail($request->paciente_id);
-            if ($paciente->clinica_id !== $user->clinica_id) {
+            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
                 return response()->json([
                     'message' => 'No tienes permiso para asignar pagos a este paciente'
                 ], 403);
@@ -166,7 +172,7 @@ class FinanzasController extends Controller
         $clinicaId = $paciente ? $paciente->clinica_id : $pago->clinica_id;
         $sucursalId = $paciente
             ? $paciente->sucursal_id
-            : ($user->isSuperAdmin && $request->filled('sucursal_id') ? $request->sucursal_id : $pago->sucursal_id);
+            : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $pago->sucursal_id);
 
         // Actualizar el pago
         $pago->update([
@@ -201,14 +207,14 @@ class FinanzasController extends Controller
         $pago = Pago::findOrFail($id);
 
         // Verificar permisos: solo superadmin puede eliminar pagos
-        if (!$user->isSuperAdmin) {
+        if (!$user->isSuperAdmin()) {
             return response()->json([
                 'message' => 'Solo los administradores pueden eliminar pagos'
             ], 403);
         }
 
         // Verificar que el pago pertenece a la misma clínica
-        if ($pago->clinica_id !== $user->clinica_id) {
+        if ($pago->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json([
                 'message' => 'No tienes permiso para eliminar pagos de esta clínica'
             ], 403);
@@ -238,13 +244,13 @@ class FinanzasController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
-        $sucursalId = $user->isSuperAdmin && $request->filled('sucursal_id')
+        $sucursalId = $user->isSuperAdmin() && $request->filled('sucursal_id')
             ? $request->sucursal_id
             : $user->sucursal_id;
 
         // Crear el egreso
         $egreso = Egreso::create([
-            'clinica_id' => $user->clinica_id,
+            'clinica_id' => $user->clinica_efectiva_id,
             'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
             'monto' => $request->monto,
@@ -273,7 +279,7 @@ class FinanzasController extends Controller
             $user = $request->user();
             $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
             
-            $query = Egreso::where('clinica_id', $clinicaId)
+            $query = Egreso::where('clinica_id', $user->clinica_efectiva_id)
                 ->where('sucursal_id', $user->sucursal_id)
                 ->with(['usuario', 'sucursal']);
 
@@ -316,7 +322,7 @@ class FinanzasController extends Controller
             $user = $request->user();
             
             $egreso = Egreso::where('id', $id)
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->where('sucursal_id', $user->sucursal_id)
                 ->with(['usuario', 'clinica', 'sucursal'])
                 ->firstOrFail();
@@ -346,7 +352,7 @@ class FinanzasController extends Controller
             }
             
             $egreso = Egreso::where('id', $id)
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->where('sucursal_id', $user->sucursal_id)
                 ->firstOrFail();
 
@@ -372,7 +378,7 @@ class FinanzasController extends Controller
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $query = Pago::with(['paciente', 'usuario', 'cita'])
-            ->where('clinica_id', $clinicaId);
+            ->where('clinica_id', $user->clinica_efectiva_id);
 
         // Filtros
         if ($request->filled('sucursal_id')) {
@@ -416,7 +422,7 @@ class FinanzasController extends Controller
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
         $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal'])
-            ->where('clinica_id', $clinicaId)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
 
         return response()->json($pago);
@@ -428,7 +434,7 @@ class FinanzasController extends Controller
     public function corteCajaDiario(Request $request)
     {
         $user = Auth::user();
-        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
         $periodo = $request->input('periodo', 'dia');
         $fecha = $request->input('fecha', Carbon::today()->toDateString());
         $mes = $request->input('mes');
@@ -438,7 +444,13 @@ class FinanzasController extends Controller
         if ($periodo === 'mes' && $mes) {
             // Formato esperado: YYYY-MM
             $fechaInicio = Carbon::parse($mes . '-01')->startOfMonth()->toDateString();
-            $fechaFin = Carbon::parse($mes . '-01')->endOfMonth()->toDateString();
+            // Si es el mes actual, limitar hasta hoy; si es mes pasado, hasta fin de mes
+            $mesParsed = Carbon::parse($mes . '-01');
+            if ($mesParsed->isSameMonth(Carbon::now())) {
+                $fechaFin = Carbon::now()->toDateString();
+            } else {
+                $fechaFin = $mesParsed->endOfMonth()->toDateString();
+            }
             $etiquetaPeriodo = Carbon::parse($mes)->locale('es')->isoFormat('MMMM YYYY');
         } elseif ($periodo === 'anio' && $anio) {
             $fechaInicio = Carbon::create($anio, 1, 1)->startOfYear()->toDateString();
@@ -564,7 +576,7 @@ class FinanzasController extends Controller
         $fechaFin = $request->input('fecha_fin', Carbon::now()->endOfMonth()->toDateString());
 
         $pagos = Pago::with('paciente')
-            ->where('clinica_id', $clinicaId)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -577,7 +589,7 @@ class FinanzasController extends Controller
         });
 
         // Obtener egresos del mismo período
-        $egresos = Egreso::where('clinica_id', $clinicaId)
+        $egresos = Egreso::where('clinica_id', $user->clinica_efectiva_id)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
@@ -722,7 +734,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
-            ->where('clinica_id', $clinicaId)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($request->pago_id);
 
         $clinica = $pago->clinica ?? $user->clinica;
@@ -776,7 +788,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
         $pago = Pago::with(['paciente', 'usuario', 'sucursal', 'clinica'])
-            ->where('clinica_id', $clinicaId)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
 
         $clinica = $pago->clinica ?? $user->clinica;
@@ -925,7 +937,7 @@ class FinanzasController extends Controller
             ], 403);
         }
 
-        $pago = Pago::where('clinica_id', $user->clinica_id)
+        $pago = Pago::where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
 
         $pago->delete();
@@ -953,7 +965,7 @@ class FinanzasController extends Controller
         $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
 
         // Construir la consulta base
-        $query = Pago::where('clinica_id', $clinicaId)
+        $query = Pago::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'usuario', 'sucursal']);
 
         if ($sucursalId) {
@@ -992,7 +1004,7 @@ class FinanzasController extends Controller
         $pagos = $query->orderBy('created_at', 'asc')->get();
 
         // Construir consulta de egresos
-        $queryEgresos = Egreso::where('clinica_id', $clinicaId)
+        $queryEgresos = Egreso::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['usuario', 'sucursal']);
 
         if ($sucursalId) {
@@ -1056,6 +1068,17 @@ class FinanzasController extends Controller
      */
     public function exportarCorte(Request $request)
     {
+        // Normalizar el tipo de manera muy agresiva
+        $allInputs = $request->all();
+        if (isset($allInputs['tipo'])) {
+            if (is_array($allInputs['tipo'])) {
+                $allInputs['tipo'] = !empty($allInputs['tipo']) ? (string) $allInputs['tipo'][0] : 'dia';
+            } else {
+                $allInputs['tipo'] = (string) $allInputs['tipo'];
+            }
+        }
+        $request->replace($allInputs);
+        
         $request->validate([
             'tipo' => 'required|in:dia,mes,año',
             'fecha' => 'required|date',
@@ -1063,8 +1086,9 @@ class FinanzasController extends Controller
         ]);
 
         $user = Auth::user();
-        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
-        $tipo = $request->tipo;
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
+        
+        $tipo = $request->input('tipo');
         $fecha = Carbon::parse($request->fecha);
         $sucursalId = $request->sucursal_id ?? $user->sucursal_id;
 
@@ -1080,6 +1104,7 @@ class FinanzasController extends Controller
         switch ($tipo) {
             case 'dia':
                 $query->byDate($fecha->toDateString());
+                $etiquetaPeriodo = $fecha->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
                 break;
             case 'mes':
                 $inicioMes = $fecha->copy()->startOfMonth()->toDateString();
@@ -1091,6 +1116,7 @@ class FinanzasController extends Controller
                 }
                 
                 $query->betweenDates($inicioMes, $finMes);
+                $etiquetaPeriodo = $fecha->locale('es')->isoFormat('MMMM YYYY');
                 break;
             case 'año':
                 $inicioAño = $fecha->copy()->startOfYear()->toDateString();
@@ -1102,158 +1128,366 @@ class FinanzasController extends Controller
                 }
                 
                 $query->betweenDates($inicioAño, $finAño);
+                $etiquetaPeriodo = $fecha->year;
                 break;
         }
 
         $pagos = $query->orderBy('created_at', 'asc')->get();
 
-        // Generar CSV
-        $filename = "corte_{$tipo}_{$fecha->format('Y-m-d')}.csv";
+        // Obtener egresos del mismo período
+        $queryEgresos = Egreso::where('clinica_id', $clinicaId);
         
-        $headers = [
-            'Content-Type' => 'text/csv; charset=utf-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        if ($sucursalId) {
+            $queryEgresos->where('sucursal_id', $sucursalId);
+        }
+        
+        switch ($tipo) {
+            case 'dia':
+                $queryEgresos->whereDate('created_at', $fecha->toDateString());
+                break;
+            case 'mes':
+                $queryEgresos->whereBetween('created_at', [$inicioMes, $finMes]);
+                break;
+            case 'año':
+                $queryEgresos->whereBetween('created_at', [$inicioAño, $finAño]);
+                break;
+        }
+        
+        $egresos = $queryEgresos->with(['usuario', 'sucursal'])->orderBy('created_at', 'asc')->get();
+
+        // Crear spreadsheet
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Corte de Caja');
+
+        // Obtener info de la clínica
+        $clinica = Clinica::find($clinicaId);
+        
+        // === ENCABEZADO ===
+        $row = 1;
+        
+        // Título principal con diseño corporativo
+        $sheet->mergeCells("A{$row}:L{$row}");
+        $sheet->setCellValue("A{$row}", strtoupper($clinica->nombre ?? 'CORTE DE CAJA'));
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 18, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0A1628']]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(35);
+        $row++;
+        
+        // Período
+        $sheet->mergeCells("A{$row}:L{$row}");
+        $tipoDisplay = is_array($tipo) ? (isset($tipo[0]) ? $tipo[0] : 'dia') : $tipo;
+        $sheet->setCellValue("A{$row}", 'Mes: ' . $etiquetaPeriodo);
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '34495E']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'ECF0F1']]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(25);
+        $row++;
+        
+        // Fecha de generación
+        $sheet->mergeCells("A{$row}:L{$row}");
+        $sheet->setCellValue("A{$row}", 'Generado: ' . now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY [a las] HH:mm'));
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '7F8C8D']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+        $row += 2;
+
+        // === SECCIÓN DE INGRESOS ===
+        $sheet->mergeCells("A{$row}:L{$row}");
+        $sheet->setCellValue("A{$row}", 'INGRESOS (PAGOS)');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E5D8C']]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(22);
+        $row++;
+
+        // Encabezados de ingresos
+        $headers = ['No. Recibo', 'Fecha', 'Hora', 'Paciente', 'Registro', 'Concepto', 'Método', 'Referencia', 'Monto', 'Recibió', 'Sucursal', 'Notas'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $col++;
+        }
+        $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2874A6']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '95A5A6']]]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        $row++;
+
+        // Datos de ingresos
+        $startDataRow = $row;
+        foreach ($pagos as $pago) {
+            $sheet->setCellValue('A' . $row, str_pad($pago->id, 6, '0', STR_PAD_LEFT));
+            $sheet->setCellValue('B' . $row, $pago->fecha_pago ?? Carbon::parse($pago->created_at)->format('Y-m-d'));
+            $sheet->setCellValue('C' . $row, Carbon::parse($pago->created_at)->format('H:i:s'));
+            $sheet->setCellValue('D' . $row, $pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A');
+            $sheet->setCellValue('E' . $row, $pago->paciente ? ($pago->paciente->registro ?? 'N/A') : 'N/A');
+            $sheet->setCellValue('F' . $row, $pago->concepto ?? '');
+            $sheet->setCellValue('G' . $row, ucfirst($pago->metodo_pago));
+            $sheet->setCellValue('H' . $row, $pago->referencia ?? '');
+            $sheet->setCellValue('I' . $row, (float) $pago->monto);
+            $sheet->setCellValue('J' . $row, $pago->usuario ? "{$pago->usuario->nombre} {$pago->usuario->apellidoPat}" : 'N/A');
+            $sheet->setCellValue('K' . $row, $pago->sucursal ? $pago->sucursal->nombre : 'N/A');
+            $sheet->setCellValue('L' . $row, $pago->notas ?? '');
+            
+            // Formato moneda
+            $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('$#,##0.00');
+            $sheet->getStyle('I' . $row)->getFont()->setBold(true);
+            
+            // Alternar colores de fila
+            if (($row - $startDataRow) % 2 == 0) {
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F7F9FA']]
+                ]);
+            } else {
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFFFF']]
+                ]);
+            }
+            
+            $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                'borders' => [
+                    'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D5DBDB']]
+                ],
+                'font' => ['size' => 10]
+            ]);
+            
+            $row++;
+        }
+
+        $row++;
+
+        // Resumen de ingresos
+        $sheet->mergeCells("A{$row}:F{$row}");
+        $sheet->setCellValue("A{$row}", 'RESUMEN DE INGRESOS');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3498DB']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        $row++;
+
+        $metodosResumen = [
+            ['metodo' => 'Efectivo', 'tipo' => 'efectivo'],
+            ['metodo' => 'Tarjeta', 'tipo' => 'tarjeta'],
+            ['metodo' => 'Transferencia', 'tipo' => 'transferencia']
         ];
 
-        $callback = function() use ($pagos, $tipo, $fecha, $user, $sucursalId) {
-            $file = fopen('php://output', 'w');
+        foreach ($metodosResumen as $metodo) {
+            $cantidad = $pagos->where('metodo_pago', $metodo['tipo'])->count();
+            $total = $pagos->where('metodo_pago', $metodo['tipo'])->sum(function($p) { return (float) $p->monto; });
             
-            // BOM para UTF-8
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            $sheet->setCellValue("A{$row}", $metodo['metodo']);
+            $sheet->setCellValue("B{$row}", $cantidad);
+            $sheet->setCellValue("C{$row}", (float) $total);
+            $sheet->getStyle("C{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $row++;
+        }
+
+        $totalIngresos = $pagos->sum(function($p) { return (float) $p->monto; });
+        $sheet->setCellValue("A{$row}", 'TOTAL INGRESOS');
+        $sheet->setCellValue("B{$row}", $pagos->count());
+        $sheet->setCellValue("C{$row}", (float) $totalIngresos);
+        $sheet->getStyle("A{$row}:C{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E5D8C']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '154360']]]
+        ]);
+        $sheet->getStyle("C{$row}")->getNumberFormat()->setFormatCode('$#,##0.00');
+        $row += 2;
+
+        // === SECCIÓN DE EGRESOS ===
+        $sheet->mergeCells("A{$row}:L{$row}");
+        $sheet->setCellValue("A{$row}", 'EGRESOS (GASTOS/RETIROS)');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E74C3C']]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(22);
+        $row++;
+
+        // Encabezados de egresos
+        $headersEgresos = ['No.', 'Fecha', 'Hora', 'Tipo', 'Concepto', 'Proveedor', 'Factura', '', 'Monto', 'Registró', 'Sucursal', 'Notas'];
+        $col = 'A';
+        foreach ($headersEgresos as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $col++;
+        }
+        $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E67E22']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '95A5A6']]]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        $row++;
+
+        // Datos de egresos
+        $startDataRowEgresos = $row;
+        foreach ($egresos as $egreso) {
+            $sheet->setCellValue('A' . $row, str_pad($egreso->id, 6, '0', STR_PAD_LEFT));
+            $sheet->setCellValue('B' . $row, Carbon::parse($egreso->created_at)->format('Y-m-d'));
+            $sheet->setCellValue('C' . $row, Carbon::parse($egreso->created_at)->format('H:i:s'));
+            $sheet->setCellValue('D' . $row, ucfirst(str_replace('_', ' ', $egreso->tipo_egreso)));
+            $sheet->setCellValue('E' . $row, $egreso->concepto ?? '');
+            $sheet->setCellValue('F' . $row, $egreso->proveedor ?? '');
+            $sheet->setCellValue('G' . $row, $egreso->factura ?? '');
+            $sheet->setCellValue('I' . $row, (float) $egreso->monto);
+            $sheet->setCellValue('J' . $row, $egreso->usuario ? "{$egreso->usuario->nombre} {$egreso->usuario->apellidoPat}" : 'N/A');
+            $sheet->setCellValue('K' . $row, $egreso->sucursal ? $egreso->sucursal->nombre : 'N/A');
+            $sheet->setCellValue('L' . $row, $egreso->notas ?? '');
             
-            // Encabezados
-            fputcsv($file, [
-                'No. Recibo',
-                'Fecha',
-                'Hora',
-                'Paciente',
-                'Registro Paciente',
-                'Concepto',
-                'Método de Pago',
-                'Referencia',
-                'Monto',
-                'Recibió',
-                'Sucursal',
-                'Notas'
+            $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('$#,##0.00');
+            $sheet->getStyle('I' . $row)->getFont()->setBold(true);
+            
+            if (($row - $startDataRowEgresos) % 2 == 0) {
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FDF2E9']]
+                ]);
+            } else {
+                $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFFFF']]
+                ]);
+            }
+            
+            $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D5DBDB']]],
+                'font' => ['size' => 10]
             ]);
-
-            // Datos
-            foreach ($pagos as $pago) {
-                fputcsv($file, [
-                    str_pad($pago->id, 6, '0', STR_PAD_LEFT),
-                    $pago->fecha_pago ?? Carbon::parse($pago->created_at)->format('Y-m-d'),
-                    Carbon::parse($pago->created_at)->format('H:i:s'),
-                    $pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A',
-                    $pago->paciente->registro ?? 'N/A',
-                    $pago->concepto ?? '',
-                    ucfirst($pago->metodo_pago),
-                    $pago->referencia ?? '',
-                    number_format($pago->monto, 2, '.', ''),
-                    $pago->usuario ? "{$pago->usuario->nombre} {$pago->usuario->apellidoPat}" : 'N/A',
-                    $pago->sucursal->nombre ?? 'N/A',
-                    $pago->notas ?? ''
-                ]);
-            }
-
-            // Separador y totales de Ingresos
-            fputcsv($file, []);
-            fputcsv($file, []);
-            fputcsv($file, ['=== RESUMEN DE INGRESOS ===']);
-            fputcsv($file, []);
-            fputcsv($file, ['Método de Pago', 'Cantidad', 'Total']);
-            fputcsv($file, ['Efectivo', $pagos->where('metodo_pago', 'efectivo')->count(), number_format($pagos->where('metodo_pago', 'efectivo')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Tarjeta', $pagos->where('metodo_pago', 'tarjeta')->count(), number_format($pagos->where('metodo_pago', 'tarjeta')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Transferencia', $pagos->where('metodo_pago', 'transferencia')->count(), number_format($pagos->where('metodo_pago', 'transferencia')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, []);
-            $totalIngresos = $pagos->sum('monto');
-            fputcsv($file, ['TOTAL INGRESOS', $pagos->count(), number_format($totalIngresos, 2, '.', '')]);
-
-            // Obtener egresos del mismo período
-            $queryEgresos = Egreso::where('clinica_id', $clinicaId);
             
-            if ($sucursalId) {
-                $queryEgresos->where('sucursal_id', $sucursalId);
-            }
+            $row++;
+        }
+
+        $row++;
+
+        // Resumen de egresos
+        $sheet->mergeCells("A{$row}:F{$row}");
+        $sheet->setCellValue("A{$row}", 'RESUMEN DE EGRESOS');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E67E22']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(20);
+        $row++;
+
+        $tiposEgreso = [
+            ['tipo' => 'Compra de Material', 'valor' => 'compra_material'],
+            ['tipo' => 'Servicio', 'valor' => 'servicio'],
+            ['tipo' => 'Mantenimiento', 'valor' => 'mantenimiento'],
+            ['tipo' => 'Nómina', 'valor' => 'nomina'],
+            ['tipo' => 'Renta', 'valor' => 'renta'],
+            ['tipo' => 'Servicios Públicos', 'valor' => 'servicios_publicos'],
+            ['tipo' => 'Otro', 'valor' => 'otro']
+        ];
+
+        foreach ($tiposEgreso as $tipo) {
+            $cantidad = $egresos->where('tipo_egreso', $tipo['valor'])->count();
+            $total = $egresos->where('tipo_egreso', $tipo['valor'])->sum(function($e) { return (float) $e->monto; });
             
-            switch ($tipo) {
-                case 'dia':
-                    $queryEgresos->whereDate('created_at', $fecha->toDateString());
-                    break;
-                case 'mes':
-                    $inicioMes = $fecha->copy()->startOfMonth();
-                    $finMes = $fecha->copy()->endOfMonth();
-                    if ($fecha->month === now()->month && $fecha->year === now()->year) {
-                        $finMes = now();
-                    }
-                    $queryEgresos->whereBetween('created_at', [$inicioMes, $finMes]);
-                    break;
-                case 'año':
-                    $inicioAño = $fecha->copy()->startOfYear();
-                    $finAño = $fecha->copy()->endOfYear();
-                    if ($fecha->year === now()->year) {
-                        $finAño = now();
-                    }
-                    $queryEgresos->whereBetween('created_at', [$inicioAño, $finAño]);
-                    break;
-            }
-            
-            $egresos = $queryEgresos->with(['usuario', 'sucursal'])->orderBy('created_at', 'asc')->get();
+            $sheet->setCellValue("A{$row}", $tipo['tipo']);
+            $sheet->setCellValue("B{$row}", $cantidad);
+            $sheet->setCellValue("C{$row}", (float) $total);
+            $sheet->getStyle("C{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $row++;
+        }
 
-            // Sección de Egresos
-            fputcsv($file, []);
-            fputcsv($file, []);
-            fputcsv($file, ['=== EGRESOS (GASTOS/RETIROS) ===']);
-            fputcsv($file, []);
-            fputcsv($file, ['No.', 'Fecha', 'Hora', 'Tipo', 'Concepto', 'Proveedor', 'Factura', '', 'Monto', 'Registró', 'Sucursal', 'Notas']);
-            
-            foreach ($egresos as $egreso) {
-                fputcsv($file, [
-                    str_pad($egreso->id, 6, '0', STR_PAD_LEFT),
-                    Carbon::parse($egreso->created_at)->format('Y-m-d'),
-                    Carbon::parse($egreso->created_at)->format('H:i:s'),
-                    ucfirst(str_replace('_', ' ', $egreso->tipo_egreso)),
-                    $egreso->concepto ?? '',
-                    $egreso->proveedor ?? '',
-                    $egreso->factura ?? '',
-                    '', // Columna vacía para alinear con estructura de ingresos
-                    number_format($egreso->monto, 2, '.', ''),
-                    $egreso->usuario ? "{$egreso->usuario->nombre} {$egreso->usuario->apellidoPat}" : 'N/A',
-                    $egreso->sucursal->nombre ?? 'N/A',
-                    $egreso->notas ?? ''
-                ]);
-            }
+        $totalEgresos = $egresos->sum(function($e) { return (float) $e->monto; });
+        $sheet->setCellValue("A{$row}", 'TOTAL EGRESOS');
+        $sheet->setCellValue("B{$row}", $egresos->count());
+        $sheet->setCellValue("C{$row}", (float) $totalEgresos);
+        $sheet->getStyle("A{$row}:C{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E74C3C']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => 'C0392B']]]
+        ]);
+        $sheet->getStyle("C{$row}")->getNumberFormat()->setFormatCode('$#,##0.00');
+        $row += 2;
 
-            // Totales de Egresos por tipo
-            fputcsv($file, []);
-            fputcsv($file, []);
-            fputcsv($file, ['=== RESUMEN DE EGRESOS ===']);
-            fputcsv($file, []);
-            fputcsv($file, ['Tipo de Egreso', 'Cantidad', 'Total']);
-            fputcsv($file, ['Compra de Material', $egresos->where('tipo_egreso', 'compra_material')->count(), number_format($egresos->where('tipo_egreso', 'compra_material')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Servicio', $egresos->where('tipo_egreso', 'servicio')->count(), number_format($egresos->where('tipo_egreso', 'servicio')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Mantenimiento', $egresos->where('tipo_egreso', 'mantenimiento')->count(), number_format($egresos->where('tipo_egreso', 'mantenimiento')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Nómina', $egresos->where('tipo_egreso', 'nomina')->count(), number_format($egresos->where('tipo_egreso', 'nomina')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Renta', $egresos->where('tipo_egreso', 'renta')->count(), number_format($egresos->where('tipo_egreso', 'renta')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Servicios Públicos', $egresos->where('tipo_egreso', 'servicios_publicos')->count(), number_format($egresos->where('tipo_egreso', 'servicios_publicos')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, ['Otro', $egresos->where('tipo_egreso', 'otro')->count(), number_format($egresos->where('tipo_egreso', 'otro')->sum('monto'), 2, '.', '')]);
-            fputcsv($file, []);
-            $totalEgresos = $egresos->sum('monto');
-            fputcsv($file, ['TOTAL EGRESOS', $egresos->count(), number_format($totalEgresos, 2, '.', '')]);
+        // === BALANCE GENERAL ===
+        $sheet->mergeCells("A{$row}:F{$row}");
+        $sheet->setCellValue("A{$row}", 'BALANCE GENERAL');
+        $sheet->getStyle("A{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0A1628']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(24);
+        $row++;
 
-            // Balance General
-            fputcsv($file, []);
-            fputcsv($file, []);
-            fputcsv($file, ['=== BALANCE GENERAL ===']);
-            fputcsv($file, []);
-            fputcsv($file, ['Concepto', 'Monto']);
-            fputcsv($file, ['Total Ingresos (+)', number_format($totalIngresos, 2, '.', '')]);
-            fputcsv($file, ['Total Egresos (-)', number_format($totalEgresos, 2, '.', '')]);
-            fputcsv($file, []);
-            fputcsv($file, ['BALANCE NETO', number_format($totalIngresos - $totalEgresos, 2, '.', '')]);
+        $sheet->setCellValue("A{$row}", 'Total Ingresos (+)');
+        $sheet->setCellValue("B{$row}", (float) $totalIngresos);
+        $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode('$#,##0.00');
+        $sheet->getStyle("A{$row}:B{$row}")->applyFromArray([
+            'font' => ['size' => 11, 'bold' => true],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'AED6F1']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]
+        ]);
+        $row++;
 
-            fclose($file);
-        };
+        $sheet->setCellValue("A{$row}", 'Total Egresos (-)');
+        $sheet->setCellValue("B{$row}", (float) $totalEgresos);
+        $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode('$#,##0.00');
+        $sheet->getStyle("A{$row}:B{$row}")->applyFromArray([
+            'font' => ['size' => 11, 'bold' => true],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5B7B1']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]
+        ]);
+        $row++;
 
-        return response()->stream($callback, 200, $headers);
+        $balanceNeto = $totalIngresos - $totalEgresos;
+        $sheet->setCellValue("A{$row}", 'BALANCE NETO');
+        $sheet->setCellValue("B{$row}", (float) $balanceNeto);
+        $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode('$#,##0.00');
+        $colorBalance = $balanceNeto >= 0 ? '1E5D8C' : 'E74C3C';
+        $sheet->getStyle("A{$row}:B{$row}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $colorBalance]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '2C3E50']]]
+        ]);
+
+        // Ajustar anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(12);
+        $sheet->getColumnDimension('B')->setWidth(12);
+        $sheet->getColumnDimension('C')->setWidth(10);
+        $sheet->getColumnDimension('D')->setWidth(25);
+        $sheet->getColumnDimension('E')->setWidth(15);
+        $sheet->getColumnDimension('F')->setWidth(25);
+        $sheet->getColumnDimension('G')->setWidth(15);
+        $sheet->getColumnDimension('H')->setWidth(15);
+        $sheet->getColumnDimension('I')->setWidth(12);
+        $sheet->getColumnDimension('J')->setWidth(20);
+        $sheet->getColumnDimension('K')->setWidth(15);
+        $sheet->getColumnDimension('L')->setWidth(30);
+
+        // Generar archivo
+        $tipoStr = is_array($tipo) ? (isset($tipo[0]) ? $tipo[0] : 'dia') : $tipo;
+        $filename = "corte_" . $tipoStr . "_" . $fecha->format('Y-m-d') . ".xlsx";
+        
+        $writer = new Xlsx($spreadsheet);
+        
+        // Generar el archivo en memoria
+        $temp = tempnam(sys_get_temp_dir(), 'excel');
+        $writer->save($temp);
+        
+        return response()->download($temp, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 }

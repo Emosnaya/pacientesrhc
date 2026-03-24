@@ -190,7 +190,7 @@ class AIController extends Controller
             $clinica = \App\Models\Clinica::find($clinicaEfectivaId);
             if (!$clinica) {
                 $clinica = $user->clinica; // Fallback a clínica principal
-                $clinicaEfectivaId = $user->clinica_id;
+                $clinicaEfectivaId = $user->clinica_efectiva_id;
             }
             
             // Si no se envió tipo_clinica, obtenerlo de la clínica efectiva
@@ -338,7 +338,7 @@ class AIController extends Controller
             $clinica = \App\Models\Clinica::find($clinicaEfectivaId);
             if (!$clinica) {
                 $clinica = $user->clinica; // Fallback a clínica principal
-                $clinicaEfectivaId = $user->clinica_id;
+                $clinicaEfectivaId = $user->clinica_efectiva_id;
             }
             
             $tipoClinica = $clinica->tipo_clinica ?? 'rehabilitacion_cardiopulmonar';
@@ -639,7 +639,7 @@ class AIController extends Controller
 
         $cita = DB::table('citas')
             ->where('id', $params['cita_id'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->first();
 
         if (!$cita) {
@@ -664,7 +664,7 @@ class AIController extends Controller
 
         $cita = DB::table('citas')
             ->where('id', $params['cita_id'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->first();
 
         if (!$cita) {
@@ -695,7 +695,7 @@ class AIController extends Controller
 
         $cita = DB::table('citas')
             ->where('id', $params['cita_id'])
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->first();
 
         if (!$cita) {
@@ -714,7 +714,7 @@ class AIController extends Controller
     {
         // Construir query base
         $query = DB::table('citas')
-            ->where('clinica_id', $user->clinica_id);
+            ->where('clinica_id', $user->clinica_efectiva_id);
 
         $filtrosAplicados = [];
 
@@ -740,7 +740,7 @@ class AIController extends Controller
             $nombreBuscar = $normalizar($params['paciente_nombre']);
             
             // Obtener todos los pacientes usando Eloquent para desencriptar nombres
-            $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
+            $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
             
             Log::info('🔍 Buscando paciente para eliminar citas', [
                 'nombre_buscado' => $params['paciente_nombre'],
@@ -832,7 +832,7 @@ class AIController extends Controller
         // Obtener vista previa de las citas a eliminar
         $citasPreview = DB::table('citas')
             ->join('pacientes', 'citas.paciente_id', '=', 'pacientes.id')
-            ->where('citas.clinica_id', $user->clinica_id);
+            ->where('citas.clinica_id', $user->clinica_efectiva_id);
 
         // Aplicar los mismos filtros para preview
         if (isset($params['estado']) && !empty($params['estado'])) {
@@ -922,7 +922,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($nombreCompleto);
         
         // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
         
         Log::info('🔍 Buscando paciente', [
             'nombre_buscado' => $nombreCompleto,
@@ -1067,7 +1067,7 @@ class AIController extends Controller
             // Crear la cita con todos los campos necesarios
             $citaId = DB::table('citas')->insertGetId([
                 'paciente_id' => $paciente->id,
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $sucursalId,
                 'admin_id' => $user->id,
                 'user_id' => $user->id,
@@ -1083,7 +1083,7 @@ class AIController extends Controller
             Log::info("✅ Cita creada exitosamente", [
                 'cita_id' => $citaId,
                 'paciente' => $paciente->nombre . ' ' . $paciente->apellidoPat,
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $sucursalId,
                 'fecha' => $params['fecha'],
                 'hora' => $hora
@@ -1132,7 +1132,7 @@ class AIController extends Controller
                 'fechaNacimiento' => $params['fecha_nacimiento'] ?? null,
                 'genero' => $params['genero'] ?? 'no_especificado',
                 'domicilio' => $params['domicilio'] ?? null,
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $user->sucursal_id,
                 'color' => $color,
                 'created_at' => now(),
@@ -1150,7 +1150,7 @@ class AIController extends Controller
                 $datosPaciente['tipo_paciente'] = $params['tipo_paciente'] ?? 'cardiaca';
                 $datosPaciente['diagnostico'] = $params['diagnostico'] ?? null;
                 $datosPaciente['medicamentos'] = $params['medicamentos'] ?? null;
-                if ($user->clinica_id === 1) {
+                if ($user->clinica_efectiva_id === 1) {
                     $datosPaciente['registro'] = $params['registro'] ?? 'AI-' . time();
                 }
             }
@@ -1161,7 +1161,7 @@ class AIController extends Controller
             Log::info("✅ Paciente creado exitosamente", [
                 'paciente_id' => $pacienteId,
                 'nombre' => $params['nombre'] . ' ' . $params['apellidoPat'],
-                'clinica_id' => $user->clinica_id,
+                'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $user->sucursal_id
             ]);
 
@@ -1214,7 +1214,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($params['nombre']);
         
         // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
         
         // Buscar pacientes normalizando nombres (recolectar todas las coincidencias)
         $pacientesEncontrados = [];
@@ -1330,7 +1330,7 @@ class AIController extends Controller
 
         $eventoId = DB::table('eventos')->insertGetId([
             'user_id' => $user->id,
-            'clinica_id' => $user->clinica_id,
+            'clinica_id' => $user->clinica_efectiva_id,
             'tipo' => $params['tipo'] ?? 'recordatorio',
             'titulo' => $params['titulo'],
             'descripcion' => $params['descripcion'] ?? null,
@@ -1351,7 +1351,7 @@ class AIController extends Controller
 
     private function obtenerMetricas($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         // Métricas del dashboard
         $totalPacientes = DB::table('pacientes')->where('clinica_id', $clinicaId)->count();
@@ -1400,7 +1400,7 @@ class AIController extends Controller
 
     private function obtenerAnaliticasPacientes($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         // Pacientes por género (genero es boolean: 0=femenino, 1=masculino)
         $pacientesPorGenero = DB::table('pacientes')
@@ -1552,7 +1552,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($params['nombre']);
         
         $pacientes = DB::table('pacientes')
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get();
         
         $paciente = null;
@@ -1669,7 +1669,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($params['nombre']);
         
         $pacientes = DB::table('pacientes')
-            ->where('clinica_id', $user->clinica_id)
+            ->where('clinica_id', $user->clinica_efectiva_id)
             ->get();
         
         $paciente = null;
@@ -1800,7 +1800,7 @@ class AIController extends Controller
             default => now()->startOfMonth()
         };
 
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         // Métricas de citas
         $totalCitas = DB::table('citas')
@@ -1896,7 +1896,7 @@ class AIController extends Controller
 
     private function analisisPredictivoCitas($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         // Análisis de cancelaciones
         $citasUltimos30Dias = DB::table('citas')
@@ -1958,7 +1958,7 @@ class AIController extends Controller
 
     private function identificarPacientesRiesgo($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         // Pacientes sin citas recientes (más de 60 días)
         $pacientesSinCitasRecientes = DB::table('pacientes')
@@ -2031,7 +2031,7 @@ class AIController extends Controller
 
     private function sugerenciasMejoraOperativa($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
         $sugerencias = [];
 
         // Análisis de horarios
@@ -2126,7 +2126,7 @@ class AIController extends Controller
 
     private function generarResumenDiario($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
         $hoy = now()->format('Y-m-d');
 
         // Citas de hoy
@@ -2222,7 +2222,7 @@ class AIController extends Controller
 
     private function obtenerAlertasSeguimiento($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
         $alertas = [];
 
         // Citas próximas sin confirmar (en las próximas 24 horas)
@@ -2300,7 +2300,7 @@ class AIController extends Controller
 
     private function sugerenciasProactivas($user)
     {
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
         $sugerencias = [];
 
         // Sugerencia: Agendar citas para pacientes sin citas próximas
@@ -2631,7 +2631,7 @@ class AIController extends Controller
         }
 
         $termino = $params['termino'];
-        $clinicaId = $user->clinica_id;
+        $clinicaId = $user->clinica_efectiva_id;
 
         $resultados = DB::table('expedientes_clinicos')
             ->join('pacientes', 'expedientes_clinicos.paciente_id', '=', 'pacientes.id')
@@ -2742,7 +2742,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($nombreBuscado);
         
         // Usar Eloquent para descifrar automáticamente
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_id)->get();
+        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
         
         foreach ($pacientes as $p) {
             $nombreCompleto = $normalizar(trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')));
@@ -2767,7 +2767,7 @@ class AIController extends Controller
     private function obtenerCorteCaja($user, $params)
     {
         try {
-            $clinicaId = $user->clinica_id;
+            $clinicaId = $user->clinica_efectiva_id;
             $sucursalNombre = $params['sucursal'] ?? null;
             $fecha = $params['fecha'] ?? 'hoy';
             
@@ -2936,7 +2936,7 @@ class AIController extends Controller
             
             // Obtener pagos del paciente
             $pagos = DB::table('pagos')
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->where('paciente_id', $paciente->id)
                 ->orderBy('fecha_pago', 'desc')
                 ->get();
@@ -2992,7 +2992,7 @@ class AIController extends Controller
             }
             
             $pagos = DB::table('pagos')
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->whereYear('fecha_pago', $anio)
                 ->whereMonth('fecha_pago', $mes)
                 ->get();
@@ -3076,7 +3076,7 @@ class AIController extends Controller
             
             // Buscar pagos del paciente con monto similar
             $pagos = DB::table('pagos')
-                ->where('clinica_id', $user->clinica_id)
+                ->where('clinica_id', $user->clinica_efectiva_id)
                 ->where('paciente_id', $paciente->id)
                 ->whereNotNull('firma_paciente')
                 ->orderBy('fecha_pago', 'desc')
