@@ -72,6 +72,9 @@ class EstratiAacvpr extends Model
         'fc_diana_str',
         'fc_diana',
         'fc_diana_manual',
+        'karvonen',
+        'blackburn',
+        'narita',
         'dp_diana',
         'carga_inicial',
         'comentarios'
@@ -112,6 +115,9 @@ class EstratiAacvpr extends Model
         'borg' => 'integer',
         'fc_diana' => 'decimal:2',
         'fc_diana_manual' => 'decimal:2',
+        'karvonen' => 'decimal:2',
+        'blackburn' => 'decimal:2',
+        'narita' => 'decimal:2',
         'dp_diana' => 'decimal:2',
         'carga_inicial' => 'decimal:2',
     ];
