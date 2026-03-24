@@ -71,7 +71,6 @@ class Paciente extends Model
         'apellidoPat' => 'encrypted',
         'apellidoMat' => 'encrypted',
         'telefono' => 'encrypted',
-        'email' => 'encrypted',
         'domicilio' => 'encrypted',
         'calle' => 'encrypted',
         'colonia' => 'encrypted',
