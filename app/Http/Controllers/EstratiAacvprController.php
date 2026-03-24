@@ -147,46 +147,43 @@ class EstratiAacvprController extends Controller
         $estratificacion->fc_diana_str = $data['fc_diana_str'] ?? null;
         $estratificacion->dp_diana = $data['dp_diana'] ?? null;
         $estratificacion->fc_diana_manual = $data['fc_diana_manual'] ?? null;
-        $estratificacion->carga_inicial = $data['carga_inicial'] ?? null;
         
-        // Calcular FC Diana automáticamente
+        // Calcular FC Diana igual que en Estratificación INCH
         $fcBasal = floatval($data['fc_basal'] ?? 0);
         $fcMax = floatval($data['fc_max'] ?? 0);
         $fcBorg12 = floatval($data['fc_borg_12'] ?? 0);
         $dpBorg12 = floatval($data['dp_borg_12'] ?? 0);
+        $cargaMaxima = floatval($data['carga_maxima'] ?? 0);
         
-        if ($fcMax > 0 && $fcBasal > 0) {
-            $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
-            $blackburn = ($fcMax * 0.8);
-            $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $nuevoPaciente->edad)));
+        // Calcular las 3 fórmulas
+        $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
+        $blackburn = ($fcMax * 0.8);
+        $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $nuevoPaciente->edad)));
 
-            switch ($data['fc_diana_metodo'] ?? 'Bo') {
-                case 'K':
-                    $fcDiana = $karvonen;
-                    break;
-                case 'BI':
-                    $fcDiana = $blackburn;
-                    break;
-                case 'N':
-                    $fcDiana = $narita;
-                    break;
-                case 'UISQ':
-                case 'Manual':
-                    $fcDiana = $data['fc_diana_manual'] ?? null;
-                    break;
-                default: // 'Bo' - Borg
-                    $fcDiana = $fcBorg12;
-            }
-            $estratificacion->fc_diana = $fcDiana;
-            
-            // Calcular DP Diana automáticamente
-            if ($fcDiana > 0) {
-                $estratificacion->dp_diana = $dpBorg12;
-            }
+        // Guardar las 3 fórmulas
+        $estratificacion->karvonen = $karvonen;
+        $estratificacion->blackburn = $blackburn;
+        $estratificacion->narita = $narita;
+
+        // Seleccionar FC Diana según método elegido
+        $metodo = $data['fc_diana_metodo'] ?? 'Bo';
+        if ($metodo === 'K') {
+            $fcDiana = $karvonen;
+        } else if ($metodo === 'BI') {
+            $fcDiana = $blackburn;
+        } else if ($metodo === 'N') {
+            $fcDiana = $narita;
+        } else if ($metodo === 'UISQ' || $metodo === 'Manual') {
+            $fcDiana = $data['fc_diana_manual'] ?? $data['fcdianaNumber'] ?? null;
         } else {
-            $estratificacion->fc_diana = $data['fc_diana_manual'] ?? null;
-            $estratificacion->dp_diana = $data['dp_diana'] ?? null;
+            // 'Bo' - Borg o default
+            $fcDiana = $fcBorg12;
         }
+
+        $estratificacion->fc_diana = $fcDiana;
+        
+        // Calcular carga inicial igual que en INCH: (carga_maxima * 0.6) * 10
+        $estratificacion->carga_inicial = ($cargaMaxima * 0.6) * 10;
 
         // Comentarios
         $estratificacion->comentarios = $data['comentarios'] ?? null;
@@ -296,46 +293,44 @@ class EstratiAacvprController extends Controller
         $expediente->fc_diana_metodo = $request['fc_diana_metodo'];
         $expediente->fc_diana_str = $request['fc_diana_str'];
         $expediente->fc_diana_manual = $request['fc_diana_manual'];
-        $expediente->carga_inicial = $request['carga_inicial'];
         
-        // Recalcular FC Diana automáticamente
+        // Recalcular FC Diana igual que en Estratificación INCH
         $fcBasal = floatval($request['fc_basal'] ?? 0);
         $fcMax = floatval($request['fc_max'] ?? 0);
         $fcBorg12 = floatval($request['fc_borg_12'] ?? 0);
         $dpBorg12 = floatval($request['dp_borg_12'] ?? 0);
+        $cargaMaxima = floatval($request['carga_maxima'] ?? 0);
         
-        if ($fcMax > 0 && $fcBasal > 0) {
-            $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
-            $blackburn = ($fcMax * 0.8);
-            $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $paciente->edad)));
+        // Calcular las 3 fórmulas
+        $karvonen = (($fcMax - $fcBasal) * 0.7) + $fcBasal;
+        $blackburn = ($fcMax * 0.8);
+        $narita = (78.4 + ((0.76 * $fcBasal) - (0.27 * $paciente->edad)));
 
-            switch ($request['fc_diana_metodo'] ?? 'Bo') {
-                case 'K':
-                    $fcDiana = $karvonen;
-                    break;
-                case 'BI':
-                    $fcDiana = $blackburn;
-                    break;
-                case 'N':
-                    $fcDiana = $narita;
-                    break;
-                case 'UISQ':
-                case 'Manual':
-                    $fcDiana = $request['fc_diana_manual'] ?? null;
-                    break;
-                default: // 'Bo' - Borg
-                    $fcDiana = $fcBorg12;
-            }
-            $expediente->fc_diana = $fcDiana;
-            
-            // Calcular DP Diana automáticamente
-            if ($fcDiana > 0) {
-                $expediente->dp_diana = $dpBorg12;
-            }
+        // Guardar las 3 fórmulas
+        $expediente->karvonen = $karvonen;
+        $expediente->blackburn = $blackburn;
+        $expediente->narita = $narita;
+
+        // Seleccionar FC Diana según método elegido
+        $metodo = $request['fc_diana_metodo'] ?? 'Bo';
+        if ($metodo === 'K') {
+            $fcDiana = $karvonen;
+        } else if ($metodo === 'BI') {
+            $fcDiana = $blackburn;
+        } else if ($metodo === 'N') {
+            $fcDiana = $narita;
+        } else if ($metodo === 'UISQ' || $metodo === 'Manual') {
+            $fcDiana = $request['fc_diana_manual'] ?? $request['fcdianaNumber'] ?? null;
         } else {
-            $expediente->fc_diana = $request['fc_diana'] ?? null;
-            $expediente->dp_diana = $request['dp_diana'] ?? null;
+            // 'Bo' - Borg o default
+            $fcDiana = $fcBorg12;
         }
+
+        $expediente->fc_diana = $fcDiana;
+        $expediente->dp_diana = $dpBorg12;
+        
+        // Calcular carga inicial igual que en INCH: (carga_maxima * 0.6) * 10
+        $expediente->carga_inicial = ($cargaMaxima * 0.6) * 10;
         
         $expediente->comentarios = $request['comentarios'];
 
