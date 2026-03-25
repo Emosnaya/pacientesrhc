@@ -814,30 +814,18 @@ class FinanzasController extends Controller
         try {
             // Validar que el usuario exista
             if (!$user) {
-                $logoPath = public_path('img/logo.png');
-                if (file_exists($logoPath)) {
-                    $imageData = file_get_contents($logoPath);
-                    $mimeType = mime_content_type($logoPath);
-                    return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
-                }
                 return null;
             }
-            
-            $clinica = $user->clinica;
+
+            $user->loadMissing(['clinicaActiva', 'clinica']);
+            $clinica = $user->clinicaActiva ?? $user->clinica;
             $logoPath = null;
             
             if ($clinica && $clinica->logo) {
                 $logoPath = storage_path('app/public/' . $clinica->logo);
             }
             
-            // Si no existe el logo de la clínica, usar el logo por defecto
             if (!$logoPath || !file_exists($logoPath)) {
-                $logoPath = public_path('img/logo.png');
-            }
-            
-            // Si tampoco existe el logo por defecto, retornar null
-            if (!file_exists($logoPath)) {
-                \Log::error('Logo no encontrado: ' . $logoPath);
                 return null;
             }
             

@@ -120,35 +120,23 @@ class PDFController extends Controller
      * Obtener el logo de la clínica en formato base64 para PDF
      * Redimensiona la imagen a la altura especificada para garantizar el tamaño correcto en dompdf
      */
-    private function getClinicaLogoBase64($user, $targetHeight = 36)
+    public function getClinicaLogoBase64($user, $targetHeight = 36)
     {
         try {
             // Validar que el usuario exista
             if (!$user) {
-                $logoPath = public_path('img/logo.png');
-                if (file_exists($logoPath)) {
-                    $imageData = file_get_contents($logoPath);
-                    $mimeType = mime_content_type($logoPath);
-                    return 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
-                }
                 return null;
             }
-            
-            $clinica = $user->clinica;
+
+            $user->loadMissing(['clinicaActiva', 'clinica']);
+            $clinica = $user->clinicaActiva ?? $user->clinica;
             $logoPath = null;
             
             if ($clinica && $clinica->logo) {
                 $logoPath = storage_path('app/public/' . $clinica->logo);
             }
             
-            // Si no existe el logo de la clínica, usar el logo por defecto
             if (!$logoPath || !file_exists($logoPath)) {
-                $logoPath = public_path('img/logo.png');
-            }
-            
-            // Si tampoco existe el logo por defecto, retornar null
-            if (!file_exists($logoPath)) {
-                \Log::error('Logo no encontrado: ' . $logoPath);
                 return null;
             }
             
@@ -399,7 +387,7 @@ class PDFController extends Controller
     /**
      * Obtener la información completa de la clínica para las vistas
      */
-    private function getClinicaInfo($user)
+    public function getClinicaInfo($user)
     {
         // Validar que el usuario exista
         if (!$user) {
@@ -409,11 +397,12 @@ class PDFController extends Controller
                 'email' => '',
                 'direccion' => '',
                 'logo' => null,
-                'logo_url' => asset('img/logo.png')
+                'logo_url' => null,
             ];
         }
-        
-        $clinica = $user->clinica;
+
+        $user->loadMissing(['clinicaActiva', 'clinica', 'sucursal']);
+        $clinica = $user->clinicaActiva ?? $user->clinica;
         
         if (!$clinica) {
             // Datos por defecto si no hay clínica
@@ -423,7 +412,7 @@ class PDFController extends Controller
                 'email' => '',
                 'direccion' => '',
                 'logo' => null,
-                'logo_url' => asset('img/logo.png')
+                'logo_url' => null,
             ];
         }
         
@@ -437,14 +426,14 @@ class PDFController extends Controller
                 'email' => $sucursal->email ?? $clinica->email,
                 'direccion' => $sucursal->direccion ?? $clinica->direccion,
                 'logo' => $clinica->logo,
-                'logo_url' => $clinica->logo ? asset('storage/' . $clinica->logo) : asset('img/logo.png')
+                'logo_url' => $clinica->logo ? asset('storage/' . $clinica->logo) : null,
             ];
         }
         
-        // Agregar logo_url al objeto clínica
-        $clinica->logo_url = $clinica->logo 
-            ? asset('storage/' . $clinica->logo) 
-            : asset('img/logo.png');
+        // Agregar logo_url al objeto clínica (solo si hay logo; sin imagen por defecto)
+        $clinica->logo_url = $clinica->logo
+            ? asset('storage/' . $clinica->logo)
+            : null;
         
         return $clinica;
     }
@@ -950,7 +939,9 @@ class PDFController extends Controller
                     break;
                 case 'cualidad_fisica':
                     $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $pdf = Pdf::loadView('cardiaca.cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $clinica = $this->getClinicaInfo($user);
+                    $clinicaLogo = $this->getClinicaLogoBase64($user);
+                    $pdf = Pdf::loadView('cardiaca.cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_final_pulmonar':
                     $firmaBase64 = $this->getFirmaBase64($userFirma);

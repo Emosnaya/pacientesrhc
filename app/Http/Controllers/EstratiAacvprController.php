@@ -188,6 +188,8 @@ class EstratiAacvprController extends Controller
         // Comentarios
         $estratificacion->comentarios = $data['comentarios'] ?? null;
 
+        $this->assignAacvprSheet($estratificacion, $data);
+
         // Asignar el user_id del dueño del paciente y clinica_id
         $estratificacion->user_id = $nuevoPaciente->user_id;
         $estratificacion->paciente_id = $nuevoPaciente->id;
@@ -334,6 +336,8 @@ class EstratiAacvprController extends Controller
         
         $expediente->comentarios = $request['comentarios'];
 
+        $this->assignAacvprSheet($expediente, $request->all());
+
         $expediente->save();
 
         return response()->json($expediente);
@@ -359,6 +363,64 @@ class EstratiAacvprController extends Controller
         
         $estrati_aacvpr->delete();
         return response()->json(['message' => 'Expediente eliminado exitosamente'], 204);
+    }
+
+    /**
+     * Claves de la hoja AACVPR (criterios Sí/No)
+     *
+     * @return list<string>
+     */
+    private static function aacvprSheetKeys(): array
+    {
+        return [
+            'aacvpr_alto_arritmias_vent_complejas_pe',
+            'aacvpr_alto_angina_sintomas_menos_5mets',
+            'aacvpr_alto_isquemia_st_ge_2mm',
+            'aacvpr_alto_alteraciones_hemodinamicas_pe',
+            'aacvpr_alto_capacidad_3_4_mets',
+            'aacvpr_alto_hc_fevi_lt_35',
+            'aacvpr_alto_hc_choque_cardiogenico',
+            'aacvpr_alto_hc_arritmias_complejas_reposo',
+            'aacvpr_alto_hc_im_complicado_revasc_incompleta',
+            'aacvpr_alto_hc_falla_cardiaca_nyha_iii_iv',
+            'aacvpr_alto_hc_alta_temprana_post_agudo',
+            'aacvpr_alto_hc_muerte_subita',
+            'aacvpr_alto_hc_trasplante_cardiaco',
+            'aacvpr_alto_hc_isquemia_post_evento',
+            'aacvpr_alto_hc_desfibrilador_implantado',
+            'aacvpr_alto_hc_complicaciones_hospitalizacion',
+            'aacvpr_alto_hc_inestabilidad_post_agudo',
+            'aacvpr_alto_hc_comorbilidades_graves_rcv',
+            'aacvpr_alto_hc_depresion_clinica',
+            'aacvpr_alto_hc_aislamiento_social',
+            'aacvpr_alto_hc_bajos_ingresos',
+            'aacvpr_mod_angina_estable_mas_7mets',
+            'aacvpr_mod_isquemia_st_lt_2mm',
+            'aacvpr_mod_capacidad_lt_5mets',
+            'aacvpr_mod_hc_fevi_35_49',
+            'aacvpr_mod_hc_hta_no_controlada',
+            'aacvpr_bajo_sin_arritmia_compleja_pe',
+            'aacvpr_bajo_sin_angina_significativa_pe',
+            'aacvpr_bajo_hemodinamica_normal_pe',
+            'aacvpr_bajo_capacidad_6_7_mets',
+            'aacvpr_bajo_hc_fevi_gt_50',
+            'aacvpr_bajo_hc_im_ok_revasc_completa',
+            'aacvpr_bajo_hc_sin_arritmias_complejas_reposo',
+            'aacvpr_bajo_hc_sin_falla_cardiaca',
+            'aacvpr_bajo_hc_sin_isquemia_post',
+            'aacvpr_bajo_hc_hta_controlada',
+            'aacvpr_bajo_hc_sin_depresion',
+            'aacvpr_bajo_hc_sin_comorbilidades',
+            'aacvpr_bajo_hc_autonomia_sin_riesgo_psicosocial',
+            'aacvpr_bajo_hc_sin_dispositivos_implantados',
+        ];
+    }
+
+    private function assignAacvprSheet(EstratiAacvpr $model, array $data): void
+    {
+        foreach (self::aacvprSheetKeys() as $key) {
+            $model->{$key} = $this->toBool($data[$key] ?? false);
+        }
     }
 
     /**

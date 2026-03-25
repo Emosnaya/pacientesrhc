@@ -539,19 +539,19 @@ class EsfuerzoController extends Controller
 
         $metsTG = ($metsVT*$nuevoPaciente->genero)+($metsMT*(1-$nuevoPaciente->genero));
 
-        $banda = ($request['banda'] === 1 ||$request['banda'] === 'true' )? 1 : 0;
-        $ciclo =($request['ciclo'] === 1 ||$request['ciclo'] === 'true' )? 1 : 0;
+        $banda = ($data['banda'] === 1 || $data['banda'] === 'true') ? 1 : 0;
+        $ciclo = ($data['ciclo'] === 1 || $data['ciclo'] === 'true') ? 1 : 0;
 
-        $mediconGases = ($request['medicionGases'] === 'true'|| $request['medicionGases'] === 1)? 1 : 0;
+        $mediconGases = ($data['medicionGases'] === 'true' || $data['medicionGases'] === 1) ? 1 : 0;
 
-        $metsCicloB12 = $ciclo*$this->safeDivide($request['watts_ciclo_b_12'], 16, 0);
-        $metsGasesB12 = $this->safeDivide($request['vo2_borg_gases'], 3.5, 0)*$mediconGases;
+        // Mismas claves camelCase que en store() (el front envía el body plano, no snake_case)
+        $metsCicloB12 = $ciclo * $this->safeDivide($data['wattsCicloBorg'] ?? null, 16, 0);
+        $metsGasesB12 = $this->safeDivide($data['vo2BorgGases'] ?? null, 3.5, 0) * $mediconGases;
 
-        $metsCicloMax = $ciclo*$this->safeDivide($request['watts_ciclo_max'], 16, 0);
-        $metsGasesMax = $this->safeDivide($request['vo2_pico_gases'], 3.5, 0)*$mediconGases;
+        $metsCicloMax = $ciclo * $this->safeDivide($data['wattsCicloMax'] ?? null, 16, 0);
+        $metsGasesMax = $this->safeDivide($data['vo2picoGases'] ?? null, 3.5, 0) * $mediconGases;
 
-
-        $metsCicloUisq = $ciclo*$this->safeDivide($request['watts_ciclo_b_12'], 16, 0);
+        $metsCicloUisq = $ciclo * $this->safeDivide($data['wattsCicloUmIsq'] ?? null, 16, 0);
 
         $mvo2 = ($dpMax*0.14*0.01)-6.3;
 
@@ -560,21 +560,21 @@ class EsfuerzoController extends Controller
 
         $po2TV = $this->safeDivide($vo2tV*$nuevoPaciente->peso, 220-$nuevoPaciente->edad, 0);
 
-        $velBorg12 = ($request['vel_borg_12']*1609)/60;
-      $velMax =  ($request['vel_max']*1609)/60;
-       $velUisq =  ($request['vel_um_isq']*1609)/60;
-        $chBorg = ($velBorg12*0.1)+3.5;
-        $chMax = ($velMax*0.1)+3.5;
-        $chUisq = ($velUisq*0.1)+3.5;
-        $cvBorg = ($velBorg12*1.8)*($request['inclin_borg_12']*0.01);
-        $cvMax = ($velMax*1.8)*($request['incl_max']*0.01);
-        $cvUisq = ($velUisq*1.8)*($request['incl_um_isq']*0.01);        
-        $vor2Max = $chMax+$cvMax;
-        $metsMaxBanda = $banda*($vor2Max/3.5);
-         $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;
-         $po2r = $this->safeDivide(($metsMax*3.5)*$nuevoPaciente->peso, $fcMax, 0);
-        $porvo2Alcanzado = $this->safeDivide(($metsMax*3.5), ($metsTG*3.5), 0)*100;
-        $duke = ($metsMax+1.69)-(5*$maxInfra)-(4*$request['scoreAngina']);
+        $velBorg12 = (($data['velBorg'] ?? 0) * 1609) / 60;
+        $velMax = (($data['velmax'] ?? 0) * 1609) / 60;
+        $velUisq = (($data['velUmIsq'] ?? 0) * 1609) / 60;
+        $chBorg = ($velBorg12 * 0.1) + 3.5;
+        $chMax = ($velMax * 0.1) + 3.5;
+        $chUisq = ($velUisq * 0.1) + 3.5;
+        $cvBorg = ($velBorg12 * 1.8) * (($data['inclinBorg'] ?? 0) * 0.01);
+        $cvMax = ($velMax * 1.8) * (($data['inclMax'] ?? 0) * 0.01);
+        $cvUisq = ($velUisq * 1.8) * (($data['inclUmIsq'] ?? 0) * 0.01);
+        $vor2Max = $chMax + $cvMax;
+        $metsMaxBanda = $banda * ($vor2Max / 3.5);
+        $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;
+        $po2r = $this->safeDivide(($metsMax * 3.5) * $nuevoPaciente->peso, $fcMax, 0);
+        $porvo2Alcanzado = $this->safeDivide(($metsMax * 3.5), ($metsTG * 3.5), 0) * 100;
+        $duke = ($metsMax + 1.69) - (5 * $maxInfra) - (4 * $data['scoreAngina']);
         $veteranos = 5*($icc)+($maxInfra)+($tAmax_tbasal_value)-$metsMax;
         $vo2Uisq = $chUisq + $cvUisq;
         $metsUisqBanda = $banda*($vo2Uisq/3.5);
