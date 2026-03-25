@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Http\Controllers\PDFController;
 
 class CualidadFisicaController extends Controller
 {
@@ -160,11 +161,18 @@ class CualidadFisicaController extends Controller
             }
         }
 
+        $user->loadMissing(['clinicaActiva', 'clinica', 'sucursal']);
+        $pdfBranding = app(PDFController::class);
+        $clinica = $pdfBranding->getClinicaInfo($user);
+        $clinicaLogo = $pdfBranding->getClinicaLogoBase64($user);
+
         $pdf = PDF::loadView('cardiaca.cualidadesfisicas', [
             'data' => $cualidadFisica,
             'paciente' => $paciente,
             'user' => $selectedUser,
-            'firmaBase64' => $firmaBase64
+            'firmaBase64' => $firmaBase64,
+            'clinica' => $clinica,
+            'clinicaLogo' => $clinicaLogo,
         ]);
 
         $pdf->setPaper('letter', 'portrait');
@@ -209,11 +217,18 @@ class CualidadFisicaController extends Controller
             }
         }
 
+        $user->loadMissing(['clinicaActiva', 'clinica', 'sucursal']);
+        $pdfBranding = app(PDFController::class);
+        $clinica = $pdfBranding->getClinicaInfo($user);
+        $clinicaLogo = $pdfBranding->getClinicaLogoBase64($user);
+
         $pdf = PDF::loadView('cardiaca.cualidadesfisicas', [
             'data' => $cualidadFisica,
             'paciente' => $paciente,
             'user' => $selectedUser,
-            'firmaBase64' => $firmaBase64
+            'firmaBase64' => $firmaBase64,
+            'clinica' => $clinica,
+            'clinicaLogo' => $clinicaLogo,
         ]);
 
         $pdf->setPaper('letter', 'portrait');

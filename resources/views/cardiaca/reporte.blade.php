@@ -12,7 +12,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             line-height: 1.3;
             color: #1e293b;
@@ -268,8 +268,6 @@
                     <div class="header-logo">
                         @if(isset($clinicaLogo) && $clinicaLogo)
                             <img src="{{ $clinicaLogo }}" alt="Logo">
-                        @else
-                            <span style="font-size: 24px;">❤️</span>
                         @endif
                     </div>
                 </td>
@@ -479,7 +477,9 @@
     <div>
       <div class="paciente mt-0">
         <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
+        @if(!empty($clinicaLogo))
         <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
+        @endif
         <br>
           <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
       </div>

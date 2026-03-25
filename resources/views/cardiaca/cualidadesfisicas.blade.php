@@ -8,7 +8,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             line-height: 1.3;
             color: #1e293b;
@@ -188,8 +188,6 @@
                     <div class="header-logo">
                         @if(isset($clinicaLogo) && $clinicaLogo)
                             <img src="{{ $clinicaLogo }}" alt="Logo">
-                        @else
-                            <span style="font-size: 24px;">❤️</span>
                         @endif
                     </div>
                 </td>
@@ -415,7 +413,9 @@
     <!-- PÁGINA 2: PRUEBA DE BALANCE -->
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
-            <img src="img/logo.png" alt="cercap logo" style="height: 60px; display: block; margin: 0 auto 5px;" class="">
+            @if(!empty($clinicaLogo))
+            <img src="{{ $clinicaLogo }}" alt="Logo" style="height: 60px; display: block; margin: 0 auto 5px;">
+            @endif
             <p class="f-bold f-15 text-center mb-0 mt-0">Cualidades Físicas No Aeróbicas (continuación)</p>
             <p class="f-bold mb-0 f-10">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre }}</span> - Registro: {{ $paciente->registro }}</p>
         </div>
@@ -634,7 +634,9 @@
     <!-- PÁGINA 3: ESCALA DE TINETTI -->
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
-            <img src="img/logo.png" alt="cercap logo" style="height: 60px; display: block; margin: 0 auto 5px;" class="">
+            @if(!empty($clinicaLogo))
+            <img src="{{ $clinicaLogo }}" alt="Logo" style="height: 60px; display: block; margin: 0 auto 5px;">
+            @endif
             <p class="f-bold f-15 text-center mb-0 mt-0">Cualidades Físicas No Aeróbicas (continuación)</p>
         </div>
     </header>
@@ -810,7 +812,9 @@
     <!-- PÁGINA 4: EVALUACIÓN DE EQUILIBRIO -->
     <header class="mb-0">
         <div class="paciente ma-t-0 mb-0">
-            <img src="img/logo.png" alt="cercap logo" style="height: 60px; display: block; margin: 0 auto 5px;" class="">
+            @if(!empty($clinicaLogo))
+            <img src="{{ $clinicaLogo }}" alt="Logo" style="height: 60px; display: block; margin: 0 auto 5px;">
+            @endif
             <p class="f-bold f-15 text-center mb-0 mt-0">Cualidades Físicas No Aeróbicas (continuación)</p>
         </div>
     </header>

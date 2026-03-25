@@ -16,7 +16,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             line-height: 1.3;
             color: #1e293b;
@@ -361,8 +361,6 @@
                     <div class="header-logo">
                         @if(isset($clinicaLogo) && $clinicaLogo)
                             <img src="{{ $clinicaLogo }}" alt="Logo">
-                        @else
-                            <span style="font-size: 24px;">❤️</span>
                         @endif
                     </div>
                 </td>

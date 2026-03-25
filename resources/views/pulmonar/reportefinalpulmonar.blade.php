@@ -202,8 +202,6 @@
                     <div class="header-logo">
                         @if(isset($clinicaLogo) && $clinicaLogo)
                             <img src="{{ $clinicaLogo }}" alt="Logo">
-                        @else
-                            <span style="font-size: 24px;">❤️</span>
                         @endif
                     </div>
                 </td>

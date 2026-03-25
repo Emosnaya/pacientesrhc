@@ -445,21 +445,18 @@ class PruebaEsfuerzoPulmonarController extends Controller
     private function getClinicaLogoBase64($user, $targetHeight = 36)
     {
         try {
-            $clinica = $user->clinica;
+            if (!$user) {
+                return null;
+            }
+            $user->loadMissing(['clinicaActiva', 'clinica']);
+            $clinica = $user->clinicaActiva ?? $user->clinica;
             $logoPath = null;
             
             if ($clinica && $clinica->logo) {
                 $logoPath = storage_path('app/public/' . $clinica->logo);
             }
             
-            // Si no existe el logo de la clínica, usar el logo por defecto
             if (!$logoPath || !file_exists($logoPath)) {
-                $logoPath = public_path('img/logo.png');
-            }
-            
-            // Si tampoco existe el logo por defecto, retornar null
-            if (!file_exists($logoPath)) {
-                \Log::error('Logo no encontrado: ' . $logoPath);
                 return null;
             }
             

@@ -11,7 +11,8 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* DejaVu Sans: incluida en DomPDF; Helvetica/core no dibuja ✔ ni muchos Unicode */
+            font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             color: #1e293b;
             line-height: 1.3;
@@ -173,6 +174,13 @@
         .risk-table .check {
             width: 15%;
             text-align: center;
+        }
+        .risk-subheader td {
+            background-color: #e5e7eb;
+            font-weight: bold;
+            font-size: 9px;
+            padding: 5px 6px;
+            border: 1px solid #d1d5db;
         }
         .check-yes {
             color: #059669;
@@ -395,8 +403,6 @@
                     <div class="header-logo">
                         @if(!empty($clinicaLogo))
                             <img src="{{ $clinicaLogo }}" alt="Logo">
-                        @else
-                            <div style="font-size: 14px; font-weight: bold; color: #0A1628;">Logo</div>
                         @endif
                     </div>
                 </td>
@@ -439,114 +445,157 @@
         @endif
     </div>
 
-    <!-- Tabla AACVPR/EAPC - Riesgo Alto -->
+    @php
+        $aacvprAltoGen = [
+            ['aacvpr_alto_arritmias_vent_complejas_pe', 'Arritmias ventriculares complejas durante la PE o en la recuperación'],
+            ['aacvpr_alto_angina_sintomas_menos_5mets', 'Angina u otros síntomas significativos (disnea, fosfenos o mareo a bajos niveles de ejercicio [&lt; 5 METs] o en la recuperación)'],
+            ['aacvpr_alto_isquemia_st_ge_2mm', 'Isquemia silente de alto grado (depresión del ST ≥ 2 mm) durante la PE o recuperación'],
+            ['aacvpr_alto_alteraciones_hemodinamicas_pe', 'Alteraciones hemodinámicas durante la PE (incompetencia cronotrópica o plana o respuesta hipotensiva) o recuperación (hipotensión grave postejercicio)'],
+            ['aacvpr_alto_capacidad_3_4_mets', 'Capacidad funcional ≤ 3–4 METs'],
+        ];
+        $aacvprAltoHc = [
+            ['aacvpr_alto_hc_fevi_lt_35', 'Disfunción ventricular con FEVI en reposo &lt; 35%'],
+            ['aacvpr_alto_hc_choque_cardiogenico', 'Historia de choque cardiogénico'],
+            ['aacvpr_alto_hc_arritmias_complejas_reposo', 'Arritmias complejas en reposo'],
+            ['aacvpr_alto_hc_im_complicado_revasc_incompleta', 'IM complicado o procedimiento de revascularización incompleta'],
+            ['aacvpr_alto_hc_falla_cardiaca_nyha_iii_iv', 'Falla cardiaca avanzada (NYHA clase III–IV) o que requiere soporte mecánico'],
+            ['aacvpr_alto_hc_alta_temprana_post_agudo', 'Paciente dado de alta muy temprano posterior al evento agudo (&lt;1–2 semanas), incluso si no complicado, particularmente si es anciano, mujer, frágil u otro factor de progresión de ECV'],
+            ['aacvpr_alto_hc_muerte_subita', 'Paciente sobreviviente de muerte súbita'],
+            ['aacvpr_alto_hc_trasplante_cardiaco', 'Paciente con trasplante cardiaco reciente'],
+            ['aacvpr_alto_hc_isquemia_post_evento', 'Presencia de signos o síntomas de isquemia posterior al evento o procedimiento'],
+            ['aacvpr_alto_hc_desfibrilador_implantado', 'Desfibrilador automático o dispositivo implantado'],
+            ['aacvpr_alto_hc_complicaciones_hospitalizacion', 'Complicaciones graves durante la hospitalización'],
+            ['aacvpr_alto_hc_inestabilidad_post_agudo', 'Inestabilidad clínica, isquemia o arritmias posterior al evento agudo'],
+            ['aacvpr_alto_hc_comorbilidades_graves_rcv', 'Enfermedades concomitantes graves con RCV alto (DM, IRC, EPOC)'],
+            ['aacvpr_alto_hc_depresion_clinica', 'Presencia de depresión clínica'],
+            ['aacvpr_alto_hc_aislamiento_social', 'Aislamiento social'],
+            ['aacvpr_alto_hc_bajos_ingresos', 'Bajos ingresos'],
+        ];
+        $aacvprModGen = [
+            ['aacvpr_mod_angina_estable_mas_7mets', 'Angina estable u otros síntomas significativos (disnea inusual, fosfenos o mareo) solo con altos niveles de esfuerzo (&gt; 7 METs)'],
+            ['aacvpr_mod_isquemia_st_lt_2mm', 'Isquemia silente ligera o moderada durante la PE o recuperación (depresión del ST &lt; 2 mm)'],
+            ['aacvpr_mod_capacidad_lt_5mets', 'Capacidad funcional &lt; 5 METs'],
+        ];
+        $aacvprModHc = [
+            ['aacvpr_mod_hc_fevi_35_49', 'FEVI en reposo = 35%–49%'],
+            ['aacvpr_mod_hc_hta_no_controlada', 'Hipertensión arterial no controlada'],
+        ];
+        $aacvprBajoGen = [
+            ['aacvpr_bajo_sin_arritmia_compleja_pe', 'Ausencia de arritmia ventricular compleja durante la PE y recuperación'],
+            ['aacvpr_bajo_sin_angina_significativa_pe', 'Ausencia de angina u otro síntoma significativo (disnea inusual, fosfenos o mareo) durante la PE o recuperación'],
+            ['aacvpr_bajo_hemodinamica_normal_pe', 'Respuesta hemodinámica normal durante la PE y recuperación (apropiado incremento y decremento en FC, TA con la carga y la recuperación)'],
+            ['aacvpr_bajo_capacidad_6_7_mets', 'Capacidad funcional 6–7 METs'],
+        ];
+        $aacvprBajoHc = [
+            ['aacvpr_bajo_hc_fevi_gt_50', 'FEVI en reposo &gt; 50%'],
+            ['aacvpr_bajo_hc_im_ok_revasc_completa', 'IM no complicado y/o revascularización completa'],
+            ['aacvpr_bajo_hc_sin_arritmias_complejas_reposo', 'Ausencia de arritmias ventriculares complejas en reposo'],
+            ['aacvpr_bajo_hc_sin_falla_cardiaca', 'Ausencia de falla cardiaca clínica'],
+            ['aacvpr_bajo_hc_sin_isquemia_post', 'Ausencia de signos y síntomas de isquemia posterior al evento o procedimiento'],
+            ['aacvpr_bajo_hc_hta_controlada', 'Hipertensión arterial controlada'],
+            ['aacvpr_bajo_hc_sin_depresion', 'Ausencia de depresión clínica'],
+            ['aacvpr_bajo_hc_sin_comorbilidades', 'Ausencia de comorbilidades'],
+            ['aacvpr_bajo_hc_autonomia_sin_riesgo_psicosocial', 'Autonomía sin riesgo psicosocial'],
+            ['aacvpr_bajo_hc_sin_dispositivos_implantados', 'Ausencia de dispositivos electrónicos implantados'],
+        ];
+    @endphp
+
+    <!-- AACVPR/EAPC — criterios detallados (hoja actual) -->
     <div class="risk-section">
         <div class="risk-header alto">RIESGO ALTO</div>
         <table class="risk-table">
+            @foreach($aacvprAltoGen as [$field, $label])
             <tr>
-                <td class="criteria">FEVI severamente disminuida (&lt;40%)</td>
-                <td class="check">@if($data->alto_fevi_disminuida) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
+            @endforeach
+            <tr class="risk-subheader"><td colspan="2">Hallazgos clínicos — riesgo alto</td></tr>
+            @foreach($aacvprAltoHc as [$field, $label])
             <tr>
-                <td class="criteria">Síntomas o signos en reposo o a baja carga (≤3METs)</td>
-                <td class="check">@if($data->alto_sintomas_reposo) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
-            <tr>
-                <td class="criteria">Respuesta isquémica o angina durante ejercicio de baja intensidad</td>
-                <td class="check">@if($data->alto_isquemia_baja_intensidad) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Arritmias ventriculares complejas en reposo o ejercicio</td>
-                <td class="check">@if($data->alto_arritmias_ventriculares) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">IM o procedimiento de revascularización complicado</td>
-                <td class="check">@if($data->alto_im_complicado) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Capacidad funcional &lt;5 METs</td>
-                <td class="check">@if($data->alto_capacidad_menor_5mets) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Respuesta hemodinámica anormal al ejercicio (ICC, cambios isquémicos ST, hipotensión)</td>
-                <td class="check">@if($data->alto_hemodinamica_anormal) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Paro cardíaco sobrevivido</td>
-                <td class="check">@if($data->alto_paro_cardiaco) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Enfermedad coronaria compleja (tronco, multivaso, etc.)</td>
-                <td class="check">@if($data->alto_enfermedad_compleja) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
+            @endforeach
         </table>
     </div>
 
-    <!-- Tabla AACVPR/EAPC - Riesgo Moderado -->
     <div class="risk-section">
         <div class="risk-header moderado">RIESGO MODERADO</div>
         <table class="risk-table">
+            @foreach($aacvprModGen as [$field, $label])
             <tr>
-                <td class="criteria">FEVI moderadamente disminuida (40-49%)</td>
-                <td class="check">@if($data->moderado_fevi_moderada) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
+            @endforeach
+            <tr class="risk-subheader"><td colspan="2">Hallazgos clínicos — riesgo moderado</td></tr>
+            @foreach($aacvprModHc as [$field, $label])
             <tr>
-                <td class="criteria">Síntomas o signos a intensidad moderada (3-6 METs)</td>
-                <td class="check">@if($data->moderado_sintomas_moderados) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
-            <tr>
-                <td class="criteria">Isquemia leve a moderada durante ejercicio</td>
-                <td class="check">@if($data->moderado_isquemia_moderada) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Capacidad funcional 5-7 METs</td>
-                <td class="check">@if($data->moderado_capacidad_5_7mets) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Imposibilidad de automonitoreo de FC/síntomas</td>
-                <td class="check">@if($data->moderado_sin_automonitoreo) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
+            @endforeach
         </table>
     </div>
 
-    <!-- Tabla AACVPR/EAPC - Riesgo Bajo -->
     <div class="risk-section">
         <div class="risk-header bajo">RIESGO BAJO</div>
         <table class="risk-table">
+            @foreach($aacvprBajoGen as [$field, $label])
             <tr>
-                <td class="criteria">FEVI preservada (≥50%)</td>
-                <td class="check">@if($data->bajo_fevi_preservada) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
+            @endforeach
+            <tr class="risk-subheader"><td colspan="2">Hallazgos clínicos — riesgo bajo</td></tr>
+            @foreach($aacvprBajoHc as [$field, $label])
             <tr>
-                <td class="criteria">Sin síntomas ni signos en reposo o ejercicio</td>
-                <td class="check">@if($data->bajo_sin_sintomas) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
+                <td class="criteria">{!! $label !!}</td>
+                <td class="check">@if(!empty($data->{$field}))<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td>
             </tr>
-            <tr>
-                <td class="criteria">Sin isquemia durante prueba de esfuerzo</td>
-                <td class="check">@if($data->bajo_sin_isquemia) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Capacidad funcional ≥7 METs</td>
-                <td class="check">@if($data->bajo_capacidad_mayor_7mets) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Sin arritmias complejas</td>
-                <td class="check">@if($data->bajo_sin_arritmias) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">IM o revascularización no complicada</td>
-                <td class="check">@if($data->bajo_im_no_complicado) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Respuesta hemodinámica normal</td>
-                <td class="check">@if($data->bajo_hemodinamica_normal) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
-            <tr>
-                <td class="criteria">Capacidad de automonitoreo adecuada</td>
-                <td class="check">@if($data->bajo_automonitoreo_adecuado) <span class="check-yes">✔ Sí</span> @else <span class="check-no">No</span> @endif</td>
-            </tr>
+            @endforeach
         </table>
     </div>
+
+    <!-- Criterios legacy (registros antiguos sin columnas aacvpr_*) -->
+    @if(
+        $data->alto_fevi_disminuida || $data->alto_sintomas_reposo || $data->alto_isquemia_baja_intensidad || $data->alto_arritmias_ventriculares
+        || $data->alto_im_complicado || $data->alto_capacidad_menor_5mets || $data->alto_hemodinamica_anormal || $data->alto_paro_cardiaco || $data->alto_enfermedad_compleja
+        || $data->moderado_fevi_moderada || $data->moderado_sintomas_moderados || $data->moderado_isquemia_moderada || $data->moderado_capacidad_5_7mets || $data->moderado_sin_automonitoreo
+        || $data->bajo_fevi_preservada || $data->bajo_sin_sintomas || $data->bajo_sin_isquemia || $data->bajo_capacidad_mayor_7mets || $data->bajo_sin_arritmias
+        || $data->bajo_im_no_complicado || $data->bajo_hemodinamica_normal || $data->bajo_automonitoreo_adecuado
+    )
+    <div class="risk-section">
+        <div class="risk-header alto" style="background-color:#64748b;">CRITERIOS ANTERIORES (LEGACY)</div>
+        <table class="risk-table">
+            <tr><td class="criteria">FEVI severamente disminuida (&lt;40%)</td><td class="check">@if($data->alto_fevi_disminuida)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Síntomas o signos en reposo o a baja carga (≤3METs)</td><td class="check">@if($data->alto_sintomas_reposo)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Respuesta isquémica o angina (baja intensidad)</td><td class="check">@if($data->alto_isquemia_baja_intensidad)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Arritmias ventriculares complejas</td><td class="check">@if($data->alto_arritmias_ventriculares)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">IM o revascularización complicado</td><td class="check">@if($data->alto_im_complicado)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Capacidad funcional &lt;5 METs</td><td class="check">@if($data->alto_capacidad_menor_5mets)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Hemodinámica anormal al ejercicio</td><td class="check">@if($data->alto_hemodinamica_anormal)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Paro cardíaco sobrevivido</td><td class="check">@if($data->alto_paro_cardiaco)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Enfermedad coronaria compleja</td><td class="check">@if($data->alto_enfermedad_compleja)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr class="risk-subheader"><td colspan="2">Moderado (legacy)</td></tr>
+            <tr><td class="criteria">FEVI moderadamente disminuida (40–49%)</td><td class="check">@if($data->moderado_fevi_moderada)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Síntomas a intensidad moderada (3–6 METs)</td><td class="check">@if($data->moderado_sintomas_moderados)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Isquemia leve a moderada</td><td class="check">@if($data->moderado_isquemia_moderada)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Capacidad 5–7 METs</td><td class="check">@if($data->moderado_capacidad_5_7mets)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Sin automonitoreo FC/síntomas</td><td class="check">@if($data->moderado_sin_automonitoreo)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr class="risk-subheader"><td colspan="2">Bajo (legacy)</td></tr>
+            <tr><td class="criteria">FEVI preservada (≥50%)</td><td class="check">@if($data->bajo_fevi_preservada)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Sin síntomas en reposo o ejercicio</td><td class="check">@if($data->bajo_sin_sintomas)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Sin isquemia en PE</td><td class="check">@if($data->bajo_sin_isquemia)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Capacidad ≥7 METs</td><td class="check">@if($data->bajo_capacidad_mayor_7mets)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Sin arritmias complejas</td><td class="check">@if($data->bajo_sin_arritmias)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">IM o revascularización no complicada</td><td class="check">@if($data->bajo_im_no_complicado)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Hemodinámica normal</td><td class="check">@if($data->bajo_hemodinamica_normal)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+            <tr><td class="criteria">Automonitoreo adecuado</td><td class="check">@if($data->bajo_automonitoreo_adecuado)<span class="check-yes">✔ Sí</span>@else<span class="check-no">No</span>@endif</td></tr>
+        </table>
+    </div>
+    @endif
 
     <!-- Hallazgos Clínicos -->
     @if($data->hallazgo_fevi || $data->hallazgo_mets || $data->hallazgo_sintomas || $data->hallazgo_isquemia)
@@ -658,5 +707,7 @@
         <span class="signature-name">{{ $user->nombre_con_titulo ?? $user->name ?? '' }}</span>
     </div>
     @endif
+
+    </div>{{-- /.content-wrapper --}}
   </body>
 </html>
