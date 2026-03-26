@@ -44,7 +44,7 @@ trait Auditable
 
         AuditLog::create([
             'user_id' => Auth::id(),
-            'clinica_id' => $this->clinica_id ?? Auth::user()?->clinica_id ?? null,
+            'clinica_id' => $this->clinica_id ?? Auth::user()?->clinica_efectiva_id ?? Auth::user()?->clinica_id ?? null,
             'sucursal_id' => $this->sucursal_id ?? session('sucursal_id') ?? null,
             'evento' => $evento,
             'modelo_afectado' => get_class($this),

@@ -56,6 +56,11 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    /*
+    | URL del frontend (SPA) para enlaces en correos (consentimiento, etc.)
+    */
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
+
     'asset_url' => env('ASSET_URL'),
 
     /*

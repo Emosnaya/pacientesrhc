@@ -107,11 +107,8 @@ class ConsultorioController extends Controller
                 'telefono'     => $request->telefono,
             ]);
 
-            // 3. Vincular al propietario en la tabla pivot
-            $user->clinicas()->attach($consultorio->id, [
-                'rol_en_clinica' => 'propietario',
-                'activa'         => true,
-            ]);
+            // 3. Vincular al propietario en la tabla pivot (admin/superadmin en este workspace)
+            $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());
 
             // 4. Cambiar automáticamente al nuevo consultorio como espacio activo
             $user->update(['clinica_activa_id' => $consultorio->id]);
@@ -273,7 +270,7 @@ class ConsultorioController extends Controller
         $request->validate([
             'clinica_id' => 'required|integer|exists:clinicas,id',
             'email'      => 'required|email',
-            'rol'        => 'required|in:colaborador,visor',
+            'rol'        => 'required|in:colaborador,visor,co_propietario',
         ]);
 
         /** @var User $user */
@@ -288,11 +285,27 @@ class ConsultorioController extends Controller
             ->where('clinica_id', $clinicaId)
             ->exists();
 
-        if (!$esAdmin && !$esPropietario) {
+        if (! $esAdmin && ! $esPropietario) {
             return response()->json([
                 'success' => false,
-                'message' => 'Solo el propietario puede invitar colaboradores.'
+                'message' => 'Solo el propietario puede invitar colaboradores.',
             ], 403);
+        }
+
+        $clinica = Clinica::find($clinicaId);
+        if ($request->rol === 'co_propietario') {
+            if (! $clinica || ! $clinica->es_consultorio_privado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Co-propietario solo aplica a consultorios privados.',
+                ], 422);
+            }
+            if (! $esPropietario && ! $user->isSuperAdmin($clinicaId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo un propietario o superadmin puede invitar co-propietario.',
+                ], 403);
+            }
         }
 
         // No invitar al mismo email si ya tiene acceso
@@ -323,7 +336,9 @@ class ConsultorioController extends Controller
             'invitado_por' => $user->id,
         ]);
 
-        $clinica = Clinica::find($clinicaId);
+        if (! isset($clinica) || ! $clinica) {
+            $clinica = Clinica::find($clinicaId);
+        }
         $acceptUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/invitacion/{$invitacion->token}";
 
         // Enviar email de invitación
@@ -426,12 +441,20 @@ class ConsultorioController extends Controller
             ->where('clinica_id', $invitacion->clinica_id)
             ->exists();
 
-        if (!$yaVinculado) {
-            $user->clinicas()->attach($invitacion->clinica_id, [
-                'rol_en_clinica' => $invitacion->rol,
-                'activa'         => true,
-                'invitado_por'   => $invitacion->invitado_por,
-            ]);
+        if (! $yaVinculado) {
+            if ($invitacion->rol === 'co_propietario') {
+                $pivot = User::pivotPropietarioConsultorio();
+                $pivot['invitado_por'] = $invitacion->invitado_por;
+            } else {
+                $pivot = [
+                    'rol_en_clinica' => $invitacion->rol,
+                    'activa'         => true,
+                    'invitado_por'   => $invitacion->invitado_por,
+                    'isAdmin'        => false,
+                    'isSuperAdmin'   => false,
+                ];
+            }
+            $user->clinicas()->attach($invitacion->clinica_id, $pivot);
         }
 
         $invitacion->update(['estado' => 'aceptada']);
@@ -510,10 +533,10 @@ class ConsultorioController extends Controller
             ->wherePivot('rol_en_clinica', 'propietario')
             ->where('clinica_id', $clinicaId)
             ->exists();
-        // isAdmin($clinicaId) consulta user_clinicas para permisos multi-tenant
         $esAdmin = $user->isAdmin($clinicaId);
+        $esSuper = $user->isSuperAdmin($clinicaId);
 
-        if (!$esPropietario && !$esAdmin) {
+        if (! $esPropietario && ! $esAdmin && ! $esSuper) {
             return response()->json(['success' => false, 'message' => 'Sin permiso.'], 403);
         }
 
@@ -546,10 +569,10 @@ class ConsultorioController extends Controller
             ->wherePivot('rol_en_clinica', 'propietario')
             ->where('clinica_id', $clinicaId)
             ->exists();
-        // isAdmin($clinicaId) consulta user_clinicas para permisos multi-tenant
         $esAdmin = $user->isAdmin($clinicaId);
+        $esSuper = $user->isSuperAdmin($clinicaId);
 
-        if (!$esPropietario && !$esAdmin) {
+        if (! $esPropietario && ! $esAdmin && ! $esSuper) {
             return response()->json(['success' => false, 'message' => 'Sin acceso.'], 403);
         }
 

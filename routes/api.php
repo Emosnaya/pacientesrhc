@@ -39,6 +39,11 @@ use App\Http\Controllers\EfirmaController;
 use App\Http\Controllers\FacturacionController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuscripcionConsultorioController;
+use App\Http\Controllers\InternalAccessController;
+use App\Http\Controllers\InternalConsultorioProvisionController;
+use App\Http\Controllers\PacienteConsentimientoController;
+use App\Http\Controllers\PacientePortalAuthController;
+use App\Http\Controllers\PacientePortalController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -68,6 +73,37 @@ Route::prefix('registro')->group(function() {
 // Webhook de Stripe (sin autenticación, Stripe valida con signature)
 Route::post('/registro/webhook/stripe', [SubscriptionController::class, 'handleWebhook']);
 
+// Desbloqueo por clave de operador (secreto en .env del servidor)
+Route::post('/public/access/clinic-registration', [InternalAccessController::class, 'unlockClinicRegistration'])
+    ->middleware('throttle:10,1');
+Route::post('/public/access/internal-consultorio', [InternalAccessController::class, 'unlockInternalConsultorio'])
+    ->middleware('throttle:10,1');
+
+// Aceptación de aviso de privacidad / términos (enlace del correo al paciente)
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/public/paciente/consentimiento', [PacienteConsentimientoController::class, 'verificar']);
+    Route::post('/public/paciente/consentimiento/aceptar', [PacienteConsentimientoController::class, 'aceptar']);
+});
+
+// Portal del paciente (primer acceso: OTP + contraseña; sin multi.tenant)
+Route::middleware(['throttle:otp'])->group(function () {
+    Route::post('/paciente-portal/request-otp', [PacientePortalAuthController::class, 'requestOtp']);
+    Route::post('/paciente-portal/verify-otp', [PacientePortalAuthController::class, 'verifyOtp']);
+});
+Route::middleware(['throttle:auth'])->group(function () {
+    Route::post('/paciente-portal/login', [PacientePortalAuthController::class, 'login']);
+});
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/paciente-portal/set-password', [PacientePortalAuthController::class, 'setPassword']);
+});
+
+// Portal paciente: datos propios (requiere contraseña ya configurada)
+Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(function () {
+    Route::get('/paciente-portal/clinicas', [PacientePortalController::class, 'clinicas']);
+    Route::get('/paciente-portal/clinicas/{clinicaId}/resumen', [PacientePortalController::class, 'clinicaResumen']);
+    Route::get('/paciente-portal/clinicas/{clinicaId}/citas', [PacientePortalController::class, 'citas']);
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // RUTAS AUTENTICADAS
 // ═══════════════════════════════════════════════════════════════════
@@ -77,25 +113,33 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/consultorio/comprar-adicional', [SubscriptionController::class, 'comprarConsultorioAdicional']);
     Route::get('/consultorio/comprar-adicional/usage', [SubscriptionController::class, 'getConsultorioUsage']);
     Route::get('/user', function (Request $request) {
-        $user = $request->user()->load(['sucursal', 'clinica', 'clinicaActiva']);
-        
-        // Cargar permisos de la clínica activa desde user_clinicas
-        $clinicaEfectivaId = $user->clinica_efectiva_id;
-        if ($clinicaEfectivaId) {
-            $relacion = \DB::table('user_clinicas')
-                ->where('user_id', $user->id)
-                ->where('clinica_id', $clinicaEfectivaId)
-                ->where('activa', true)
-                ->first();
-            
-            if ($relacion) {
-                // Agregar permisos al objeto user para compatibilidad con frontend
-                $user->isAdmin = (bool) ($relacion->isAdmin ?? false);
-                $user->isSuperAdmin = (bool) ($relacion->isSuperAdmin ?? false);
-                $user->rol_en_clinica = $relacion->rol_en_clinica;
-            }
+        $user = $request->user()->load(['sucursal', 'clinica', 'clinicaActiva', 'pacienteRecord']);
+
+        if ($user->paciente_id) {
+            $user->tiene_modulo_facturacion = false;
+            $user->sucursales_permitidas_ids = [];
+            $user->puede_crear_consultorio = false;
+            $user->isAdmin = false;
+            $user->isSuperAdmin = false;
+            $user->rol_en_clinica = null;
+
+            return $user;
         }
-        
+
+        $user->applyWorkspacePermissionsFromPivot();
+
+        $efectiva = $user->clinica_efectiva_id;
+        if ($efectiva) {
+            $c = \App\Models\Clinica::query()->find($efectiva);
+            $user->tiene_modulo_facturacion = $c && $c->facturacion_addon_activo;
+            $user->sucursales_permitidas_ids = $user->getSucursalesPermitidasIdsForClinica($efectiva);
+        } else {
+            $user->tiene_modulo_facturacion = false;
+            $user->sucursales_permitidas_ids = [];
+        }
+
+        $user->puede_crear_consultorio = $user->puedeCrearConsultorios();
+
         return $user;
     });
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -110,13 +154,14 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::delete('/profile/{id}/delete-signature', [ProfileController::class, 'deleteSignature']);
 
     // Verificación de pacientes existentes (importación con OTP)
-    Route::prefix('pacientes/verificacion')->group(function() {
+    Route::prefix('pacientes/verificacion')->middleware('throttle:otp')->group(function () {
         Route::post('/check-email', [\App\Http\Controllers\PacienteVerificationController::class, 'checkEmail']);
         Route::post('/request-otp', [\App\Http\Controllers\PacienteVerificationController::class, 'requestOtp']);
         Route::post('/verify-otp', [\App\Http\Controllers\PacienteVerificationController::class, 'verifyOtp']);
     });
 
     // Almacenar ordenes
+    Route::put('/pacientes/{paciente}/portal-visibilidad', [PacienteController::class, 'updatePortalVisibilidad']);
     Route::apiResource('/pacientes', PacienteController::class);
     Route::post('/pacientes/express', [PacienteController::class, 'createExpress']); // Flujo urgencias
     
@@ -184,30 +229,28 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     // MÓDULO DE FACTURACIÓN
     // ==========================================
     Route::prefix('facturacion')->group(function() {
-        // Catálogos SAT
-        Route::get('/catalogos/regimenes', [FacturacionController::class, 'catalogoRegimenes']);
-        Route::get('/catalogos/usos-cfdi', [FacturacionController::class, 'catalogoUsosCfdi']);
-        
-        // Datos fiscales del paciente
-        Route::get('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'getDatosFiscales']);
-        Route::post('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'storeDatosFiscales']);
-        Route::delete('/datos-fiscales/{id}', [FacturacionController::class, 'deleteDatosFiscales']);
-        
-        // Solicitudes de factura
-        Route::get('/solicitudes', [FacturacionController::class, 'listSolicitudes']);
-        Route::post('/solicitudes', [FacturacionController::class, 'createSolicitud']);
-        Route::get('/solicitudes/{id}', [FacturacionController::class, 'showSolicitud']);
-        Route::post('/solicitudes/{id}/cancelar', [FacturacionController::class, 'cancelSolicitud']);
-        Route::post('/solicitudes/{id}/reintentar', [FacturacionController::class, 'retrySolicitud']);
-        
-        // Timbrado y gestión de CFDI (preparado para integración con PAC)
-        Route::post('/solicitudes/{id}/timbrar', [FacturacionController::class, 'timbrarFactura']);
-        Route::post('/solicitudes/{id}/cancelar-cfdi', [FacturacionController::class, 'cancelarCfdi']);
-        
-        // Descargas y reenvío
-        Route::get('/solicitudes/{id}/xml', [FacturacionController::class, 'downloadXml']);
-        Route::get('/solicitudes/{id}/pdf', [FacturacionController::class, 'downloadPdf']);
-        Route::post('/solicitudes/{id}/reenviar', [FacturacionController::class, 'reenviarFactura']);
+        // Catálogos SAT (referencia; también protegidos por add-on para no filtrar flujo sin contrato)
+        Route::middleware(['facturacion.addon'])->group(function () {
+            Route::get('/catalogos/regimenes', [FacturacionController::class, 'catalogoRegimenes']);
+            Route::get('/catalogos/usos-cfdi', [FacturacionController::class, 'catalogoUsosCfdi']);
+
+            Route::get('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'getDatosFiscales']);
+            Route::post('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'storeDatosFiscales']);
+            Route::delete('/datos-fiscales/{id}', [FacturacionController::class, 'deleteDatosFiscales']);
+
+            Route::get('/solicitudes', [FacturacionController::class, 'listSolicitudes']);
+            Route::post('/solicitudes', [FacturacionController::class, 'createSolicitud']);
+            Route::get('/solicitudes/{id}', [FacturacionController::class, 'showSolicitud']);
+            Route::post('/solicitudes/{id}/cancelar', [FacturacionController::class, 'cancelSolicitud']);
+            Route::post('/solicitudes/{id}/reintentar', [FacturacionController::class, 'retrySolicitud']);
+
+            Route::post('/solicitudes/{id}/timbrar', [FacturacionController::class, 'timbrarFactura']);
+            Route::post('/solicitudes/{id}/cancelar-cfdi', [FacturacionController::class, 'cancelarCfdi']);
+
+            Route::get('/solicitudes/{id}/xml', [FacturacionController::class, 'downloadXml']);
+            Route::get('/solicitudes/{id}/pdf', [FacturacionController::class, 'downloadPdf']);
+            Route::post('/solicitudes/{id}/reenviar', [FacturacionController::class, 'reenviarFactura']);
+        });
     });
 
     // ==========================================
@@ -449,18 +492,27 @@ Route::get('/analytics', [AnalyticsController::class, 'index'])->middleware('aut
 // Ruta para obtener lista de usuarios/doctores (todos los usuarios autenticados)
 Route::get('/users', [UserManagementController::class, 'listDoctors'])->middleware(['auth:sanctum', 'multi.tenant']);
 
-Route::post('/registro', [AuthController::class, 'signup']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
-Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
+Route::middleware(['throttle:auth'])->group(function () {
+    Route::post('/registro', [AuthController::class, 'signup']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+});
+Route::post('/reset-password/{token}', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
+Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->middleware('throttle:auth');
 
 // Invitación consultorio — pública para preview antes de login
 Route::get('/consultorio/invitacion/{token}', [ConsultorioController::class, 'verInvitacion']);
 
-// Rutas para registro de clínicas (públicas)
-Route::get('/clinicas/tipos', [\App\Http\Controllers\ClinicaController::class, 'getTipos']);
-Route::post('/clinicas', [\App\Http\Controllers\ClinicaController::class, 'store']);
+// Registro de clínicas (público pero protegido si CLINIC_REGISTRATION_SECRET está definido)
+Route::middleware(['clinic.registration'])->group(function () {
+    Route::get('/clinicas/tipos', [\App\Http\Controllers\ClinicaController::class, 'getTipos']);
+    Route::post('/clinicas', [\App\Http\Controllers\ClinicaController::class, 'store']);
+});
+
+// Provisionamiento interno de consultorio (operador)
+Route::middleware(['internal.consultorio.setup'])->group(function () {
+    Route::post('/internal/consultorio/provision', [InternalConsultorioProvisionController::class, 'store']);
+});
 
 // Rutas para obtener información de clínicas (autenticadas)
 Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function () {

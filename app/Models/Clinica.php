@@ -32,6 +32,7 @@ class Clinica extends Model
         'receta_pdf_config',
         'es_consultorio_privado',
         'propietario_user_id',
+        'facturacion_addon_activo',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class Clinica extends Model
         'activa' => 'boolean',
         'permite_multiples_sucursales' => 'boolean',
         'es_consultorio_privado' => 'boolean',
+        'facturacion_addon_activo' => 'boolean',
         'fecha_vencimiento' => 'date',
         'modulos_habilitados' => 'array',
         'receta_pdf_config' => 'array'

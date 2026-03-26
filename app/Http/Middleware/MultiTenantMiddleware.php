@@ -22,6 +22,11 @@ class MultiTenantMiddleware
         if (Auth::check()) {
             $user = Auth::user();
 
+            // Cuentas solo de portal del paciente: no tienen clínica de staff
+            if ($user->paciente_id && ! $user->clinica_id && ! $user->clinica_activa_id) {
+                return $next($request);
+            }
+
             // Resolver qué clínica está activa:
             // clinica_activa_id si el usuario está usando un workspace alternativo (consultorio privado),
             // de lo contrario la clinica_id asignada originalmente.

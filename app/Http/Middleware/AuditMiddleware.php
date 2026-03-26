@@ -66,7 +66,7 @@ class AuditMiddleware
 
         AuditLog::create([
             'user_id' => Auth::id(),
-            'clinica_id' => Auth::user()->clinica_id,
+            'clinica_id' => Auth::user()->clinica_efectiva_id ?? Auth::user()->clinica_id,
             'sucursal_id' => session('sucursal_id'),
             'evento' => 'viewed',
             'modelo_afectado' => $modelClass,

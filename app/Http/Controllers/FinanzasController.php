@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1073,6 +1074,14 @@ class FinanzasController extends Controller
             'sucursal_id' => 'nullable|exists:sucursales,id',
         ]);
 
+        if (! extension_loaded('zip')) {
+            Log::error('exportarCorte: extensión PHP zip no cargada');
+
+            return response()->json([
+                'message' => 'El servidor no tiene habilitada la extensión PHP "zip", necesaria para generar archivos Excel. En Ubuntu/Debian: sudo apt install php-zip y reiniciar PHP-FPM.',
+            ], 503);
+        }
+
         $user = Auth::user();
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_efectiva_id;
         
@@ -1156,7 +1165,7 @@ class FinanzasController extends Controller
         
         // Título principal con diseño corporativo
         $sheet->mergeCells("A{$row}:L{$row}");
-        $sheet->setCellValue("A{$row}", strtoupper($clinica->nombre ?? 'CORTE DE CAJA'));
+        $sheet->setCellValue("A{$row}", strtoupper((string) ($clinica->nombre ?? 'CORTE DE CAJA')));
         $sheet->getStyle("A{$row}")->applyFromArray([
             'font' => ['bold' => true, 'size' => 18, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri'],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -1219,15 +1228,15 @@ class FinanzasController extends Controller
             $sheet->setCellValue('A' . $row, str_pad($pago->id, 6, '0', STR_PAD_LEFT));
             $sheet->setCellValue('B' . $row, $pago->fecha_pago ?? Carbon::parse($pago->created_at)->format('Y-m-d'));
             $sheet->setCellValue('C' . $row, Carbon::parse($pago->created_at)->format('H:i:s'));
-            $sheet->setCellValue('D' . $row, $pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A');
-            $sheet->setCellValue('E' . $row, $pago->paciente ? ($pago->paciente->registro ?? 'N/A') : 'N/A');
-            $sheet->setCellValue('F' . $row, $pago->concepto ?? '');
-            $sheet->setCellValue('G' . $row, ucfirst($pago->metodo_pago));
-            $sheet->setCellValue('H' . $row, $pago->referencia ?? '');
+            $sheet->setCellValue('D' . $row, $this->excelSafeCellValue($pago->paciente ? "{$pago->paciente->nombre} {$pago->paciente->apellidoPat} {$pago->paciente->apellidoMat}" : 'N/A'));
+            $sheet->setCellValue('E' . $row, $this->excelSafeCellValue($pago->paciente ? ($pago->paciente->registro ?? 'N/A') : 'N/A'));
+            $sheet->setCellValue('F' . $row, $this->excelSafeCellValue($pago->concepto));
+            $sheet->setCellValue('G' . $row, ucfirst((string) ($pago->metodo_pago ?? '')));
+            $sheet->setCellValue('H' . $row, $this->excelSafeCellValue($pago->referencia));
             $sheet->setCellValue('I' . $row, (float) $pago->monto);
-            $sheet->setCellValue('J' . $row, $pago->usuario ? "{$pago->usuario->nombre} {$pago->usuario->apellidoPat}" : 'N/A');
-            $sheet->setCellValue('K' . $row, $pago->sucursal ? $pago->sucursal->nombre : 'N/A');
-            $sheet->setCellValue('L' . $row, $pago->notas ?? '');
+            $sheet->setCellValue('J' . $row, $this->excelSafeCellValue($pago->usuario ? "{$pago->usuario->nombre} {$pago->usuario->apellidoPat}" : 'N/A'));
+            $sheet->setCellValue('K' . $row, $this->excelSafeCellValue($pago->sucursal ? $pago->sucursal->nombre : 'N/A'));
+            $sheet->setCellValue('L' . $row, $this->excelSafeCellValue($pago->notas));
             
             // Formato moneda
             $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('$#,##0.00');
@@ -1330,14 +1339,14 @@ class FinanzasController extends Controller
             $sheet->setCellValue('A' . $row, str_pad($egreso->id, 6, '0', STR_PAD_LEFT));
             $sheet->setCellValue('B' . $row, Carbon::parse($egreso->created_at)->format('Y-m-d'));
             $sheet->setCellValue('C' . $row, Carbon::parse($egreso->created_at)->format('H:i:s'));
-            $sheet->setCellValue('D' . $row, ucfirst(str_replace('_', ' ', $egreso->tipo_egreso)));
-            $sheet->setCellValue('E' . $row, $egreso->concepto ?? '');
-            $sheet->setCellValue('F' . $row, $egreso->proveedor ?? '');
-            $sheet->setCellValue('G' . $row, $egreso->factura ?? '');
+            $sheet->setCellValue('D' . $row, ucfirst(str_replace('_', ' ', (string) ($egreso->tipo_egreso ?? ''))));
+            $sheet->setCellValue('E' . $row, $this->excelSafeCellValue($egreso->concepto));
+            $sheet->setCellValue('F' . $row, $this->excelSafeCellValue($egreso->proveedor));
+            $sheet->setCellValue('G' . $row, $this->excelSafeCellValue($egreso->factura));
             $sheet->setCellValue('I' . $row, (float) $egreso->monto);
-            $sheet->setCellValue('J' . $row, $egreso->usuario ? "{$egreso->usuario->nombre} {$egreso->usuario->apellidoPat}" : 'N/A');
-            $sheet->setCellValue('K' . $row, $egreso->sucursal ? $egreso->sucursal->nombre : 'N/A');
-            $sheet->setCellValue('L' . $row, $egreso->notas ?? '');
+            $sheet->setCellValue('J' . $row, $this->excelSafeCellValue($egreso->usuario ? "{$egreso->usuario->nombre} {$egreso->usuario->apellidoPat}" : 'N/A'));
+            $sheet->setCellValue('K' . $row, $this->excelSafeCellValue($egreso->sucursal ? $egreso->sucursal->nombre : 'N/A'));
+            $sheet->setCellValue('L' . $row, $this->excelSafeCellValue($egreso->notas));
             
             $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('$#,##0.00');
             $sheet->getStyle('I' . $row)->getFont()->setBold(true);
@@ -1383,11 +1392,11 @@ class FinanzasController extends Controller
             ['tipo' => 'Otro', 'valor' => 'otro']
         ];
 
-        foreach ($tiposEgreso as $tipo) {
-            $cantidad = $egresos->where('tipo_egreso', $tipo['valor'])->count();
-            $total = $egresos->where('tipo_egreso', $tipo['valor'])->sum(function($e) { return (float) $e->monto; });
+        foreach ($tiposEgreso as $tipoEgresoItem) {
+            $cantidad = $egresos->where('tipo_egreso', $tipoEgresoItem['valor'])->count();
+            $total = $egresos->where('tipo_egreso', $tipoEgresoItem['valor'])->sum(function($e) { return (float) $e->monto; });
             
-            $sheet->setCellValue("A{$row}", $tipo['tipo']);
+            $sheet->setCellValue("A{$row}", $tipoEgresoItem['tipo']);
             $sheet->setCellValue("B{$row}", $cantidad);
             $sheet->setCellValue("C{$row}", (float) $total);
             $sheet->getStyle("C{$row}")->getNumberFormat()->setFormatCode('#,##0.00');
@@ -1464,18 +1473,41 @@ class FinanzasController extends Controller
         $sheet->getColumnDimension('K')->setWidth(15);
         $sheet->getColumnDimension('L')->setWidth(30);
 
-        // Generar archivo
+        // Generar archivo (stream evita tempnam/sys_get_temp_dir en servidores con permisos u open_basedir restrictivos)
         $tipoStr = is_array($tipo) ? (isset($tipo[0]) ? $tipo[0] : 'dia') : $tipo;
-        $filename = "corte_" . $tipoStr . "_" . $fecha->format('Y-m-d') . ".xlsx";
-        
-        $writer = new Xlsx($spreadsheet);
-        
-        // Generar el archivo en memoria
-        $temp = tempnam(sys_get_temp_dir(), 'excel');
-        $writer->save($temp);
-        
-        return response()->download($temp, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->deleteFileAfterSend(true);
+        $filename = 'corte_'.$tipoStr.'_'.$fecha->format('Y-m-d').'.xlsx';
+
+        try {
+            return response()->streamDownload(function () use ($spreadsheet) {
+                $writer = new Xlsx($spreadsheet);
+                $writer->save('php://output');
+            }, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('exportarCorte: fallo al generar XLSX', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'message' => 'No se pudo generar el archivo Excel. Comprueba que PHP tenga la extensión zip y espacio en disco.',
+                'detail' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Quita caracteres de control no válidos en XML (Excel falla en prod con datos binarios o NUL).
+     */
+    private function excelSafeCellValue(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $value);
+
+        return is_string($clean) ? $clean : '';
     }
 }

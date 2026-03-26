@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -48,6 +49,8 @@ class User extends Authenticatable
         'suscripcion_fin',
         'trial_ends_at',
         'consultorios_adicionales_comprados',
+        'paciente_id',
+        'password_set_at',
     ];
 
     /**
@@ -74,18 +77,22 @@ class User extends Authenticatable
         'suscripcion_inicio' => 'datetime',
         'suscripcion_fin' => 'datetime',
         'trial_ends_at' => 'datetime',
+        'password_set_at' => 'datetime',
     ];
 
     /**
      * Atributos que se agregan al serializar (JSON) para API / sidebar / expedientes
      */
-    protected $appends = ['titulo_profesional', 'nombre_con_titulo', 'clinica_efectiva_id'];
+    protected $appends = ['titulo_profesional', 'nombre_con_titulo', 'clinica_efectiva_id', 'es_paciente_portal'];
 
     /**
      * Título profesional según rol: Dr., Dra., Lic. (vacío si no aplica)
      */
     public function getTituloProfesionalAttribute(): string
     {
+        if ($this->rol === 'paciente' || $this->paciente_id) {
+            return '';
+        }
         $titulos = config('roles.titulos', []);
         return $this->rol && isset($titulos[$this->rol]) ? $titulos[$this->rol] : '';
     }
@@ -136,6 +143,121 @@ class User extends Authenticatable
     public function getClinicaEfectivaIdAttribute(): ?int
     {
         return $this->clinica_activa_id ?? $this->clinica_id;
+    }
+
+    public function getEsPacientePortalAttribute(): bool
+    {
+        return $this->paciente_id !== null;
+    }
+
+    /**
+     * Expediente clínico vinculado (cuenta portal del paciente).
+     */
+    public function pacienteRecord()
+    {
+        return $this->belongsTo(Paciente::class, 'paciente_id');
+    }
+
+    public function isPatientPortalAccount(): bool
+    {
+        return $this->paciente_id !== null;
+    }
+
+    /**
+     * Sucursales adicionales asignadas (misma clínica; ver multisucursal para participantes).
+     */
+    public function sucursalesAsignadas(): BelongsToMany
+    {
+        return $this->belongsToMany(Sucursal::class, 'user_sucursal')->withTimestamps();
+    }
+
+    /**
+     * Sobrescribe en el modelo (para JSON de /api/user) isAdmin, isSuperAdmin y rol_en_clinica
+     * desde user_clinicas para la clínica efectiva. Si no hay fila activa, fuerza false/null
+     * (no usar columnas legacy de users).
+     */
+    public function applyWorkspacePermissionsFromPivot(): void
+    {
+        $clinicaEfectivaId = $this->clinica_efectiva_id;
+        if (! $clinicaEfectivaId) {
+            $this->isAdmin = false;
+            $this->isSuperAdmin = false;
+            $this->rol_en_clinica = null;
+
+            return;
+        }
+
+        $relacion = DB::table('user_clinicas')
+            ->where('user_id', $this->id)
+            ->where('clinica_id', $clinicaEfectivaId)
+            ->where('activa', true)
+            ->first();
+
+        if ($relacion) {
+            $this->isAdmin = (bool) ($relacion->isAdmin ?? false);
+            $this->isSuperAdmin = (bool) ($relacion->isSuperAdmin ?? false);
+            $this->rol_en_clinica = $relacion->rol_en_clinica;
+        } else {
+            $this->isAdmin = false;
+            $this->isSuperAdmin = false;
+            $this->rol_en_clinica = null;
+        }
+    }
+
+    /**
+     * IDs de sucursales que el usuario puede elegir en la clínica dada (no superadmin).
+     * Incluye users.sucursal_id si pertenece a esa clínica, más filas en user_sucursal.
+     *
+     * @return int[] lista vacía si no aplica
+     */
+    public function getSucursalesPermitidasIdsForClinica(?int $clinicaId = null): array
+    {
+        $clinicaId = $clinicaId ?? $this->clinica_efectiva_id;
+        if (! $clinicaId) {
+            return [];
+        }
+
+        if ($this->isSuperAdmin($clinicaId)) {
+            return [];
+        }
+
+        $ids = [];
+
+        if ($this->sucursal_id) {
+            $ok = DB::table('sucursales')
+                ->where('id', $this->sucursal_id)
+                ->where('clinica_id', $clinicaId)
+                ->exists();
+            if ($ok) {
+                $ids[] = (int) $this->sucursal_id;
+            }
+        }
+
+        $extra = DB::table('user_sucursal')
+            ->join('sucursales', 'sucursales.id', '=', 'user_sucursal.sucursal_id')
+            ->where('user_sucursal.user_id', $this->id)
+            ->where('sucursales.clinica_id', $clinicaId)
+            ->pluck('user_sucursal.sucursal_id')
+            ->all();
+
+        foreach ($extra as $sid) {
+            $ids[] = (int) $sid;
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Atributos pivot para propietario de consultorio/clínica (administración completa en ese workspace).
+     */
+    public static function pivotPropietarioConsultorio(): array
+    {
+        return [
+            'rol_en_clinica' => 'propietario',
+            'activa' => true,
+            'isAdmin' => true,
+            'isSuperAdmin' => true,
+        ];
     }
 
     /**
@@ -497,5 +619,38 @@ class User extends Authenticatable
         }
 
         return $this->cantidad_consultorios_privados < $this->limite_consultorios;
+    }
+
+    /**
+     * El otro usuario tiene membresía activa en el mismo workspace que el actual.
+     */
+    public function sharesActiveWorkspaceWithUser(int $otherUserId): bool
+    {
+        $efectiva = $this->clinica_efectiva_id;
+        if (! $efectiva) {
+            return false;
+        }
+
+        return DB::table('user_clinicas')
+            ->where('user_id', $otherUserId)
+            ->where('clinica_id', $efectiva)
+            ->where('activa', true)
+            ->exists();
+    }
+
+    /**
+     * Ver/editar perfil propio o, si es admin del workspace, de miembros del mismo espacio.
+     */
+    public function canAccessProfileOf(self $target): bool
+    {
+        if ((int) $this->id === (int) $target->id) {
+            return true;
+        }
+
+        if (! $this->hasAdminAccess()) {
+            return false;
+        }
+
+        return $this->sharesActiveWorkspaceWithUser((int) $target->id);
     }
 }

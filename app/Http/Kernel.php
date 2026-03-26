@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
         ],
     ];
 
@@ -65,5 +66,9 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
         'multi.tenant' => \App\Http\Middleware\MultiTenantMiddleware::class,
+        'patient.portal' => \App\Http\Middleware\EnsurePatientPortalFullAccount::class,
+        'clinic.registration' => \App\Http\Middleware\EnsureClinicRegistrationUnlocked::class,
+        'internal.consultorio.setup' => \App\Http\Middleware\EnsureInternalConsultorioUnlocked::class,
+        'facturacion.addon' => \App\Http\Middleware\EnsureFacturacionAddonActive::class,
     ];
 }

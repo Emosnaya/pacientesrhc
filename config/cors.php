@@ -32,7 +32,15 @@ return [
 
     'allowed_origins_patterns' => ['/localhost.*/'],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => [
+        'Accept',
+        'Authorization',
+        'Content-Type',
+        'X-Requested-With',
+        'X-Clinic-Registration-Token',
+        'X-Internal-Consultorio-Token',
+        'X-XSRF-TOKEN',
+    ],
 
     'exposed_headers' => [],
 
