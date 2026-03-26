@@ -14,17 +14,21 @@ use Intervention\Image\Drivers\Gd\Driver;
 class ProfileController extends Controller
 {
     /**
-     * Obtener perfil del usuario
+     * Obtener perfil del usuario (solo propio o admin del mismo workspace).
      */
     public function show(Request $request, $id): JsonResponse
     {
-        $user = User::find($id);
-        
-        if (!$user) {
+        $target = User::find($id);
+
+        if (! $target) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        return response()->json($user);
+        if (! $request->user()->canAccessProfileOf($target)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        return response()->json($target);
     }
 
     /**
@@ -33,16 +37,14 @@ class ProfileController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        // Log para debug
-        \Log::info('📥 Datos recibidos en ProfileController::update', [
-            'all_data' => $request->all(),
-            'user_id' => $id
-        ]);
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
 
         $validator = Validator::make($request->all(), [
             'nombre' => 'nullable|string|max:255',
@@ -92,8 +94,6 @@ class ProfileController extends Controller
             $updateData['rol'] = $request->rol ?: null;
         }
 
-        \Log::info('📝 Datos a actualizar', ['updateData' => $updateData]);
-
         // Manejar la subida de imagen
         if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
             // Eliminar imagen anterior si existe y no es la por defecto
@@ -110,11 +110,8 @@ class ProfileController extends Controller
 
         // Siempre actualizar, incluso si no hay datos específicos
         // (esto permite actualizar solo la imagen si es necesario)
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $user->update($updateData);
-            \Log::info('✅ Usuario actualizado', ['user' => $user->fresh()]);
-        } else {
-            \Log::warning('⚠️ No hay datos para actualizar');
         }
 
         return response()->json([
@@ -129,9 +126,13 @@ class ProfileController extends Controller
     public function uploadImage(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -173,9 +174,13 @@ class ProfileController extends Controller
     public function uploadSignature(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -217,9 +222,13 @@ class ProfileController extends Controller
     public function uploadUniversidadLogo(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -291,9 +300,13 @@ class ProfileController extends Controller
     public function deleteImage(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
         try {
@@ -322,9 +335,13 @@ class ProfileController extends Controller
     public function deleteSignature(Request $request, $id): JsonResponse
     {
         $user = User::find($id);
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        if (! $request->user()->canAccessProfileOf($user)) {
+            return response()->json(['error' => 'No autorizado'], 403);
         }
 
         try {

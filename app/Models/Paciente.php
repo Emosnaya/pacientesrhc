@@ -54,12 +54,22 @@ class Paciente extends Model
         'sucursal_id',
         'aviso_privacidad_aceptado_at',
         'version_aviso',
+        'consentimiento_token_hash',
+        'consentimiento_token_expires_at',
+        'consentimiento_email_enviado_at',
         'archivo_muerto',
         'archivo_muerto_at',
         'archivo_muerto_motivo'
     ];
 
     protected $appends = ['domicilio_formateado'];
+
+    /**
+     * No exponer hash de invitación en JSON de API.
+     */
+    protected $hidden = [
+        'consentimiento_token_hash',
+    ];
 
     /**
      * The attributes that should be cast.
@@ -80,6 +90,8 @@ class Paciente extends Model
         'alergias' => 'encrypted',
         'fechaNacimiento' => 'date',
         'aviso_privacidad_aceptado_at' => 'datetime',
+        'consentimiento_token_expires_at' => 'datetime',
+        'consentimiento_email_enviado_at' => 'datetime',
         'archivo_muerto' => 'boolean',
         'archivo_muerto_at' => 'datetime',
     ];
@@ -136,7 +148,14 @@ class Paciente extends Model
     public function clinicas()
     {
         return $this->belongsToMany(Clinica::class, 'clinica_paciente')
-            ->withPivot('sucursal_id', 'user_id', 'vinculado_at')
+            ->withPivot(
+                'sucursal_id',
+                'user_id',
+                'vinculado_at',
+                'portal_visible_citas',
+                'portal_visible_datos_basicos',
+                'portal_visible_expediente_resumen'
+            )
             ->withTimestamps();
     }
 

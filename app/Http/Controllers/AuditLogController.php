@@ -8,6 +8,24 @@ use Illuminate\Http\Request;
 class AuditLogController extends Controller
 {
     /**
+     * Workspace efectivo para filtrar bitácoras (alineado con multi-tenant).
+     */
+    protected function effectiveClinicaIdForAudit(): int
+    {
+        $u = auth()->user();
+
+        return (int) ($u->clinica_efectiva_id ?? $u->clinica_id);
+    }
+
+    /**
+     * Super administrador del workspace activo ve bitácora completa de esa clínica.
+     */
+    protected function userCanSeeAllAuditLogsInWorkspace(): bool
+    {
+        return auth()->user()->isSuperAdmin();
+    }
+
+    /**
      * Display a listing of audit logs
      */
     public function index(Request $request)
@@ -16,9 +34,8 @@ class AuditLogController extends Controller
             ->with(['user', 'clinica', 'sucursal'])
             ->latest();
 
-        // Filtrar por clínica del usuario actual
-        if (!auth()->user()->hasRole('super_admin')) {
-            $query->where('clinica_id', auth()->user()->clinica_id);
+        if (! $this->userCanSeeAllAuditLogsInWorkspace()) {
+            $query->where('clinica_id', $this->effectiveClinicaIdForAudit());
         }
 
         // Aplicar filtros de búsqueda
@@ -62,8 +79,7 @@ class AuditLogController extends Controller
     {
         $log = AuditLog::with(['user', 'clinica', 'sucursal'])->findOrFail($id);
 
-        // Verificar que el usuario tenga acceso a este log
-        if (!auth()->user()->hasRole('super_admin') && $log->clinica_id !== auth()->user()->clinica_id) {
+        if (! $this->userCanSeeAllAuditLogsInWorkspace() && (int) $log->clinica_id !== $this->effectiveClinicaIdForAudit()) {
             abort(403, 'No tienes permiso para ver este log');
         }
 
@@ -89,9 +105,8 @@ class AuditLogController extends Controller
             ->with(['user'])
             ->latest();
 
-        // Filtrar por clínica del usuario actual
-        if (!auth()->user()->hasRole('super_admin')) {
-            $query->where('clinica_id', auth()->user()->clinica_id);
+        if (! $this->userCanSeeAllAuditLogsInWorkspace()) {
+            $query->where('clinica_id', $this->effectiveClinicaIdForAudit());
         }
 
         $logs = $query->get();
@@ -108,9 +123,8 @@ class AuditLogController extends Controller
             ->with(['user', 'clinica'])
             ->latest();
 
-        // Aplicar mismo filtro de clínica
-        if (!auth()->user()->hasRole('super_admin')) {
-            $query->where('clinica_id', auth()->user()->clinica_id);
+        if (! $this->userCanSeeAllAuditLogsInWorkspace()) {
+            $query->where('clinica_id', $this->effectiveClinicaIdForAudit());
         }
 
         // Aplicar filtros de fecha si existen
@@ -151,9 +165,8 @@ class AuditLogController extends Controller
     {
         $baseQuery = AuditLog::query();
 
-        // Filtrar por clínica si no es super admin
-        if (!auth()->user()->hasRole('super_admin')) {
-            $baseQuery->where('clinica_id', auth()->user()->clinica_id);
+        if (! $this->userCanSeeAllAuditLogsInWorkspace()) {
+            $baseQuery->where('clinica_id', $this->effectiveClinicaIdForAudit());
         }
 
         return [

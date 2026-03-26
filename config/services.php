@@ -30,4 +30,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    | Registro de clínicas (B2B) y provisionamiento interno de consultorios.
+    | Si el secret está vacío, los middlewares permiten acceso (solo desarrollo).
+    */
+    'clinic_registration' => [
+        'secret' => env('CLINIC_REGISTRATION_SECRET'),
+    ],
+
+    'internal_consultorio' => [
+        'secret' => env('INTERNAL_CONSULTORIO_SETUP_SECRET'),
+    ],
+
 ];

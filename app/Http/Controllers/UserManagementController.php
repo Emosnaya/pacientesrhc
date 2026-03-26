@@ -234,7 +234,9 @@ class UserManagementController extends Controller
             'rol' => 'nullable|string|in:' . config('roles.validacion_in'),
             'isAdmin' => 'boolean',
             'isSuperAdmin' => 'boolean',
-            'sucursal_id' => 'nullable|exists:sucursales,id'
+            'sucursal_id' => 'nullable|exists:sucursales,id',
+            'sucursales_extra_ids' => 'nullable|array',
+            'sucursales_extra_ids.*' => 'integer|exists:sucursales,id',
         ]);
 
         if ($validator->fails()) {
@@ -286,6 +288,16 @@ class UserManagementController extends Controller
                 'rol_en_clinica' => ($request->isSuperAdmin || $request->isAdmin) ? 'propietario' : 'colaborador',
                 'updated_at' => now(),
             ]);
+
+        // Multisucursal: sucursales adicionales permitidas (misma clínica efectiva)
+        if ($request->has('sucursales_extra_ids') && is_array($request->sucursales_extra_ids)) {
+            $validIds = \App\Models\Sucursal::query()
+                ->where('clinica_id', $clinicaEfectivaId)
+                ->whereIn('id', $request->sucursales_extra_ids)
+                ->pluck('id')
+                ->all();
+            $targetUser->sucursalesAsignadas()->sync($validIds);
+        }
 
         return response()->json([
             'message' => 'Usuario actualizado exitosamente',

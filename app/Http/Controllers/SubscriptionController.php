@@ -228,10 +228,7 @@ class SubscriptionController extends Controller
             ]);
 
             // 4. Vincular propietario en user_clinicas
-            $user->clinicas()->attach($consultorio->id, [
-                'rol_en_clinica' => 'propietario',
-                'activa' => true,
-            ]);
+            $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());
 
             // 5. Activar workspace
             $user->update([
@@ -386,10 +383,7 @@ class SubscriptionController extends Controller
             ]);
 
             // Vincular al usuario como propietario
-            $user->clinicas()->attach($nuevoConsultorio->id, [
-                'rol_en_clinica' => 'propietario',
-                'activa' => true,
-            ]);
+            $user->clinicas()->attach($nuevoConsultorio->id, User::pivotPropietarioConsultorio());
 
             // Incrementar contador de consultorios adicionales en la clínica principal
             $clinicaPrincipal = Clinica::where('propietario_user_id', $user->id)

@@ -4,12 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PacienteCollection;
 use App\Models\Paciente;
+use App\Services\ClinicalAuditService;
+use App\Services\PacienteConsentimientoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PacienteController extends Controller
 {
+    /**
+     * El paciente pertenece al workspace activo (columna legacy o pivot clinica_paciente).
+     */
+    protected function pacienteBelongsToWorkspace(Paciente $paciente, $user): bool
+    {
+        $cid = $user->clinica_efectiva_id;
+        if (! $cid) {
+            return false;
+        }
+        if ((int) $paciente->clinica_id === (int) $cid) {
+            return true;
+        }
+
+        return $paciente->clinicas()->where('clinica_id', $cid)->exists();
+    }
+
     /**
      * Display a listing of the resource.
      * Todos los usuarios de la misma clínica pueden ver los pacientes.
@@ -186,6 +204,10 @@ class PacienteController extends Controller
             'vinculado_at' => now()
         ]);
 
+        // LFPDPPP: invitación por correo para aceptar aviso y términos (si hay email)
+        $paciente->refresh();
+        app(PacienteConsentimientoService::class)->enviarInvitacion($paciente, $paciente->clinica);
+
         return [
             'message' => 'Paciente Guardado',
             'paciente' => $paciente
@@ -202,11 +224,20 @@ class PacienteController extends Controller
     public function show(Paciente $paciente)
     {
         $user = Auth::user();
-        
-        // Verificar que el paciente pertenece al workspace activo
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
             return response()->json(['error' => 'No tienes permisos para ver este paciente'], 403);
         }
+
+        ClinicalAuditService::logAccess(
+            $user,
+            Paciente::class,
+            $paciente->id,
+            'Visualización de paciente en expediente',
+            'viewed'
+        );
+
+        $paciente->load('clinicas');
 
         return response()->json($paciente);
     }
@@ -222,9 +253,8 @@ class PacienteController extends Controller
     public function update(Request $request, Paciente $paciente)
     {
         $user = Auth::user();
-        
-        // Verificar que el paciente pertenece al workspace activo
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
             return response()->json(['error' => 'No tienes permisos para editar este paciente'], 403);
         }
 
@@ -291,9 +321,8 @@ class PacienteController extends Controller
         }
         
         $clinicaId = $user->clinica_efectiva_id;
-        
-        // Verificar que el paciente esté vinculado al workspace activo
-        if (!$paciente->clinicas()->where('clinica_id', $clinicaId)->exists()) {
+
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
             return response()->json(['error' => 'No tienes permisos para desvincular este paciente'], 403);
         }
         
@@ -329,6 +358,7 @@ class PacienteController extends Controller
             'telefono' => 'required|string|max:20',
             'motivo_consulta' => 'required|string|max:500',
             'tipo_paciente' => 'sometimes|string|in:cardiaca,pulmonar,dental,fisioterapia,nutricion,psicologia',
+            'email' => 'nullable|email|max:255',
         ]);
         
         // Determinar sucursal_id
@@ -342,28 +372,49 @@ class PacienteController extends Controller
             ->max('registro');
         $nuevoRegistro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
         
-        // Crear paciente express (datos mínimos + aceptación de aviso de privacidad)
-        $paciente = Paciente::create([
+        $emailExpress = $request->filled('email') ? strtolower(trim($request->email)) : null;
+
+        $datosPaciente = [
             'registro' => $nuevoRegistro,
             'nombre' => $request->nombre,
             'apellidoPat' => $request->apellidoPat ?? '',
             'apellidoMat' => $request->apellidoMat ?? '',
             'telefono' => $request->telefono,
             'fechaNacimiento' => '1900-01-01', // Fecha temporal para emergencias - se actualiza después
-                'edad' => 0,
-                'genero' => false,
-                'talla' => 0,
-                'peso' => 0,
-                'cintura' => 0,
-                'imc' => 0,
+            'edad' => 0,
+            'genero' => false,
+            'talla' => 0,
+            'peso' => 0,
+            'cintura' => 0,
+            'imc' => 0,
             'motivo_consulta' => $request->motivo_consulta,
             'tipo_paciente' => $request->tipo_paciente ?? 'dental',
             'user_id' => $user->id,
             'clinica_id' => $clinicaId,
             'sucursal_id' => $sucursalId,
-            // Cumplimiento LFPDPPP: Aviso de privacidad aceptado implícitamente en urgencias
-            'aviso_privacidad_aceptado_at' => now(),
-            'version_aviso' => '1.0-EXPRESS',
+        ];
+
+        if ($emailExpress) {
+            $datosPaciente['email'] = $emailExpress;
+            // LFPDPPP: con email se envía invitación; la aceptación queda en el enlace del correo
+            $datosPaciente['aviso_privacidad_aceptado_at'] = null;
+            $datosPaciente['version_aviso'] = null;
+        } else {
+            // Urgencia sin correo: aceptación implícita documentada en expediente (NOM express)
+            $datosPaciente['aviso_privacidad_aceptado_at'] = now();
+            $datosPaciente['version_aviso'] = '1.0-EXPRESS';
+        }
+
+        $paciente = Paciente::create($datosPaciente);
+
+        if ($emailExpress) {
+            app(PacienteConsentimientoService::class)->enviarInvitacion($paciente->fresh(), $clinica);
+        }
+
+        $paciente->clinicas()->attach($clinicaId, [
+            'sucursal_id' => $sucursalId,
+            'user_id' => $user->id,
+            'vinculado_at' => now(),
         ]);
 
         // Crear cita automática marcada como completada (ya está en consulta)
@@ -410,6 +461,44 @@ class PacienteController extends Controller
         }
 
         return null; // Sin filtro de sucursal = todos los de la clínica efectiva
+    }
+
+    /**
+     * Visibilidad en portal del paciente por clínica (LFPDPPP: solo lo que la clínica autoriza).
+     */
+    public function updatePortalVisibilidad(Request $request, Paciente $paciente)
+    {
+        $user = Auth::user();
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'clinica_id' => 'required|integer|exists:clinicas,id',
+            'portal_visible_citas' => 'sometimes|boolean',
+            'portal_visible_datos_basicos' => 'sometimes|boolean',
+            'portal_visible_expediente_resumen' => 'sometimes|boolean',
+        ]);
+
+        $clinicaId = (int) $validated['clinica_id'];
+        if (! $paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+            return response()->json(['message' => 'La clínica no está vinculada a este paciente'], 422);
+        }
+
+        $updates = [];
+        foreach (['portal_visible_citas', 'portal_visible_datos_basicos', 'portal_visible_expediente_resumen'] as $key) {
+            if (array_key_exists($key, $validated)) {
+                $updates[$key] = (bool) $validated[$key];
+            }
+        }
+
+        if ($updates === []) {
+            return response()->json(['message' => 'Sin cambios'], 200);
+        }
+
+        $paciente->clinicas()->updateExistingPivot($clinicaId, $updates);
+
+        return response()->json(['message' => 'Visibilidad actualizada']);
     }
 }
 

@@ -69,6 +69,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
+        $credentials['email'] = strtolower(trim($credentials['email']));
 
         $userExists = User::where('email', $credentials['email'])->exists();
 
@@ -78,6 +79,15 @@ class AuthController extends Controller
                 'errors' => [
                     'email' => ['No existe ningún usuario registrado con este email. ¿Deseas crear una cuenta?']
                 ]
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        /** @var User|null $pre */
+        $pre = User::where('email', $credentials['email'])->first();
+        if ($pre && $pre->paciente_id && ! $pre->password_set_at) {
+            return response()->json([
+                'message' => 'Completa el acceso al portal del paciente con el código enviado a tu correo.',
+                'requires_portal_setup' => true,
             ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -94,8 +104,11 @@ class AuthController extends Controller
         $user = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Cargar la relación de la clínica para tener el tipo_clinica disponible
-        $user->load('clinica');
+        if ($user->paciente_id) {
+            $user->load('pacienteRecord');
+        } else {
+            $user->load('clinica');
+        }
 
         return response()->json([
             'token' => $token,
