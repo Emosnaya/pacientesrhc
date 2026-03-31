@@ -94,17 +94,27 @@ class CrearSucursalProduccionSeeder extends Seeder
         $this->command->newLine();
         $this->command->info('🏥 Asignando pacientes a la sucursal...');
         
-        // Contar pacientes antes
-        $pacientesTotales = Paciente::where('clinica_id', $clinicaId)->count();
-        $pacientesSinAsignar = Paciente::where('clinica_id', $clinicaId)->whereNull('sucursal_id')->count();
+        // Contar vínculos clinica_paciente antes
+        $pacientesTotales = DB::table('clinica_paciente')->where('clinica_id', $clinicaId)->count();
+        $pacientesSinAsignar = DB::table('clinica_paciente')
+            ->where('clinica_id', $clinicaId)
+            ->whereNull('sucursal_id')
+            ->count();
         
         $this->command->info("   Total pacientes: {$pacientesTotales}");
         $this->command->info("   Sin asignar: {$pacientesSinAsignar}");
         
-        // Asignar pacientes
-        $pacientesActualizados = Paciente::where('clinica_id', $clinicaId)
+        // Asignar sucursal en clinica_paciente y sincronizar columna legacy en pacientes
+        $pacientesActualizados = DB::table('clinica_paciente')
+            ->where('clinica_id', $clinicaId)
             ->whereNull('sucursal_id')
-            ->update(['sucursal_id' => $sucursal->id]);
+            ->update(['sucursal_id' => $sucursal->id, 'updated_at' => now()]);
+
+        Paciente::whereIn('id', function ($q) use ($clinicaId, $sucursal) {
+            $q->select('paciente_id')->from('clinica_paciente')
+                ->where('clinica_id', $clinicaId)
+                ->where('sucursal_id', $sucursal->id);
+        })->whereNull('sucursal_id')->update(['sucursal_id' => $sucursal->id]);
         
         $this->command->info("   ✓ Pacientes asignados: {$pacientesActualizados}");
         
@@ -130,7 +140,10 @@ class CrearSucursalProduccionSeeder extends Seeder
         
         // Verificar que no queden registros sin asignar
         $usuariosSinAsignar = User::where('clinica_id', $clinicaId)->whereNull('sucursal_id')->count();
-        $pacientesSinAsignar = Paciente::where('clinica_id', $clinicaId)->whereNull('sucursal_id')->count();
+        $pacientesSinAsignar = DB::table('clinica_paciente')
+            ->where('clinica_id', $clinicaId)
+            ->whereNull('sucursal_id')
+            ->count();
         
         if ($usuariosSinAsignar === 0 && $pacientesSinAsignar === 0) {
             $this->command->info("   ✓ Todos los usuarios asignados correctamente");

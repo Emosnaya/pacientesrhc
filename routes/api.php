@@ -102,6 +102,11 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/clinicas', [PacientePortalController::class, 'clinicas']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/resumen', [PacientePortalController::class, 'clinicaResumen']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/citas', [PacientePortalController::class, 'citas']);
+    Route::get('/paciente-portal/perfil', [PacientePortalController::class, 'perfil']);
+    Route::put('/paciente-portal/perfil', [PacientePortalController::class, 'updatePerfil']);
+    Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
+    Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
+    Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -162,8 +167,11 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 
     // Almacenar ordenes
     Route::put('/pacientes/{paciente}/portal-visibilidad', [PacienteController::class, 'updatePortalVisibilidad']);
+    Route::get('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'portalExpedientesCompartidos']);
+    Route::put('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'syncPortalExpedientesCompartidos']);
     Route::apiResource('/pacientes', PacienteController::class);
     Route::post('/pacientes/express', [PacienteController::class, 'createExpress']); // Flujo urgencias
+    Route::post('/pacientes/{paciente}/vincular-clinica', [PacienteController::class, 'vincularClinica']);
     
     // Rutas para el calendario de citas
     Route::apiResource('/citas', CitaController::class);

@@ -24,7 +24,7 @@ class ReporteFinalController extends Controller
         
         // Todos los usuarios pueden ver los expedientes de su clínica
         $expedientes = ReporteFinal::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_efectiva_id);
+            $query->forClinicaWorkspace((int) $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new ReporteFinalCollection($expedientes);
@@ -49,7 +49,7 @@ class ReporteFinalController extends Controller
         $paciente = $esfuerzo->paciente;
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
@@ -106,7 +106,7 @@ class ReporteFinalController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -126,7 +126,7 @@ class ReporteFinalController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         $reporteFinal->clinica_id = $user->clinica_efectiva_id;
@@ -152,7 +152,7 @@ class ReporteFinalController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $reporteFinal->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         

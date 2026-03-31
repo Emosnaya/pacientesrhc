@@ -35,7 +35,9 @@ class ExpedienteUnificadoController extends Controller
         $paciente = Paciente::findOrFail($pacienteId);
 
         // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        $clinicaId = (int) $user->clinica_efectiva_id;
+
+        if (! $paciente->belongsToClinicaWorkspace($clinicaId)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
@@ -43,6 +45,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 1. Esfuerzos
         $esfuerzos = Esfuerzo::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -55,8 +58,15 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
-        // 2. Estratificaciones
+        // 2. Estratificaciones (clinica_id nullable en datos viejos: caer a clínica del usuario creador)
         $estratificaciones = Estratificacion::where('paciente_id', $pacienteId)
+            ->where(function ($q) use ($clinicaId) {
+                $q->where('clinica_id', $clinicaId)
+                    ->orWhere(function ($q2) use ($clinicaId) {
+                        $q2->whereNull('clinica_id')
+                            ->whereHas('user', fn ($uq) => $uq->where('clinica_id', $clinicaId));
+                    });
+            })
             ->get()
             ->map(function($item) {
                 return [
@@ -71,6 +81,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 3. Clínicos
         $clinicos = Clinico::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -85,6 +96,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 4. Reportes Finales
         $reportes = ReporteFinal::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -99,6 +111,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 5. Reportes Nutricionales
         $nutricionales = ReporteNutri::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -113,6 +126,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 6. Reportes Psicológicos
         $psicologicos = ReportePsico::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -127,6 +141,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 7. Reportes Fisiológicos
         $fisiologicos = ReporteFisio::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -141,6 +156,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 8. Expedientes Pulmonares
         $pulmonares = ExpedientePulmonar::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -153,8 +169,9 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
-        // 11. Historia Clínica de Fisioterapia
+        // 11. Historia Clínica de Fisioterapia (sin clinica_id en tabla: filtrar por clínica del usuario autor)
         $historiasFisioterapia = HistoriaClinicaFisioterapia::where('paciente_id', $pacienteId)
+            ->whereHas('user', fn ($uq) => $uq->where('clinica_id', $clinicaId))
             ->get()
             ->map(function($item) {
                 return [
@@ -169,6 +186,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 12. Notas de Evolución de Fisioterapia
         $evolucionesFisioterapia = NotaEvolucionFisioterapia::where('paciente_id', $pacienteId)
+            ->whereHas('user', fn ($uq) => $uq->where('clinica_id', $clinicaId))
             ->get()
             ->map(function($item) {
                 return [
@@ -183,6 +201,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 13. Notas de Alta de Fisioterapia
         $altasFisioterapia = NotaAltaFisioterapia::where('paciente_id', $pacienteId)
+            ->whereHas('user', fn ($uq) => $uq->where('clinica_id', $clinicaId))
             ->get()
             ->map(function($item) {
                 return [
@@ -197,7 +216,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 14. Cualidades Físicas No Aeróbicas
         $cualidadesFisicas = CualidadFisica::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_efectiva_id)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -215,7 +234,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 15. Reporte Final Pulmonar
         $reportesFinalesPulmonares = ReporteFinalPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_efectiva_id)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -230,7 +249,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 16. Prueba de Esfuerzo Pulmonar
         $pruebasEsfuerzoPulmonar = PruebaEsfuerzoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_efectiva_id)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -245,6 +264,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 17. Historia Clínica Dental
         $historiasDentales = HistoriaClinicaDental::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -259,6 +279,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 18. Odontogramas
         $odontogramas = Odontograma::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -273,7 +294,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 19. Notas de Seguimiento Pulmonar
         $notasSeguimientoPulmonar = NotaSeguimientoPulmonar::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_efectiva_id)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [
@@ -288,7 +309,7 @@ class ExpedienteUnificadoController extends Controller
 
         // 20. Estratificación AACVPR/EAPC
         $estratiAacvprs = EstratiAacvpr::where('paciente_id', $pacienteId)
-            ->where('clinica_id', $user->clinica_efectiva_id)
+            ->where('clinica_id', $clinicaId)
             ->get()
             ->map(function($item) {
                 return [

@@ -27,6 +27,13 @@
             padding: 40px 20px;
             text-align: center;
         }
+        .header img {
+            height: 72px;
+            width: auto;
+            max-width: 520px;
+            object-fit: contain;
+            margin-bottom: 16px;
+        }
         .header h1 {
             margin: 0;
             font-size: 28px;
@@ -86,7 +93,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 ¡Bienvenido a {{ config('app.name', 'PacientesRHC') }}!</h1>
+            @php
+                $lynkamedSrc = \App\Helpers\EmailHelper::embedMailImage($message ?? null, \App\Helpers\EmailHelper::getLynkamedLogoPath());
+            @endphp
+            @if($lynkamedSrc)
+                <img src="{{ $lynkamedSrc }}" alt="Lynkamed">
+            @endif
+            <h1>🎉 ¡Bienvenido a {{ config('app.name', 'Lynkamed') }}!</h1>
         </div>
         
         <div class="content">
@@ -134,6 +147,9 @@
         <div class="footer">
             <p>Este correo fue enviado a {{ $user->email }}</p>
             <p>&copy; {{ date('Y') }} {{ config('app.name') }}. Todos los derechos reservados.</p>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #dee2e6; font-size: 11px; color: #94a3b8;">
+                <span>Powered by</span> <strong style="color: #667eea;">Lynkamed</strong>
+            </div>
         </div>
     </div>
 </body>

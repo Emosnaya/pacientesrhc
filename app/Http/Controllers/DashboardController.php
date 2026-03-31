@@ -33,15 +33,13 @@ class DashboardController extends Controller
             // Priorizar sucursal_id del request (para super admins cambiando de sucursal)
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
-            // Total de pacientes
-            $query = Paciente::where('clinica_id', $clinicaId);
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            // Total de pacientes (solo vínculo clinica_paciente; sucursal opcional en pivot)
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null);
             $totalPacientes = $query->count();
 
             // Pacientes activos (con actualización en últimos 30 días)
-            $query = Paciente::where('clinica_id', $clinicaId)
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
                 ->where('updated_at', '>=', now()->subDays(30));
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
             $pacientesActivos = $query->count();
 
             // Tasa de actividad
@@ -50,18 +48,16 @@ class DashboardController extends Controller
                 : 0;
 
             // Pacientes que requieren seguimiento (sin actividad en +14 días)
-            $query = Paciente::where('clinica_id', $clinicaId)
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
                 ->where('updated_at', '<', now()->subDays(14));
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
             $requierenSeguimiento = $query->count();
 
             // Reportes de esta semana
             $reportesSemanales = $this->countWeeklyReports($clinicaId, $sucursalId);
 
             // Pacientes nuevos esta semana
-            $query = Paciente::where('clinica_id', $clinicaId)
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
                 ->where('created_at', '>=', now()->startOfWeek());
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
             $pacientesNuevos = $query->count();
 
             return response()->json([
@@ -97,12 +93,8 @@ class DashboardController extends Controller
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Obtener pacientes sin actividad reciente
-            $query = Paciente::where('clinica_id', $clinicaId)
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
                 ->where('updated_at', '<', now()->subDays(14));
-            
-            if ($sucursalId) {
-                $query->where('sucursal_id', $sucursalId);
-            }
             
             $pacientesSinSeguimiento = $query->select('id', 'nombre', 'apellidoPat', 'registro', 'updated_at')
                 ->orderBy('updated_at', 'asc')
@@ -150,8 +142,7 @@ class DashboardController extends Controller
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
             // Obtener datos de pacientes
-            $query = Paciente::where('clinica_id', $clinicaId);
-            if ($sucursalId) $query->where('sucursal_id', $sucursalId);
+            $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null);
             
             $pacientes = $query->select('id', 'nombre', 'apellidoPat', 'registro', 'created_at', 'updated_at')
                 ->get()
@@ -187,17 +178,17 @@ class DashboardController extends Controller
         $startOfWeek = now()->startOfWeek();
         
         $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
         $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
         $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })->where('created_at', '>=', $startOfWeek)->count();
 
@@ -213,7 +204,7 @@ class DashboardController extends Controller
 
         // Reportes de fisioterapia
         $fisio = ReporteFisio::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)
@@ -225,7 +216,7 @@ class DashboardController extends Controller
 
         // Reportes de psicología
         $psico = ReportePsico::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)
@@ -237,7 +228,7 @@ class DashboardController extends Controller
 
         // Reportes de nutrición
         $nutri = ReporteNutri::whereHas('paciente', function($query) use ($clinicaId, $sucursalId) {
-            $query->where('clinica_id', $clinicaId);
+            $query->forClinicaWorkspace((int) $clinicaId);
             if ($sucursalId) $query->where('sucursal_id', $sucursalId);
         })
         ->where('created_at', '>=', $oneWeekAgo)

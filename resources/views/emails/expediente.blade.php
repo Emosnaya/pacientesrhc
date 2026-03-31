@@ -85,7 +85,7 @@
     <div class="email-container">
         <div class="header">
             @if($clinica && $clinica->logo)
-                <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre }} Logo" class="logo">
+                <img src="{{ $clinica->logo_url ?? config('app.url') . '/storage/' . $clinica->logo }}" alt="{{ $clinica->nombre }} Logo" class="logo">
             @endif
             <h1>{{ $tipoExpedienteNombre ?? 'Expediente Médico' }}</h1>
             <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>

@@ -72,7 +72,7 @@ class CargarSucursalesDemoDental extends Command
                 continue;
             }
             $aCrear = $porSucursal - $existentes;
-            $baseRegistro = (int) Paciente::where('clinica_id', $clinica->id)->max(DB::raw('CAST(registro AS UNSIGNED)')) ?: 1000;
+            $baseRegistro = (int) Paciente::forClinicaWorkspace((int) $clinica->id)->max(DB::raw('CAST(registro AS UNSIGNED)')) ?: 1000;
             $this->info('Sucursal: ' . $sucursal->nombre . ' (ID ' . $sucursal->id . ') – creando ' . $aCrear . ' pacientes...');
 
             for ($i = 0; $i < $aCrear; $i++) {

@@ -34,6 +34,7 @@ class PacienteConsentimientoController extends Controller
             'valid' => true,
             'ya_aceptado' => (bool) $paciente->aviso_privacidad_aceptado_at,
             'clinica_nombre' => $clinica?->nombre,
+            'invitacion_contexto' => $paciente->consentimiento_invitacion_contexto ?: 'registro',
             'version_aviso_config' => config('legal.version_aviso_privacidad'),
             'version_terminos_config' => config('legal.version_terminos'),
         ]);

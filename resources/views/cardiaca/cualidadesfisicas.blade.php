@@ -244,6 +244,12 @@
                 <td width="30%"></td>
             </tr>
             <tr>
+                <td class="f-bold">Fecha:</td>
+                <td>{{ $data->fecha_prueba_inicial ? date('d/m/Y', strtotime($data->fecha_prueba_inicial)) : '_____' }}</td>
+                <td class="f-bold">Fecha:</td>
+                <td>{{ $data->fecha_prueba_final ? date('d/m/Y', strtotime($data->fecha_prueba_final)) : '_____' }}</td>
+            </tr>
+            <tr>
                 <td class="f-bold">TA:</td>
                 <td>{{ $data->ta_inicial ?? '_____' }} mmHg</td>
                 <td class="f-bold">TA:</td>
@@ -311,25 +317,25 @@
             <tbody>
                 <tr>
                     <td class="f-bold">Mano derecha</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma1_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma2_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma3_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_promedio_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma1_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma2_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_toma3_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_derecha_promedio_final ?? '' }}</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma1_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma2_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma3_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_promedio_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma1_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma2_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_toma3_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_derecha_promedio_final ?? '' }} kg</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Mano izquierda</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma1_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma2_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma3_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_promedio_inicial ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma1_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma2_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_toma3_final ?? '' }}</td>
-                    <td>{{ $data->dinamometria_mano_izquierda_promedio_final ?? '' }}</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma1_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma2_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma3_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_promedio_inicial ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma1_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma2_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_toma3_final ?? '' }} kg</td>
+                    <td>{{ $data->dinamometria_mano_izquierda_promedio_final ?? '' }} kg</td>
                 </tr>
             </tbody>
         </table>
@@ -431,7 +437,7 @@
         <table class="tabla m-t-0">
             <thead>
                 <tr>
-                    <th rowspan="3" width="15%">Bipedal</th>
+                    <th rowspan="3" width="15%">Bipodal</th>
                     <th colspan="4" class="bck-blue">Prueba Inicial</th>
                     <th colspan="4" class="bck-red">Prueba Final</th>
                 </tr>
@@ -455,36 +461,36 @@
             <tbody>
                 <tr>
                     <td class="f-bold">Semitandem</td>
-                    <td>{{ $data->balance_semitandem_derecha_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_derecha_oc_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_izquierda_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_izquierda_oc_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_derecha_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_derecha_oc_final ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_izquierda_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_semitandem_izquierda_oc_final ?? '' }}</td>
+                    <td>{{ $data->balance_semitandem_derecha_oa_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_derecha_oc_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_izquierda_oa_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_izquierda_oc_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_derecha_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_derecha_oc_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_izquierda_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_semitandem_izquierda_oc_final ?? '' }} seg</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Tandem</td>
-                    <td>{{ $data->balance_tandem_derecha_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_derecha_oc_inicial ?? '' }}</td>
+                    <td>{{ $data->balance_tandem_derecha_oa_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_tandem_derecha_oc_inicial ?? '' }} seg</td>
                     <td>{{ $data->balance_tandem_izquierda_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_izquierda_oc_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_derecha_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_derecha_oc_final ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_izquierda_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_tandem_izquierda_oc_final ?? '' }}</td>
+                    <td>{{ $data->balance_tandem_izquierda_oc_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_tandem_derecha_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_tandem_derecha_oc_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_tandem_izquierda_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_tandem_izquierda_oc_final ?? '' }} seg</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Monopedal</td>
-                    <td>{{ $data->balance_monopedal_derecha_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_derecha_oc_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_izquierda_oa_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_izquierda_oc_inicial ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_derecha_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_derecha_oc_final ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_izquierda_oa_final ?? '' }}</td>
-                    <td>{{ $data->balance_monopedal_izquierda_oc_final ?? '' }}</td>
+                    <td>{{ $data->balance_monopedal_derecha_oa_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_derecha_oc_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_izquierda_oa_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_izquierda_oc_inicial ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_derecha_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_derecha_oc_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_izquierda_oa_final ?? '' }} seg</td>
+                    <td>{{ $data->balance_monopedal_izquierda_oc_final ?? '' }} seg</td>
                 </tr>
             </tbody>
         </table>
@@ -509,13 +515,13 @@
             <tbody>
                 <tr>
                     <td></td>
-                    <td colspan="2">{{ $data->sentadillas_realizadas_inicial ?? '' }}</td>
-                    <td colspan="2">{{ $data->sentadillas_realizadas_final ?? '' }}</td>
+                    <td colspan="2">{{ $data->sentadillas_realizadas_inicial ?? '' }} rep</td>
+                    <td colspan="2">{{ $data->sentadillas_realizadas_final ?? '' }} rep</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Tiempo empleado en realizar 5 sentadillas</td>
-                    <td colspan="2">{{ $data->tiempo_5_sentadillas_inicial ?? '' }}</td>
-                    <td colspan="2">{{ $data->tiempo_5_sentadillas_final ?? '' }}</td>
+                    <td colspan="2">{{ $data->tiempo_5_sentadillas_inicial ?? '' }} seg</td>
+                    <td colspan="2">{{ $data->tiempo_5_sentadillas_final ?? '' }} seg</td>
                 </tr>
             </tbody>
         </table>
@@ -542,12 +548,12 @@
             <tbody>
                 <tr>
                     <td>c) Lagartija</td>
-                    <td>{{ $data->lagartijas_realizadas_a_inicial ?? '' }}</td>
-                    <td>{{ $data->lagartijas_realizadas_b_inicial ?? '' }}</td>
-                    <td>{{ $data->lagartijas_realizadas_c_inicial ?? '' }}</td>
-                    <td>{{ $data->lagartijas_realizadas_a_final ?? '' }}</td>
-                    <td>{{ $data->lagartijas_realizadas_b_final ?? '' }}</td>
-                    <td>{{ $data->lagartijas_realizadas_c_final ?? '' }}</td>
+                    <td>{{ $data->lagartijas_realizadas_a_inicial ?? '' }} rep</td>
+                    <td>{{ $data->lagartijas_realizadas_b_inicial ?? '' }} rep</td>
+                    <td>{{ $data->lagartijas_realizadas_c_inicial ?? '' }} rep</td>
+                    <td>{{ $data->lagartijas_realizadas_a_final ?? '' }} rep</td>
+                    <td>{{ $data->lagartijas_realizadas_b_final ?? '' }} rep</td>
+                    <td>{{ $data->lagartijas_realizadas_c_final ?? '' }} rep</td>
                 </tr>
             </tbody>
         </table>
@@ -565,8 +571,8 @@
             <tbody>
                 <tr>
                     <td></td>
-                    <td>{{ $data->abdominales_realizadas_inicial ?? '' }}</td>
-                    <td>{{ $data->abdominales_realizadas_final ?? '' }}</td>
+                    <td>{{ $data->abdominales_realizadas_inicial ?? '' }} rep</td>
+                    <td>{{ $data->abdominales_realizadas_final ?? '' }} rep</td>
                 </tr>
             </tbody>
         </table>
@@ -594,9 +600,11 @@
                     <td></td>
                     <td>{{ $data->sit_reach_toma1_inicial ?? '' }}</td>
                     <td>{{ $data->sit_reach_toma2_inicial ?? '' }}</td>
+                    <td>{{ $data->sit_reach_toma3_inicial ?? '' }}</td>
                     <td>{{ $data->sit_reach_promedio_inicial ?? '' }}</td>
                     <td>{{ $data->sit_reach_toma1_final ?? '' }}</td>
                     <td>{{ $data->sit_reach_toma2_final ?? '' }}</td>
+                    <td>{{ $data->sit_reach_toma3_final ?? '' }}</td>
                     <td>{{ $data->sit_reach_promedio_final ?? '' }}</td>
                 </tr>
             </tbody>
@@ -615,13 +623,13 @@
             <tbody>
                 <tr>
                     <td class="f-bold">Lado derecho</td>
-                    <td>{{ $data->back_scratch_lado_derecho_inicial ?? '' }}</td>
-                    <td>{{ $data->back_scratch_lado_derecho_final ?? '' }}</td>
+                    <td>{{ $data->back_scratch_lado_derecho_inicial ?? '' }} cm</td>
+                    <td>{{ $data->back_scratch_lado_derecho_final ?? '' }} cm</td>
                 </tr>
                 <tr>
                     <td class="f-bold">Lado izquierdo</td>
-                    <td>{{ $data->back_scratch_lado_izquierdo_inicial ?? '' }}</td>
-                    <td>{{ $data->back_scratch_lado_izquierdo_final ?? '' }}</td>
+                    <td>{{ $data->back_scratch_lado_izquierdo_inicial ?? '' }} cm</td>
+                    <td>{{ $data->back_scratch_lado_izquierdo_final ?? '' }} cm</td>
                 </tr>
             </tbody>
         </table>

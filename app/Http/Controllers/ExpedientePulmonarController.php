@@ -27,7 +27,7 @@ class ExpedientePulmonarController extends Controller
             }
             
             // Verificar que el paciente pertenece a la misma clínica
-            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
             }
             
@@ -41,7 +41,7 @@ class ExpedientePulmonarController extends Controller
         // Comportamiento para web (sin pacienteId)
         $expedientes = ExpedientePulmonar::with(['paciente', 'user'])
             ->whereHas('paciente', function($query) use ($user) {
-                $query->where('clinica_id', $user->clinica_efectiva_id);
+                $query->forClinicaWorkspace((int) $user->clinica_efectiva_id);
             })
             ->orderBy('fecha_consulta', 'desc')
             ->paginate(15);
@@ -59,9 +59,11 @@ class ExpedientePulmonarController extends Controller
         $user = Auth::user();
         
         // Obtener pacientes pulmonares de la clínica
-        $pacientes = Paciente::where('clinica_id', $user->clinica_efectiva_id)
-            ->whereIn('tipo_paciente', ['pulmonar', 'ambos'])
-            ->get();
+        $clinicaId = $user->clinica_efectiva_id;
+        $pacientes = Paciente::whereHas('clinicas', function ($q) use ($clinicaId) {
+            $q->where('clinicas.id', $clinicaId)
+                ->whereIn('clinica_paciente.tipo_paciente', ['pulmonar', 'ambos']);
+        })->get();
 
         return view('expediente-pulmonar.create', compact('pacientes'));
     }
@@ -84,7 +86,7 @@ class ExpedientePulmonarController extends Controller
         $paciente = Paciente::findOrFail($request->paciente_id);
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'No tienes acceso a este paciente.'], 403);
             }
@@ -137,7 +139,7 @@ class ExpedientePulmonarController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $expedientePulmonar->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             if (request()->wantsJson() || request()->is('api/*')) {
                 return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }
@@ -165,7 +167,7 @@ class ExpedientePulmonarController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $expedientePulmonar->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return redirect()->back()->with('error', 'No tienes acceso a este expediente.');
         }
 
@@ -192,7 +194,7 @@ class ExpedientePulmonarController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $expedientePulmonar->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }
@@ -254,7 +256,7 @@ class ExpedientePulmonarController extends Controller
         
         // Verificar que el expediente pertenece a la misma clínica
         $paciente = $expedientePulmonar->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             if (request()->wantsJson() || request()->is('api/*')) {
                 return response()->json(['error' => 'No tienes acceso a este expediente.'], 403);
             }

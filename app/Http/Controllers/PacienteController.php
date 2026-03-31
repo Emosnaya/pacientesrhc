@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\PacienteCollection;
+use App\Models\Clinica;
 use App\Models\Paciente;
+use App\Models\PortalExpedienteCompartido;
 use App\Services\ClinicalAuditService;
 use App\Services\PacienteConsentimientoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PacienteController extends Controller
 {
@@ -17,15 +20,9 @@ class PacienteController extends Controller
      */
     protected function pacienteBelongsToWorkspace(Paciente $paciente, $user): bool
     {
-        $cid = $user->clinica_efectiva_id;
-        if (! $cid) {
-            return false;
-        }
-        if ((int) $paciente->clinica_id === (int) $cid) {
-            return true;
-        }
+        $cid = $user->clinica_efectiva_id ?? null;
 
-        return $paciente->clinicas()->where('clinica_id', $cid)->exists();
+        return $paciente->belongsToClinicaWorkspace($cid ? (int) $cid : null);
     }
 
     /**
@@ -37,24 +34,31 @@ class PacienteController extends Controller
     public function index(Request $request){
         $user = Auth::user();
         $clinicaId = $user->clinica_efectiva_id;
-        
-        // Obtener pacientes vinculados a la clínica/workspace activo mediante la tabla pivot
-        $query = Paciente::whereHas('clinicas', function($q) use ($clinicaId) {
-            $q->where('clinica_id', $clinicaId);
-        });
-        
-        // Resolver sucursal: validar que pertenezca a la clínica efectiva
+
         $sucursalId = $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
-        
-        if ($sucursalId) {
-            $query->whereHas('clinicas', function($q) use ($clinicaId, $sucursalId) {
-                $q->where('clinica_id', $clinicaId)
-                  ->where('sucursal_id', $sucursalId);
+
+        // Solo pacientes con fila en clinica_paciente (sucursal opcional en el pivot)
+        $query = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null);
+
+        if ($request->filled('tipo_paciente')) {
+            $tipoFiltro = $request->tipo_paciente;
+            $query->whereHas('clinicas', function ($q) use ($clinicaId, $sucursalId, $tipoFiltro) {
+                $q->where('clinicas.id', $clinicaId)
+                    ->where('clinica_paciente.tipo_paciente', $tipoFiltro);
+                if ($sucursalId) {
+                    $q->where('clinica_paciente.sucursal_id', $sucursalId);
+                }
             });
         }
-        
-        $pacientes = $query->get();
-        
+
+        $pacientes = $query->with(['clinicas' => function ($q) use ($clinicaId) {
+            $q->where('clinicas.id', $clinicaId);
+        }])->get();
+
+        foreach ($pacientes as $paciente) {
+            $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
+        }
+
         return new PacienteCollection($pacientes);
     }
 
@@ -75,13 +79,23 @@ class PacienteController extends Controller
             $existingPaciente = Paciente::where('email', $email)->first();
             
             if ($existingPaciente) {
+                $g = (int) (bool) $existingPaciente->genero;
+
                 return response()->json([
+                    'message' => 'Ya existe un paciente con este correo. Puedes vincularlo a tu clínica o consultorio.',
                     'error' => 'Este email ya está registrado en el sistema',
                     'paciente_existente' => [
                         'id' => $existingPaciente->id,
                         'nombre' => $existingPaciente->nombre,
                         'apellidoPat' => $existingPaciente->apellidoPat,
-                    ]
+                        'apellidoMat' => $existingPaciente->apellidoMat,
+                        'email' => $existingPaciente->email,
+                        'telefono' => $existingPaciente->telefono,
+                        'fechaNacimiento' => $existingPaciente->fechaNacimiento?->format('Y-m-d'),
+                        'genero' => $g,
+                        'genero_label' => $g === 1 ? 'Masculino' : 'Femenino',
+                        'domicilio_formateado' => $existingPaciente->domicilio_formateado,
+                    ],
                 ], 409);
             }
         }
@@ -131,8 +145,7 @@ class PacienteController extends Controller
         } else {
             // Otras clínicas: registro secuencial por sucursal
             if (!$request->registro) {
-                $ultimoRegistro = Paciente::where('clinica_id', $clinicaId)
-                    ->where('sucursal_id', $sucursalId)
+                $ultimoRegistro = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
                     ->max('registro');
                 $paciente->registro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
             } else {
@@ -157,7 +170,6 @@ class PacienteController extends Controller
         $paciente->estadoCivil = $request->estadoCivil ?? null;
         $paciente->diagnostico = $request->diagnostico ?? null;
         $paciente->medicamentos = $request->medicamentos ?? null;
-        $paciente->motivo_consulta = $request->motivo_consulta ?? null;
         $paciente->alergias = $request->alergias ?? null;
         $paciente->envio = $request->envio ?? null;
         $paciente->talla = $request->talla ?? 0;
@@ -197,21 +209,107 @@ class PacienteController extends Controller
 
         $paciente->save();
         
-        // Crear la vinculación en la tabla pivot
+        $tipoPivot = $request->tipo_paciente ?? $paciente->tipo_paciente ?? 'cardiaca';
+
+        // Crear la vinculación en la tabla pivot (motivo y tipo por clínica)
         $paciente->clinicas()->attach($clinicaId, [
             'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
-            'vinculado_at' => now()
+            'vinculado_at' => now(),
+            'motivo_consulta' => $request->motivo_consulta ?? null,
+            'tipo_paciente' => $tipoPivot,
         ]);
 
         // LFPDPPP: invitación por correo para aceptar aviso y términos (si hay email)
         $paciente->refresh();
+        $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
         app(PacienteConsentimientoService::class)->enviarInvitacion($paciente, $paciente->clinica);
 
         return [
             'message' => 'Paciente Guardado',
             'paciente' => $paciente
         ];
+    }
+
+    /**
+     * Vincula un paciente existente (mismo correo) al workspace activo en clinica_paciente.
+     * Requiere el correo para evitar vincular por ID arbitrario.
+     */
+    public function vincularClinica(Request $request, Paciente $paciente)
+    {
+        $user = Auth::user();
+        $clinicaId = $user->clinica_efectiva_id;
+        if (! $clinicaId) {
+            return response()->json(['message' => 'No hay clínica activa en el workspace.'], 400);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'sucursal_id' => 'nullable|integer|exists:sucursales,id',
+            'tipo_paciente' => 'nullable|string|max:255',
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+        if (strtolower(trim((string) ($paciente->email ?? ''))) !== $email) {
+            return response()->json(['message' => 'El correo no coincide con este paciente.'], 422);
+        }
+
+        if ($paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+            return response()->json([
+                'message' => 'Este paciente ya está vinculado a tu clínica o consultorio.',
+            ], 422);
+        }
+
+        if ($user->isSuperAdmin() && $request->filled('sucursal_id')) {
+            $sucursal = \App\Models\Sucursal::where('id', $request->sucursal_id)
+                ->where('clinica_id', $clinicaId)
+                ->first();
+
+            if (! $sucursal) {
+                return response()->json(['error' => 'La sucursal seleccionada no es válida'], 400);
+            }
+            $sucursalId = $sucursal->id;
+        } else {
+            $sucursalId = $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
+        }
+
+        $tipoNuevoVinculo = $validated['tipo_paciente'] ?? null;
+        if ($tipoNuevoVinculo === null || $tipoNuevoVinculo === '') {
+            $tipoNuevoVinculo = $paciente->tipo_paciente ?: 'general';
+        }
+
+        $paciente->clinicas()->attach($clinicaId, [
+            'sucursal_id' => $sucursalId,
+            'user_id' => $user->id,
+            'vinculado_at' => now(),
+            'motivo_consulta' => null,
+            'tipo_paciente' => $tipoNuevoVinculo,
+        ]);
+
+        $paciente->refresh();
+        $clinica = Clinica::query()->find($clinicaId);
+        $consentimientoEmailEnviado = false;
+        if ($clinica) {
+            try {
+                $consentimientoEmailEnviado = app(PacienteConsentimientoService::class)->enviarInvitacion(
+                    $paciente,
+                    $clinica,
+                    PacienteConsentimientoService::CONTEXTO_NUEVA_VINCULACION
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
+
+        return response()->json([
+            'message' => 'Paciente vinculado a tu clínica',
+            'paciente' => $paciente,
+            'consentimiento_email_enviado' => $consentimientoEmailEnviado,
+        ], 201);
     }
 
     /**
@@ -238,6 +336,7 @@ class PacienteController extends Controller
         );
 
         $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
 
         return response()->json($paciente);
     }
@@ -285,7 +384,6 @@ class PacienteController extends Controller
             'estadoCivil' => $request->estadoCivil,
             'diagnostico' => $request->diagnostico,
             'medicamentos' => $request->medicamentos,
-            'motivo_consulta' => $request->motivo_consulta,
             'alergias' => $request->alergias,
             'envio' => $request->envio,
             'talla' => $talla,
@@ -295,11 +393,28 @@ class PacienteController extends Controller
             'imc' => $imc,
             'email' => $request->email,
             'genero' => ($request->genero == 1 || $request->genero === '1') ? 1 : 0,
-            'tipo_paciente' => $request->tipo_paciente ?? $paciente->tipo_paciente,
             'categoria_pago' => $request->categoria_pago ?? $paciente->categoria_pago,
             'aseguradora' => $request->categoria_pago === 'aseguradora' ? ($request->aseguradora ?? $paciente->aseguradora) : null,
             'color' => $request->color ?? $paciente->color
         ]);
+
+        $efectiva = $user->clinica_efectiva_id;
+        if ($efectiva && $paciente->clinicas()->where('clinicas.id', $efectiva)->exists()) {
+            $pivotUpdates = [];
+            if ($request->has('motivo_consulta')) {
+                $pivotUpdates['motivo_consulta'] = $request->motivo_consulta;
+            }
+            if ($request->has('tipo_paciente')) {
+                $pivotUpdates['tipo_paciente'] = $request->tipo_paciente;
+            }
+            if ($pivotUpdates !== []) {
+                $paciente->clinicas()->updateExistingPivot($efectiva, $pivotUpdates);
+            }
+        }
+
+        $paciente->refresh();
+        $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
 
         return response()->json($paciente, 200);
     }
@@ -367,10 +482,9 @@ class PacienteController extends Controller
             : $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         
         // Generar registro secuencial por sucursal
-        $ultimoRegistro = Paciente::where('clinica_id', $clinicaId)
-            ->where('sucursal_id', $sucursalId)
+        $ultimoRegistro = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
             ->max('registro');
-        $nuevoRegistro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
+        $nuevoRegistro = $ultimoRegistro ? ((int) $ultimoRegistro + 1) : 1;
         
         $emailExpress = $request->filled('email') ? strtolower(trim($request->email)) : null;
 
@@ -387,7 +501,6 @@ class PacienteController extends Controller
             'peso' => 0,
             'cintura' => 0,
             'imc' => 0,
-            'motivo_consulta' => $request->motivo_consulta,
             'tipo_paciente' => $request->tipo_paciente ?? 'dental',
             'user_id' => $user->id,
             'clinica_id' => $clinicaId,
@@ -415,6 +528,8 @@ class PacienteController extends Controller
             'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
             'vinculado_at' => now(),
+            'motivo_consulta' => $request->motivo_consulta,
+            'tipo_paciente' => $paciente->tipo_paciente ?? 'dental',
         ]);
 
         // Crear cita automática marcada como completada (ya está en consulta)
@@ -430,6 +545,9 @@ class PacienteController extends Controller
             'primera_vez' => true,
             'notas' => 'Urgencia Express: ' . $request->motivo_consulta,
         ]);
+
+        $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
 
         return response()->json([
             'message' => 'Paciente express creado exitosamente',
@@ -499,6 +617,89 @@ class PacienteController extends Controller
         $paciente->clinicas()->updateExistingPivot($clinicaId, $updates);
 
         return response()->json(['message' => 'Visibilidad actualizada']);
+    }
+
+    /**
+     * Lista de expedientes marcados para el portal del paciente (clínica activa).
+     */
+    public function portalExpedientesCompartidos(Request $request, Paciente $paciente)
+    {
+        $user = Auth::user();
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $clinicaId = (int) $request->query('clinica_id', $user->clinica_efectiva_id);
+        if ($clinicaId !== (int) $user->clinica_efectiva_id) {
+            return response()->json(['message' => 'Usa la clínica/consultorio activo en el selector'], 403);
+        }
+
+        if (! $paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+            return response()->json(['data' => []]);
+        }
+
+        $rows = PortalExpedienteCompartido::query()
+            ->where('paciente_id', $paciente->id)
+            ->where('clinica_id', $clinicaId)
+            ->get(['tipo_exp', 'expediente_id', 'tipo_nombre_snapshot', 'fecha_snapshot']);
+
+        return response()->json([
+            'data' => $rows->map(fn ($r) => [
+                'tipo_exp' => (int) $r->tipo_exp,
+                'expediente_id' => (int) $r->expediente_id,
+                'tipo_nombre' => $r->tipo_nombre_snapshot,
+                'fecha' => $r->fecha_snapshot?->format('Y-m-d'),
+            ]),
+        ]);
+    }
+
+    /**
+     * Sustituye la lista de expedientes visibles en el portal para esta clínica y paciente.
+     */
+    public function syncPortalExpedientesCompartidos(Request $request, Paciente $paciente)
+    {
+        $user = Auth::user();
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'clinica_id' => 'required|integer|exists:clinicas,id',
+            'items' => 'present|array',
+            'items.*.tipo_exp' => 'required|integer|min:1|max:50',
+            'items.*.expediente_id' => 'required|integer|min:1',
+            'items.*.tipo_nombre' => 'nullable|string|max:191',
+            'items.*.fecha' => 'nullable|date',
+        ]);
+
+        $clinicaId = (int) $validated['clinica_id'];
+        if ($clinicaId !== (int) $user->clinica_efectiva_id) {
+            return response()->json(['message' => 'Solo puedes editar desde tu clínica/consultorio activo'], 403);
+        }
+
+        if (! $paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+            return response()->json(['message' => 'Paciente no vinculado a esta clínica'], 422);
+        }
+
+        DB::transaction(function () use ($paciente, $clinicaId, $validated) {
+            PortalExpedienteCompartido::query()
+                ->where('paciente_id', $paciente->id)
+                ->where('clinica_id', $clinicaId)
+                ->delete();
+
+            foreach ($validated['items'] as $row) {
+                PortalExpedienteCompartido::create([
+                    'paciente_id' => $paciente->id,
+                    'clinica_id' => $clinicaId,
+                    'tipo_exp' => (int) $row['tipo_exp'],
+                    'expediente_id' => (int) $row['expediente_id'],
+                    'tipo_nombre_snapshot' => $row['tipo_nombre'] ?? null,
+                    'fecha_snapshot' => isset($row['fecha']) && $row['fecha'] !== '' ? $row['fecha'] : null,
+                ]);
+            }
+        });
+
+        return response()->json(['message' => 'Documentos visibles en el portal actualizados']);
     }
 }
 

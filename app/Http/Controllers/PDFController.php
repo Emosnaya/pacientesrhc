@@ -79,16 +79,16 @@ class PDFController extends Controller
     {
         $userFirma = $this->getDoctorParaFirma($request, $creadorUserId);
         
-        // Usar SIEMPRE el usuario actual si está autenticado, para mostrar sus datos (sucursal, universidad, etc)
+        // Cuenta portal del paciente (paciente_id): el PDF debe reflejar la clínica del profesional que creó el expediente
         $usuarioActual = Auth::user();
-        if ($usuarioActual) {
+        if ($usuarioActual && $usuarioActual->paciente_id) {
+            $user = User::with(['sucursal', 'clinica', 'clinicaActiva'])->find($creadorUserId);
+        } elseif ($usuarioActual) {
             $user = $usuarioActual;
-            // Asegurar que sucursal esté cargada
             if (!$user->relationLoaded('sucursal') && $user->sucursal_id) {
                 $user->load('sucursal');
             }
         } else {
-            // Si no hay usuario autenticado, usar el creador
             $user = User::with('sucursal')->find($creadorUserId);
         }
         
@@ -133,9 +133,12 @@ class PDFController extends Controller
             $logoPath = null;
             
             if ($clinica && $clinica->logo) {
-                $logoPath = storage_path('app/public/' . $clinica->logo);
+                $logoPath = public_path('storage/' . $clinica->logo);
+                if (!file_exists($logoPath)) {
+                    $logoPath = storage_path('app/public/' . $clinica->logo);
+                }
             }
-            
+
             if (!$logoPath || !file_exists($logoPath)) {
                 return null;
             }
@@ -726,10 +729,8 @@ class PDFController extends Controller
 
         $paciente = Paciente::find($data->paciente_id);
         
-        // Usar el método resolveUsuarioPdf para obtener el usuario correcto
-        [$userFirma, $user] = $this->resolveUsuarioPdf($request, $data->user_id);
-        
-        // Si no hay usuario autenticado, usar el creador del odontograma
+        [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+
         if (!$user) {
             $user = User::with('sucursal')->find($data->user_id);
         }
@@ -754,7 +755,7 @@ class PDFController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'expediente_id' => 'required|integer',
-            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar,cualidad_fisica,reporte_final_pulmonar,historia_dental,odontograma',
+            'expediente_type' => 'required|string|in:esfuerzo,estratificacion,estrati_aacvpr,clinico,reporte_final,reporte_psico,reporte_nutri,reporte_fisio,expediente_pulmonar,cualidad_fisica,reporte_final_pulmonar,historia_dental,odontograma',
             'email' => 'required|email',
             'subject' => 'nullable|string|max:255',
             'message' => 'nullable|string|max:1000'
@@ -788,8 +789,14 @@ class PDFController extends Controller
                 case 'estratificacion':
                     $data = Estratificacion::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Estratificacion.pdf';
+                    break;
+                case 'estrati_aacvpr':
+                    $data = EstratiAacvpr::find($expedienteId);
+                    $paciente = Paciente::find($data->paciente_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
+                    $pdfFileName = 'Estratificacion_AACVPR_EAPC.pdf';
                     break;
                 case 'clinico':
                     $data = Clinico::find($expedienteId);
@@ -824,13 +831,13 @@ class PDFController extends Controller
                 case 'expediente_pulmonar':
                     $data = ExpedientePulmonar::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Expediente_Pulmonar.pdf';
                     break;
                 case 'cualidad_fisica':
                     $data = CualidadFisica::find($expedienteId);
                     $paciente = Paciente::find($data->paciente_id);
-                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id);
+                    [$user, $userFirma] = $this->resolveUsuarioPdf($request, $data->user_id ?? $paciente->user_id);
                     $pdfFileName = 'Cualidades_Fisicas.pdf';
                     break;
                 case 'reporte_final_pulmonar':
@@ -853,14 +860,31 @@ class PDFController extends Controller
                     break;
             }
 
-            if (!$data || !$paciente || !$user) {
+            if (!$data || !$paciente) {
                 return response()->json(['error' => 'Expediente no encontrado'], 404);
             }
+
+            if (!$user && Auth::check()) {
+                $authUser = Auth::user();
+                if ($authUser && empty($authUser->paciente_id)) {
+                    $authUser->loadMissing(['sucursal', 'clinica', 'clinicaActiva']);
+                    $user = $authUser;
+                }
+            }
+
+            if (!$user) {
+                return response()->json(['error' => 'No se pudo determinar el usuario para el envío'], 404);
+            }
+
+            $clinica = $this->getClinicaInfo($user);
+            $clinicaLogo = $this->getClinicaLogoBase64($user);
+            $firmaBase64 = $this->getFirmaBase64($userFirma);
 
             // Generar asunto automático con tipo de expediente y nombre del paciente
             $tipoExpedienteNombres = [
                 'esfuerzo' => 'Prueba de Esfuerzo',
                 'estratificacion' => 'Estratificación',
+                'estrati_aacvpr' => 'Estratificación AACVPR/EAPC',
                 'clinico' => 'Reporte Clínico',
                 'reporte_final' => 'Reporte Final',
                 'reporte_psico' => 'Reporte Psicológico',
@@ -888,80 +912,80 @@ class PDFController extends Controller
                 $subject = $request->subject;
             }
 
-            // Generar PDF según el tipo
+            // Generar PDF según el tipo (mismas variables que los métodos stream/descarga)
             $pdf = null;
-            $firmaBase64 = $this->getFirmaBase64($userFirma);
 
             switch ($expedienteType) {
                 case 'esfuerzo':
-                    $pdf = Pdf::loadView('cardiaca.esfuerzo', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.esfuerzo', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
                     break;
                 case 'estratificacion':
-                    $pdf = Pdf::loadView('cardiaca.estrati', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.estrati', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
+                    break;
+                case 'estrati_aacvpr':
+                    $pdf = Pdf::loadView('cardiaca.estrati_aacvpr', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
                     break;
                 case 'clinico':
-                    $pdf = Pdf::loadView('cardiaca.clinico', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.clinico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64'));
                     break;
                 case 'reporte_final':
                     $esfuerzoUno = Esfuerzo::find($data->pe_1);
                     $esfuerzoDos = Esfuerzo::find($data->pe_2);
                     $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
-                    
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-                    $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64'));
+                    $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_psico':
-                    $pdf = Pdf::loadView('psico', compact('data', 'paciente', 'user'));
+                    $pdf = Pdf::loadView('psico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_nutri':
-                    $pdf = Pdf::loadView('nutri', compact('data', 'paciente', 'user'));
+                    $pdf = Pdf::loadView('nutri', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_fisio':
-                    // Para reportes de fisioterapia, usar el archivo existente si está disponible
-                    $filePath = storage_path('app/public/' . $data->archivo);
+                    // Mismo criterio que ReporteFisioController::imprimir: adjunto subido a storage público
+                    $pdfContent = null;
+                    $resolvedPath = null;
+                    if (! empty($data->archivo)) {
+                        $candidates = [
+                            storage_path('app/public/' . $data->archivo),
+                            public_path('storage/' . $data->archivo),
+                        ];
+                        foreach ($candidates as $tryPath) {
+                            if (is_readable($tryPath)) {
+                                $resolvedPath = $tryPath;
+                                $pdfContent = file_get_contents($tryPath);
+                                break;
+                            }
+                        }
+                    }
                     $debugInfo = [
-                        'archivo_field' => $data->archivo,
-                        'full_path' => $filePath,
-                        'file_exists' => file_exists($filePath),
-                        'is_readable' => is_readable($filePath)
+                        'archivo_field' => $data->archivo ?? null,
+                        'resolved_path' => $resolvedPath,
                     ];
-                    
-                    if ($data->archivo && file_exists($filePath)) {
-                        $pdfContent = file_get_contents($filePath);
-                    } else {
-                        return response()->json(['error' => 'Archivo de fisioterapia no encontrado', 'debug' => $debugInfo], 404);
+                    if ($pdfContent === false || $pdfContent === null) {
+                        return response()->json([
+                            'error' => 'Archivo de fisioterapia no encontrado. Los reportes tipo 7 solo se envían si tienen un archivo adjunto (PDF/imagen/doc) subido; el texto en el formulario no genera PDF automático.',
+                            'debug' => $debugInfo,
+                        ], 404);
                     }
                     break;
                 case 'expediente_pulmonar':
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $pdf = Pdf::loadView('pulmonar.pulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('pulmonar.pulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'cualidad_fisica':
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $clinica = $this->getClinicaInfo($user);
-                    $clinicaLogo = $this->getClinicaLogoBase64($user);
                     $pdf = Pdf::loadView('cardiaca.cualidadesfisicas', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_final_pulmonar':
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $pdf = Pdf::loadView('pulmonar.reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64'));
+                    $pdf = Pdf::loadView('pulmonar.reportefinalpulmonar', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'historia_dental':
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
-                    $pdf = Pdf::loadView('dental.historia-clinica-dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo'));
+                    $pdf = Pdf::loadView('dental.historia_dental', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'odontograma':
-                    $firmaBase64 = $this->getFirmaBase64($userFirma);
-                    $clinicaLogo = $this->getClinicaLogoBase64($user, 60);
-                    $dientes = $data->dientes;
-                    $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'dientes'));
+                    $dientes = is_string($data->dientes) ? json_decode($data->dientes, true) : $data->dientes;
+                    $pdf = Pdf::loadView('dental.odontograma', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica', 'firmaBase64', 'dientes'));
                     break;
             }
-
-            // Obtener clínica del usuario
-            $clinica = $user->clinica;
 
             // Enviar correo
             if ($expedienteType === 'reporte_fisio') {

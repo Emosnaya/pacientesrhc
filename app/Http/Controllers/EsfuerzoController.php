@@ -37,7 +37,7 @@ class EsfuerzoController extends Controller
         
         // Todos los usuarios pueden ver los esfuerzos de su clínica
         $esfuerzos = Esfuerzo::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_efectiva_id);
+            $query->forClinicaWorkspace((int) $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new EsfuerzoCollection($esfuerzos);
@@ -101,7 +101,7 @@ class EsfuerzoController extends Controller
             $id = intval($request->input('id'));
             $nuevoPaciente = Paciente::find($id);
             
-            if ($nuevoPaciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $nuevoPaciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
 
@@ -432,7 +432,7 @@ class EsfuerzoController extends Controller
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
@@ -452,7 +452,7 @@ class EsfuerzoController extends Controller
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
 
@@ -787,7 +787,7 @@ class EsfuerzoController extends Controller
         
         // Verificar que el esfuerzo pertenece a la misma clínica
         $paciente = $esfuerzo->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de esfuerzo'], 403);
         }
         

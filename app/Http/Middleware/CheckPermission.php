@@ -51,7 +51,7 @@ class CheckPermission
         if ($user->isAdmin()) {
             $clinicaEfectiva = $user->clinica_efectiva_id;
             
-            if ($resource === 'paciente' && $resourceModel->clinica_id !== $clinicaEfectiva) {
+            if ($resource === 'paciente' && ! $resourceModel->belongsToClinicaWorkspace($clinicaEfectiva ? (int) $clinicaEfectiva : null)) {
                 return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);
             } elseif ($resource === 'expediente' && $resourceModel->user->clinica_efectiva_id !== $clinicaEfectiva) {
                 return response()->json(['error' => 'No tienes permisos para acceder a este recurso'], 403);

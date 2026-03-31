@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use App\Models\Paciente;
 use App\Models\User;
 
 class AIController extends Controller
@@ -245,7 +246,7 @@ class AIController extends Controller
                         ->orderBy('fecha', 'desc')->orderBy('hora', 'desc')->limit(15);
                 }, 'pagos' => function ($q) {
                     $q->orderBy('created_at', 'desc')->limit(10);
-                }])->where('clinica_id', $clinicaEfectivaId)->find($pacienteId);
+                }])->forClinicaWorkspace((int) $clinicaEfectivaId)->find($pacienteId);
 
                 if ($paciente) {
                     $edad = $paciente->fechaNacimiento
@@ -740,7 +741,7 @@ class AIController extends Controller
             $nombreBuscar = $normalizar($params['paciente_nombre']);
             
             // Obtener todos los pacientes usando Eloquent para desencriptar nombres
-            $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
+            $pacientes = \App\Models\Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)->get();
             
             Log::info('🔍 Buscando paciente para eliminar citas', [
                 'nombre_buscado' => $params['paciente_nombre'],
@@ -922,7 +923,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($nombreCompleto);
         
         // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
+        $pacientes = \App\Models\Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)->get();
         
         Log::info('🔍 Buscando paciente', [
             'nombre_buscado' => $nombreCompleto,
@@ -1214,7 +1215,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($params['nombre']);
         
         // Obtener todos los pacientes de la clínica usando Eloquent para desencriptar nombres
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
+        $pacientes = \App\Models\Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)->get();
         
         // Buscar pacientes normalizando nombres (recolectar todas las coincidencias)
         $pacientesEncontrados = [];
@@ -1353,8 +1354,8 @@ class AIController extends Controller
     {
         $clinicaId = $user->clinica_efectiva_id;
 
-        // Métricas del dashboard
-        $totalPacientes = DB::table('pacientes')->where('clinica_id', $clinicaId)->count();
+        // Métricas del dashboard (membresía por clinica_paciente)
+        $totalPacientes = Paciente::forClinicaWorkspace((int) $clinicaId)->count();
         
         $citasHoy = DB::table('citas')
             ->where('clinica_id', $clinicaId)
@@ -1374,8 +1375,7 @@ class AIController extends Controller
             ->where('estado', '!=', 'cancelada')
             ->count();
         
-        $pacientesNuevosMes = DB::table('pacientes')
-            ->where('clinica_id', $clinicaId)
+        $pacientesNuevosMes = Paciente::forClinicaWorkspace((int) $clinicaId)
             ->where('created_at', '>=', now()->startOfMonth())
             ->count();
         
@@ -1412,10 +1412,11 @@ class AIController extends Controller
         $hombres = $pacientesPorGenero->firstWhere('genero', 1)->total ?? 0;
         $mujeres = $pacientesPorGenero->firstWhere('genero', 0)->total ?? 0;
 
-        // Pacientes por tipo (cardiaca, pulmonar, ambos)
-        $pacientesPorTipo = DB::table('pacientes')
+        // Pacientes por tipo según vínculo clinica_paciente (un mismo expediente puede tener distinto tipo por clínica)
+        $pacientesPorTipo = DB::table('clinica_paciente')
             ->select('tipo_paciente', DB::raw('count(*) as total'))
             ->where('clinica_id', $clinicaId)
+            ->whereNotNull('tipo_paciente')
             ->groupBy('tipo_paciente')
             ->get();
 
@@ -1962,8 +1963,9 @@ class AIController extends Controller
 
         // Pacientes sin citas recientes (más de 60 días)
         $pacientesSinCitasRecientes = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->whereNotNull('citas.id')
             ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
             ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
@@ -1973,8 +1975,9 @@ class AIController extends Controller
 
         // Pacientes con alta tasa de cancelación
         $pacientesAltaCancelacion = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->join('citas', 'pacientes.id', '=', 'citas.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, 
                 COUNT(*) as total_citas,
                 SUM(CASE WHEN citas.estado = "cancelada" THEN 1 ELSE 0 END) as canceladas,
@@ -1987,8 +1990,9 @@ class AIController extends Controller
 
         // Pacientes que nunca han completado una cita
         $pacientesSinCompletadas = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->join('citas', 'pacientes.id', '=', 'citas.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, COUNT(*) as total_citas')
             ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
             ->havingRaw('SUM(CASE WHEN citas.estado = "completada" THEN 1 ELSE 0 END) = 0')
@@ -2098,8 +2102,9 @@ class AIController extends Controller
 
         // Pacientes sin expediente clínico
         $pacientesSinExpediente = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->leftJoin('expedientes_clinicos', 'pacientes.id', '=', 'expedientes_clinicos.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->whereNull('expedientes_clinicos.id')
             ->count();
 
@@ -2165,8 +2170,9 @@ class AIController extends Controller
 
         // Pacientes que requieren seguimiento
         $pacientesSeguimiento = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
             ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
             ->havingRaw('MAX(citas.fecha) BETWEEN ? AND ?', [
@@ -2248,8 +2254,9 @@ class AIController extends Controller
 
         // Pacientes sin citas hace más de 3 meses
         $pacientesInactivos = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->leftJoin('citas', 'pacientes.id', '=', 'citas.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->selectRaw('pacientes.id, pacientes.nombre, pacientes.apellidoPat, MAX(citas.fecha) as ultima_cita')
             ->groupBy('pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat')
             ->havingRaw('MAX(citas.fecha) < ?', [now()->subDays(90)->format('Y-m-d')])
@@ -2305,11 +2312,12 @@ class AIController extends Controller
 
         // Sugerencia: Agendar citas para pacientes sin citas próximas
         $pacientesSinCitasProximas = DB::table('pacientes')
-            ->leftJoin('citas', function($join) {
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
+            ->leftJoin('citas', function ($join) {
                 $join->on('pacientes.id', '=', 'citas.paciente_id')
                      ->where('citas.fecha', '>=', now()->format('Y-m-d'));
             })
-            ->where('pacientes.clinica_id', $clinicaId)
             ->whereNull('citas.id')
             ->limit(5)
             ->get(['pacientes.id', 'pacientes.nombre', 'pacientes.apellidoPat']);
@@ -2347,17 +2355,18 @@ class AIController extends Controller
         }
 
         // Sugerencia: Crear expedientes faltantes
-        $pacientesSinExpediente = DB::table('pacientes')
+        $pacientesSinExpedienteProactivo = DB::table('pacientes')
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->leftJoin('expedientes_clinicos', 'pacientes.id', '=', 'expedientes_clinicos.paciente_id')
-            ->where('pacientes.clinica_id', $clinicaId)
             ->whereNull('expedientes_clinicos.id')
             ->count();
 
-        if ($pacientesSinExpediente > 0) {
+        if ($pacientesSinExpedienteProactivo > 0) {
             $sugerencias[] = [
                 'tipo' => 'completar_expedientes',
                 'icono' => '📋',
-                'mensaje' => "Hay {$pacientesSinExpediente} pacientes sin expediente clínico. ¿Quieres que te ayude a crearlos?",
+                'mensaje' => "Hay {$pacientesSinExpedienteProactivo} pacientes sin expediente clínico. ¿Quieres que te ayude a crearlos?",
                 'accion' => 'Iniciar creación de expedientes'
             ];
         }
@@ -2635,7 +2644,8 @@ class AIController extends Controller
 
         $resultados = DB::table('expedientes_clinicos')
             ->join('pacientes', 'expedientes_clinicos.paciente_id', '=', 'pacientes.id')
-            ->where('pacientes.clinica_id', $clinicaId)
+            ->join('clinica_paciente', 'pacientes.id', '=', 'clinica_paciente.paciente_id')
+            ->where('clinica_paciente.clinica_id', $clinicaId)
             ->where(function($query) use ($termino) {
                 $query->where('expedientes_clinicos.antecedentes_personales', 'LIKE', "%{$termino}%")
                       ->orWhere('expedientes_clinicos.antecedentes_familiares', 'LIKE', "%{$termino}%")
@@ -2742,7 +2752,7 @@ class AIController extends Controller
         $nombreBuscar = $normalizar($nombreBuscado);
         
         // Usar Eloquent para descifrar automáticamente
-        $pacientes = \App\Models\Paciente::where('clinica_id', $user->clinica_efectiva_id)->get();
+        $pacientes = \App\Models\Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)->get();
         
         foreach ($pacientes as $p) {
             $nombreCompleto = $normalizar(trim(($p->nombre ?? '') . ' ' . ($p->apellidoPat ?? '') . ' ' . ($p->apellidoMat ?? '')));

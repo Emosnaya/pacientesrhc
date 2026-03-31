@@ -582,6 +582,11 @@
                     @endif
                 </td>
             </tr>
+            <tr>
+                <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
+                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                </td>
+            </tr>
         </table>
     </div>
 

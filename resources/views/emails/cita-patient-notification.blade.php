@@ -204,7 +204,7 @@
     <div class="email-wrapper">
         <div class="header">
             @if($clinica && $clinica->logo)
-                <img src="{{ $clinica->logo }}" alt="{{ $clinicaDisplayName ?? $clinica->nombre }} Logo">
+                <img src="{{ $clinica->logo_url ?? config('app.url') . '/storage/' . $clinica->logo }}" alt="{{ $clinicaDisplayName ?? $clinica->nombre }} Logo">
             @endif
             <h1>Confirmación de Cita</h1>
             <p>{{ $clinicaDisplayName ?? ($clinica ? $clinica->nombre : 'Clínica Médica') }}</p>

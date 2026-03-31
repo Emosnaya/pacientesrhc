@@ -26,7 +26,7 @@
             padding: 28px 30px;
             text-align: center;
         }
-        .header img {
+        .header .clinic-logo {
             max-width: 160px;
             max-height: 60px;
             object-fit: contain;
@@ -37,6 +37,13 @@
             display: block;
             margin-left: auto;
             margin-right: auto;
+        }
+        .header .lynkamed-logo {
+            height: 72px;
+            width: auto;
+            max-width: 520px;
+            object-fit: contain;
+            margin-bottom: 16px;
         }
         .header h1 {
             color: white;
@@ -152,7 +159,16 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ $clinica->logo }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
+            @php
+                $lynkamedSrc = \App\Helpers\EmailHelper::embedMailImage($message ?? null, \App\Helpers\EmailHelper::getLynkamedLogoPath());
+                $clinicaSrc = \App\Helpers\EmailHelper::embedMailImage($message ?? null, \App\Helpers\EmailHelper::clinicaLogoPath($clinica));
+            @endphp
+            @if($lynkamedSrc)
+                <img src="{{ $lynkamedSrc }}" alt="Lynkamed" class="lynkamed-logo">
+            @endif
+            @if($clinicaSrc)
+                <img src="{{ $clinicaSrc }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo" class="clinic-logo">
+            @endif
             <h1>Credenciales de Acceso</h1>
             <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
         </div>
@@ -196,6 +212,9 @@
             @if($clinica->email ?? null)Email: {{ $clinica->email }}<br>@endif
             @if($clinica->direccion ?? null){{ $clinica->direccion }}@endif
         </p>
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+            <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
+        </div>
         </div>
     </div>
 </body>

@@ -64,7 +64,7 @@ class SeedDummyDentalBulk extends Command
         $colores = ['#4ECDC4', '#FF6B6B', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
         $tipos = ['general', 'ortodoncia', 'general', 'endodoncia', 'general'];
 
-        $maxRegistro = (int) Paciente::where('clinica_id', $clinicaId)->max(DB::raw('CAST(registro AS UNSIGNED)'));
+        $maxRegistro = (int) Paciente::forClinicaWorkspace((int) $clinicaId)->max(DB::raw('CAST(registro AS UNSIGNED)'));
         $baseRegistro = $maxRegistro ?: 1000;
 
         $this->info('Clínica: ' . $clinica->nombre . ' | Sucursales: ' . $sucursales->pluck('nombre')->join(', '));

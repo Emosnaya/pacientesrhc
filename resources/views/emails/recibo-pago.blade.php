@@ -45,5 +45,8 @@
         </div>
         <p class="footer">Este es un correo automático. No responder.</p>
     </div>
+    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+        <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
+    </div>
 </body>
 </html>

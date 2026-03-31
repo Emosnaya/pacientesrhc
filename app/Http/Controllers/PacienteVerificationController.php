@@ -175,18 +175,22 @@ class PacienteVerificationController extends Controller
         $sucursalId = $user->sucursal_id;
 
         // Evitar duplicados en pivot
-        if (!$paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+        if (! $paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
             $paciente->clinicas()->attach($clinicaId, [
                 'sucursal_id' => $sucursalId,
                 'user_id' => $user->id,
-                'vinculado_at' => now()
+                'vinculado_at' => now(),
+                'tipo_paciente' => $paciente->tipo_paciente ?: 'general',
             ]);
         }
+
+        $paciente->load('clinicas');
+        $paciente->mergeClinicaPivotAttributes($clinicaId);
 
         return response()->json([
             'success' => true,
             'message' => 'Paciente verificado y vinculado exitosamente',
-            'paciente' => $paciente->load('clinicas')
+            'paciente' => $paciente,
         ]);
     }
 

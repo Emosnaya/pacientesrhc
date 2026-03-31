@@ -21,7 +21,7 @@ class ReportePsicoController extends Controller
         
         // Todos los usuarios pueden ver los reportes psicológicos de su clínica
         $reportes = ReportePsico::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_efectiva_id);
+            $query->forClinicaWorkspace((int) $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new ReportePsicoCollection($reportes);
@@ -42,7 +42,7 @@ class ReportePsicoController extends Controller
         $paciente = Paciente::find($id);
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
         
@@ -104,7 +104,7 @@ class ReportePsicoController extends Controller
         $user = Auth::user();
         
         $paciente = $psico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
 
@@ -125,7 +125,7 @@ class ReportePsicoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $psico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         
@@ -191,7 +191,7 @@ class ReportePsicoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $psico->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte psicológico'], 403);
         }
         

@@ -26,7 +26,7 @@ class NotaSeguimientoPulmonarController extends Controller
             return response()->json(['error' => 'Paciente no encontrado'], 404);
         }
 
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
@@ -61,7 +61,7 @@ class NotaSeguimientoPulmonarController extends Controller
         ]);
 
         $paciente = Paciente::findOrFail($validated['paciente_id']);
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 

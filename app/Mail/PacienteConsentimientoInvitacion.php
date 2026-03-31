@@ -16,13 +16,18 @@ class PacienteConsentimientoInvitacion extends Mailable
     public function __construct(
         public Paciente $paciente,
         public string $clinicaNombre,
-        public string $plainToken
+        public string $plainToken,
+        public string $contexto = 'registro'
     ) {}
 
     public function envelope(): Envelope
     {
+        $subject = $this->contexto === 'nueva_vinculacion'
+            ? 'Confirma el uso compartido de tu expediente — '.$this->clinicaNombre
+            : 'Aceptación de aviso de privacidad y términos — '.$this->clinicaNombre;
+
         return new Envelope(
-            subject: 'Aceptación de aviso de privacidad y términos — '.$this->clinicaNombre,
+            subject: $subject,
         );
     }
 
@@ -40,6 +45,7 @@ class PacienteConsentimientoInvitacion extends Mailable
                 'diasValidez' => config('legal.consentimiento_enlace_dias', 14),
                 'urlAviso' => config('legal.url_aviso_privacidad'),
                 'urlTerminos' => config('legal.url_terminos'),
+                'contexto' => $this->contexto,
             ],
         );
     }

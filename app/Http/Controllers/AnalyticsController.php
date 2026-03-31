@@ -34,7 +34,21 @@ class AnalyticsController extends Controller
         
         return $query;
     }
-    
+
+    /**
+     * Pacientes cuyo tipo en clinica_paciente (workspace) está en $tipos.
+     */
+    private function pacientesPorTipoPivot($clinicaId, $sucursalId, array $tipos)
+    {
+        return Paciente::whereHas('clinicas', function ($q) use ($clinicaId, $sucursalId, $tipos) {
+            $q->where('clinicas.id', $clinicaId)
+                ->whereIn('clinica_paciente.tipo_paciente', $tipos);
+            if ($sucursalId) {
+                $q->where('clinica_paciente.sucursal_id', $sucursalId);
+            }
+        });
+    }
+
     public function index(Request $request)
     {
         try {
@@ -416,10 +430,10 @@ class AnalyticsController extends Controller
 
     private function getPacientesPulmonares($clinicaId, $sucursalId = null)
     {
-        $cardiaca = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'cardiaca')->count();
-        $pulmonar = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'pulmonar')->count();
-        $ambos = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'ambos')->count();
-        $fisioterapia = $this->pacientesQuery($clinicaId, $sucursalId)->where('tipo_paciente', 'fisioterapia')->count();
+        $cardiaca = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['cardiaca'])->count();
+        $pulmonar = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['pulmonar'])->count();
+        $ambos = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['ambos'])->count();
+        $fisioterapia = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['fisioterapia'])->count();
 
         return [
             'labels' => ['Cardíaca', 'Pulmonar', 'Ambos', 'Fisioterapia'],
@@ -601,10 +615,8 @@ class AnalyticsController extends Controller
      */
     private function getTasaTermino($clinicaId, $sucursalId = null)
     {
-        // Solo pacientes cardíacos o cardiopulmonares (ambos)
-        $totalPacientes = $this->pacientesQuery($clinicaId, $sucursalId)
-            ->whereIn('tipo_paciente', ['cardiaca', 'ambos'])
-            ->count();
+        // Solo pacientes cardíacos o cardiopulmonares (ambos) según pivot del workspace
+        $totalPacientes = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['cardiaca', 'ambos'])->count();
         
         if ($totalPacientes == 0) {
             return 0;
@@ -622,10 +634,8 @@ class AnalyticsController extends Controller
      */
     private function getPacientesConExpedienteFinal($clinicaId, $sucursalId = null)
     {
-        // Obtener IDs de pacientes cardíacos o cardiopulmonares de la clínica
-        $pacientesIds = $this->pacientesQuery($clinicaId, $sucursalId)
-            ->whereIn('tipo_paciente', ['cardiaca', 'ambos'])
-            ->pluck('id');
+        // IDs de pacientes cardíacos o cardiopulmonares según pivot del workspace
+        $pacientesIds = $this->pacientesPorTipoPivot($clinicaId, $sucursalId, ['cardiaca', 'ambos'])->pluck('id');
         
         // Contar pacientes que tienen reporte final (expediente final)
         return ReporteFinal::where('clinica_id', $clinicaId)

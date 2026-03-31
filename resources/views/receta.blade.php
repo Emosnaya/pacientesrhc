@@ -380,6 +380,11 @@
                 <td colspan="2" class="clinic-address">{{ $direccionMostrar }}</td>
             </tr>
             @endif
+            <tr>
+                <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
+                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                </td>
+            </tr>
         </table>
     </div>
     <div class="content-wrapper">
@@ -556,14 +561,6 @@
     @endif
 @endforeach
 
-<div class="pie-receta">
-    @if(isset($efirmaData) && $efirmaData)
-    <p>Receta electrónica válida · Verificable en plataformas oficiales · No requiere firma autógrafa</p>
-    @else
-    <p>Este documento es válido únicamente con firma del médico tratante · No se aceptan fotocopias ni tachaduras</p>
-    @endif
-</div>
-    </div><!-- end content-wrapper -->
-
+<div class="pie-receta"><!-- end content-wrapper -->
 </body>
 </html>

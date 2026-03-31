@@ -59,7 +59,7 @@ class HistoriaClinicaDentalController extends Controller
         try {
             // Verificar que el paciente pertenezca a la misma clínica
             $paciente = Paciente::find($request->paciente_id);
-            if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
 
@@ -267,7 +267,7 @@ class HistoriaClinicaDentalController extends Controller
 
         // Verificar que el paciente pertenezca a la misma clínica
         $paciente = Paciente::find($pacienteId);
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
