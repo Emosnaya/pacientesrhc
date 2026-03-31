@@ -7,6 +7,7 @@ use App\Models\Clinica;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Models\Paciente;
+use Illuminate\Support\Facades\DB;
 
 class CrearSucursalesPrincipalesSeeder extends Seeder
 {
@@ -47,10 +48,17 @@ class CrearSucursalesPrincipalesSeeder extends Seeder
                 ->whereNull('sucursal_id')
                 ->update(['sucursal_id' => $sucursal->id]);
             
-            // Asignar pacientes de esta clínica a la sucursal principal
-            $pacientesActualizados = Paciente::where('clinica_id', $clinica->id)
+            // Asignar vínculos clinica_paciente a la sucursal principal (fuente de verdad)
+            $pacientesActualizados = DB::table('clinica_paciente')
+                ->where('clinica_id', $clinica->id)
                 ->whereNull('sucursal_id')
-                ->update(['sucursal_id' => $sucursal->id]);
+                ->update(['sucursal_id' => $sucursal->id, 'updated_at' => now()]);
+
+            Paciente::whereIn('id', function ($q) use ($clinica, $sucursal) {
+                $q->select('paciente_id')->from('clinica_paciente')
+                    ->where('clinica_id', $clinica->id)
+                    ->where('sucursal_id', $sucursal->id);
+            })->whereNull('sucursal_id')->update(['sucursal_id' => $sucursal->id]);
             
             // Asignar todos los expedientes asociados
             $this->asignarExpedientesASucursal($clinica->id, $sucursal->id);

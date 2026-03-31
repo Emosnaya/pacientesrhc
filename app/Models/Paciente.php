@@ -57,6 +57,7 @@ class Paciente extends Model
         'consentimiento_token_hash',
         'consentimiento_token_expires_at',
         'consentimiento_email_enviado_at',
+        'consentimiento_invitacion_contexto',
         'archivo_muerto',
         'archivo_muerto_at',
         'archivo_muerto_motivo'
@@ -69,6 +70,7 @@ class Paciente extends Model
      */
     protected $hidden = [
         'consentimiento_token_hash',
+        'consentimiento_invitacion_contexto',
     ];
 
     /**
@@ -148,15 +150,77 @@ class Paciente extends Model
     public function clinicas()
     {
         return $this->belongsToMany(Clinica::class, 'clinica_paciente')
+            ->using(ClinicaPaciente::class)
             ->withPivot(
                 'sucursal_id',
                 'user_id',
                 'vinculado_at',
                 'portal_visible_citas',
                 'portal_visible_datos_basicos',
-                'portal_visible_expediente_resumen'
+                'portal_visible_expediente_resumen',
+                'motivo_consulta',
+                'tipo_paciente'
             )
             ->withTimestamps();
+    }
+
+    /**
+     * Tras cargar la relación clinicas, expone motivo_consulta y tipo_paciente del vínculo con la clínica indicada
+     * (fallback a columnas en pacientes para datos legacy).
+     */
+    public function mergeClinicaPivotAttributes(?int $clinicaId): void
+    {
+        if (! $clinicaId || ! $this->relationLoaded('clinicas')) {
+            return;
+        }
+        $motivoLegacy = $this->getAttribute('motivo_consulta');
+        $tipoLegacy = $this->getAttribute('tipo_paciente');
+
+        $row = $this->clinicas->firstWhere('id', $clinicaId);
+        $pivot = $row?->pivot;
+
+        $motivoPivot = $pivot?->motivo_consulta;
+        $usarMotivo = $motivoPivot !== null && trim((string) $motivoPivot) !== '';
+        $this->setAttribute('motivo_consulta', $usarMotivo ? $motivoPivot : $motivoLegacy);
+
+        $tipoPivot = $pivot?->tipo_paciente;
+        $usarTipo = $tipoPivot !== null && trim((string) $tipoPivot) !== '';
+        $this->setAttribute('tipo_paciente', $usarTipo ? $tipoPivot : $tipoLegacy);
+    }
+
+    /**
+     * El paciente está vinculado al workspace solo si existe fila en clinica_paciente (no se usa pacientes.clinica_id).
+     */
+    public function belongsToClinicaWorkspace(?int $clinicaId): bool
+    {
+        if (! $clinicaId) {
+            return false;
+        }
+
+        return $this->clinicas()->where('clinicas.id', $clinicaId)->exists();
+    }
+
+    /**
+     * Pacientes con vínculo activo en clinica_paciente para la clínica indicada.
+     *
+     * @param  int|null  $pivotSucursalId  Si se indica, el vínculo pivot debe tener esa sucursal_id.
+     */
+    public function scopeForClinicaWorkspace($query, ?int $clinicaId, $pivotSucursalId = null)
+    {
+        if (! $clinicaId) {
+            return $query->whereRaw('1 = 0');
+        }
+        $table = $query->getModel()->getTable();
+
+        return $query->whereExists(function ($sub) use ($clinicaId, $pivotSucursalId, $table) {
+            $sub->selectRaw('1')
+                ->from('clinica_paciente')
+                ->whereColumn('clinica_paciente.paciente_id', $table.'.id')
+                ->where('clinica_paciente.clinica_id', $clinicaId);
+            if ($pivotSucursalId !== null && $pivotSucursalId !== '') {
+                $sub->where('clinica_paciente.sucursal_id', (int) $pivotSucursalId);
+            }
+        });
     }
 
     /**

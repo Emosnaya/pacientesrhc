@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Mail\PacientePortalOtpMail;
 use App\Models\PacientePortalOtp;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
@@ -129,18 +132,31 @@ class PacientePortalAuthController extends Controller
             return response()->json(['message' => 'Datos inválidos', 'errors' => $v->errors()], 422);
         }
 
-        $user->password = Hash::make($request->password);
-        $user->password_set_at = now();
-        $user->save();
+        try {
+            $plain = DB::transaction(function () use ($user, $request) {
+                $user->password = Hash::make($request->password);
+                $user->password_set_at = now();
+                $user->save();
 
-        $user->currentAccessToken()->delete();
+                $user->currentAccessToken()->delete();
 
-        $plain = $user->createToken('auth_token')->plainTextToken;
-        $user->load('pacienteRecord');
+                return $user->createToken('auth_token')->plainTextToken;
+            });
+        } catch (\Throwable $e) {
+            Log::error('PacientePortal setPassword: transacción fallida (contraseña/token no aplicados)', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
 
+            return response()->json([
+                'message' => 'No se pudo completar el registro de contraseña. Intenta de nuevo o solicita un nuevo código desde el portal.',
+            ], 500);
+        }
+
+        // JSON desde fila SQL: evita accessors/appends del modelo User y relaciones.
         return response()->json([
             'token' => $plain,
-            'user' => $user,
+            'user' => $this->portalUserJsonArrayFromDb($user->id),
         ]);
     }
 
@@ -184,11 +200,67 @@ class PacientePortalAuthController extends Controller
 
         $user->tokens()->delete();
         $plain = $user->createToken('auth_token')->plainTextToken;
-        $user->load('pacienteRecord');
 
         return response()->json([
             'token' => $plain,
-            'user' => $user,
+            'user' => $this->portalUserJsonArrayFromDb($user->id),
         ]);
+    }
+
+    /**
+     * Payload estable para el front del portal (lectura directa en users, sin Eloquent).
+     */
+    private function portalUserJsonArrayFromDb(int $userId): array
+    {
+        $row = DB::table('users')->where('id', $userId)->first();
+
+        if (! $row) {
+            Log::error('PacientePortal: fila users no encontrada al armar JSON', ['user_id' => $userId]);
+
+            return [
+                'id' => $userId,
+                'email' => '',
+                'nombre' => '',
+                'apellidoPat' => '',
+                'apellidoMat' => '',
+                'paciente_id' => null,
+                'rol' => 'paciente',
+                'password_set_at' => null,
+                'es_paciente_portal' => true,
+                'titulo_profesional' => '',
+                'nombre_con_titulo' => '',
+                'clinica_efectiva_id' => null,
+            ];
+        }
+
+        $nombre = (string) ($row->nombre ?? '');
+        $apPat = (string) ($row->apellidoPat ?? '');
+        $apMat = (string) ($row->apellidoMat ?? '');
+
+        $pwdIso = null;
+        if (! empty($row->password_set_at)) {
+            try {
+                $pwdIso = Carbon::parse($row->password_set_at)->toIso8601String();
+            } catch (\Throwable $e) {
+                $pwdIso = is_string($row->password_set_at) ? $row->password_set_at : null;
+            }
+        }
+
+        $clinicaEfectiva = $row->clinica_activa_id ?? $row->clinica_id ?? null;
+
+        return [
+            'id' => (int) $row->id,
+            'email' => (string) ($row->email ?? ''),
+            'nombre' => $nombre,
+            'apellidoPat' => $apPat,
+            'apellidoMat' => $apMat,
+            'paciente_id' => $row->paciente_id !== null ? (int) $row->paciente_id : null,
+            'rol' => (string) ($row->rol ?? 'paciente'),
+            'password_set_at' => $pwdIso,
+            'es_paciente_portal' => true,
+            'titulo_profesional' => '',
+            'nombre_con_titulo' => trim($nombre.' '.$apPat.' '.$apMat),
+            'clinica_efectiva_id' => $clinicaEfectiva !== null ? (int) $clinicaEfectiva : null,
+        ];
     }
 }

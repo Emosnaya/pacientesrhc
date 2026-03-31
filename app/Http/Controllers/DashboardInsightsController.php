@@ -32,7 +32,7 @@ class DashboardInsightsController extends Controller
             $clinicaId = $user->clinica_efectiva_id;
 
             // Obtener pacientes de la clínica
-            $pacientes = Paciente::where('clinica_id', $clinicaId)
+            $pacientes = Paciente::forClinicaWorkspace((int) $clinicaId)
                 ->orderBy('updated_at', 'desc')
                 ->get()
                 ->toArray();
@@ -81,15 +81,15 @@ class DashboardInsightsController extends Controller
             $clinicaId = $user->clinica_efectiva_id;
 
             // Pacientes totales
-            $totalPacientes = Paciente::where('clinica_id', $clinicaId)->count();
+            $totalPacientes = Paciente::forClinicaWorkspace((int) $clinicaId)->count();
 
             // Pacientes activos (actualizados en los últimos 30 días)
-            $pacientesActivos = Paciente::where('clinica_id', $clinicaId)
+            $pacientesActivos = Paciente::forClinicaWorkspace((int) $clinicaId)
                 ->where('updated_at', '>=', now()->subDays(30))
                 ->count();
 
             // Pacientes que requieren seguimiento (sin actividad en 14+ días)
-            $requierenSeguimiento = Paciente::where('clinica_id', $clinicaId)
+            $requierenSeguimiento = Paciente::forClinicaWorkspace((int) $clinicaId)
                 ->where('updated_at', '<', now()->subDays(14))
                 ->count();
 
@@ -107,7 +107,7 @@ class DashboardInsightsController extends Controller
             })->where('created_at', '>=', now()->subWeek())->count();
 
             // Pacientes nuevos (últimos 30 días)
-            $pacientesNuevos = Paciente::where('clinica_id', $clinicaId)
+            $pacientesNuevos = Paciente::forClinicaWorkspace((int) $clinicaId)
                 ->where('created_at', '>=', now()->subDays(30))
                 ->count();
 
@@ -144,7 +144,7 @@ class DashboardInsightsController extends Controller
             $clinicaId = $user->clinica_efectiva_id;
 
             // Pacientes sin actividad en 14+ días
-            $pacientesSeguimiento = Paciente::where('clinica_id', $clinicaId)
+            $pacientesSeguimiento = Paciente::forClinicaWorkspace((int) $clinicaId)
                 ->where('updated_at', '<', now()->subDays(14))
                 ->orderBy('updated_at', 'asc')
                 ->limit(10)

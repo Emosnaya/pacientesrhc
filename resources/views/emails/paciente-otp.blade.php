@@ -1,85 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Código de verificación</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px 10px 0 0;
-        }
-        .content {
-            background: #f9fafb;
-            padding: 30px;
-            border: 1px solid #e5e7eb;
-        }
-        .otp-code {
-            background: #fff;
-            border: 2px dashed #667eea;
-            padding: 20px;
-            text-align: center;
-            font-size: 32px;
-            font-weight: bold;
-            letter-spacing: 8px;
-            color: #667eea;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-        .warning {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-        }
-        .footer {
-            background: #1f2937;
-            color: #9ca3af;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            border-radius: 0 0 10px 10px;
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
-    <div class="header">
-        <h1>🔐 Código de Verificación</h1>
+<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #1e293b; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+        @include('emails.partials.lynkamed-logo-inline', ['height' => 72, 'style' => 'margin-bottom:12px;'])
+        @php
+            $clinicaSrc = isset($clinica) ? \App\Helpers\EmailHelper::embedMailImage($message ?? null, \App\Helpers\EmailHelper::clinicaLogoPath($clinica)) : null;
+        @endphp
+        @if(!empty($clinicaSrc))
+            <img src="{{ $clinicaSrc }}" alt="{{ $clinica->nombre }}" style="height: 40px; width: auto; padding: 6px; background: white; border-radius: 4px;">
+        @endif
     </div>
+    <p>Hola <strong>{{ $paciente->nombre }}</strong>,</p>
+    <p>
+        <strong>{{ $clinica->nombre }}</strong> está solicitando vincular tu expediente médico a su sistema.
+    </p>
+    <p>Tu código de verificación es:</p>
+    <p style="margin: 20px 0; padding: 20px; text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 0.35em; color: #071F4A; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px;">
+        {{ $otpCode }}
+    </p>
+    <p style="font-size: 13px; color: #64748b; border-left: 4px solid #f59e0b; padding-left: 12px; margin: 20px 0;">
+        <strong>Este código expira en 15 minutos.</strong> Si no solicitaste esta vinculación, ignora este correo. Tu información permanece segura.
+    </p>
+    <p>
+        Al verificar este código, permites que <strong>{{ $clinica->nombre }}</strong> acceda a tu historial médico para brindarte una mejor atención.
+    </p>
+    <p style="font-size: 13px; color: #64748b;">
+        Este mensaje se envía de forma automática en relación con tu expediente en el sistema de la clínica.
+    </p>
+    <p style="font-size: 12px; color: #94a3b8;">No respondas a este correo automático.</p>
     
-    <div class="content">
-        <p>Hola <strong>{{ $paciente->nombre }}</strong>,</p>
-        
-        <p>La clínica <strong>{{ $clinica->nombre }}</strong> está solicitando vincular tu expediente médico a su sistema.</p>
-        
-        <p>Tu código de verificación es:</p>
-        
-        <div class="otp-code">
-            {{ $otpCode }}
-        </div>
-        
-        <div class="warning">
-            ⚠️ <strong>Este código expira en 15 minutos.</strong><br>
-            Si no solicitaste esta vinculación, ignora este correo. Tu información permanece segura.
-        </div>
-        
-        <p>Al verificar este código, permites que <strong>{{ $clinica->nombre }}</strong> acceda a tu historial médico para brindarte una mejor atención.</p>
-    </div>
-    
-    <div class="footer">
-        <p>Este es un correo automático. Por favor no respondas a este mensaje.</p>
-        <p>© {{ date('Y') }} PacientesRHC - Sistema de Gestión Médica</p>
+    <!-- Branding Footer -->
+    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #94a3b8;">
+        <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
     </div>
 </body>
 </html>

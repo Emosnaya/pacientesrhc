@@ -27,8 +27,12 @@ class PacienteOtpMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $clinica = trim((string) ($this->clinica->nombre ?? ''));
+
         return new Envelope(
-            subject: 'Código de verificación - ' . $this->clinica->nombre,
+            subject: $clinica !== ''
+                ? 'Código de verificación — '.$clinica
+                : 'Código de verificación',
         );
     }
 

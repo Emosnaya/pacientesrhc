@@ -22,7 +22,7 @@ class EstratificacionController extends Controller
         
         // Todos los usuarios pueden ver las estratificaciones de su clínica
         $estratificaciones = Estratificacion::whereHas('paciente', function($query) use ($user) {
-            $query->where('clinica_id', $user->clinica_efectiva_id);
+            $query->forClinicaWorkspace((int) $user->clinica_efectiva_id);
         })->with('paciente')->get();
         
         return new EstratificacionCollection($estratificaciones);
@@ -87,7 +87,7 @@ class EstratificacionController extends Controller
             $nuevoPaciente = Paciente::find($id);
             
             // Verificar que el paciente pertenece a la misma clínica
-            if ($nuevoPaciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $nuevoPaciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
         }
@@ -216,7 +216,7 @@ class EstratificacionController extends Controller
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estratificacion->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de estratificación'], 403);
         }
 
@@ -236,7 +236,7 @@ class EstratificacionController extends Controller
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estratificacion->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de estratificación'], 403);
         }
 
@@ -370,7 +370,7 @@ class EstratificacionController extends Controller
         
         // Verificar que la estratificación pertenece a la misma clínica
         $paciente = $estratificacion->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente de estratificación'], 403);
         }
         

@@ -26,7 +26,7 @@ class ReporteFisioController extends Controller
         }
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
         
@@ -51,7 +51,7 @@ class ReporteFisioController extends Controller
         $paciente = Paciente::Find($request['paciente_id']);
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 
@@ -84,7 +84,7 @@ class ReporteFisioController extends Controller
         $paciente = $expediente->paciente;
         
         // Verificar que el expediente pertenece a la misma clínica
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
         
@@ -123,7 +123,7 @@ class ReporteFisioController extends Controller
         $paciente = $expediente->paciente;
         
         // Verificar que el expediente pertenece a la misma clínica
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 

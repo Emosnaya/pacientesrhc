@@ -108,7 +108,7 @@ class CitaController extends Controller
                 $paciente = Paciente::findOrFail($request->paciente_id);
 
                 // Verificar que el paciente pertenece a la misma clínica
-                if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+                if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                     return response()->json([
                         'success' => false,
                         'message' => 'No tienes acceso a este paciente'
@@ -286,10 +286,8 @@ class CitaController extends Controller
 
             $cita->load(['paciente', 'admin', 'user.clinica']);
 
-            // Enviar correos de notificación
-            $this->sendCitaNotificationEmails($cita, $user);
-
-            // Enviar invitación de calendario al doctor del paciente
+            // Un solo envío al paciente (ICS + plantilla) y al doctor/correo personalizado si aplica.
+            // Antes también se llamaba sendCitaNotificationEmails y el paciente recibía correo duplicado.
             $this->sendCalendarInvitation($cita, 'create');
 
             $response = [
@@ -640,7 +638,7 @@ class CitaController extends Controller
             $paciente = Paciente::findOrFail($request->paciente_id);
 
             // Verificar que el paciente pertenece a la misma clínica
-            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes acceso a este paciente'
@@ -723,27 +721,6 @@ class CitaController extends Controller
             }
         } catch (\Exception $e) {
             \Log::error('Error sending multiple citas notification email: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Enviar correos de notificación de cita
-     */
-    private function sendCitaNotificationEmails($cita, $admin)
-    {
-        try {
-            // Enviar correo solo al paciente si tiene email
-            if ($cita->paciente->email) {
-                // Usar Mailable personalizado para enviar con ICS incluido
-                \Mail::to($cita->paciente->email)
-                     ->send(new \App\Mail\CitaNotificationMail($cita));
-                
-                \Log::info('Cita notification email sent to patient: ' . $cita->paciente->email);
-            }
-
-        } catch (\Exception $e) {
-            // Log error but don't fail the cita creation
-            \Log::error('Error sending cita notification emails: ' . $e->getMessage());
         }
     }
 

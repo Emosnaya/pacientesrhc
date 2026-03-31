@@ -170,7 +170,7 @@
 <body>
     <div class="email-wrapper">
         <div class="header">
-            <img src="{{ $clinica->logo}}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
+            <img src="{{ $clinica->logo_url ?? config('app.url') . '/storage/' . $clinica->logo }}" alt="{{ $clinica->nombre ?? 'Clínica' }} Logo">
             <h1>Nueva Cita Programada</h1>
             <p>{{ $clinica->nombre}}</p>
         </div>
@@ -227,6 +227,9 @@
                 @if($clinica->email ?? null)Email: {{ $clinica->email }}<br>@endif
                 @if($clinica->direccion ?? null){{ $clinica->direccion }}@endif
             </p>
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+                <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
+            </div>
         </div>
     </div>
 </body>

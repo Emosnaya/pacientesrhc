@@ -31,7 +31,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -48,7 +48,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -65,7 +65,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -82,7 +82,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -99,7 +99,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -116,7 +116,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -133,7 +133,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -153,7 +153,7 @@ class InfoController extends Controller
         }
 
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los reportes de este paciente'], 403);
         }
 
@@ -185,7 +185,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         
@@ -210,7 +210,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         
@@ -229,7 +229,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporteNutriResponse->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -247,7 +247,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reportePsicoResponse->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
         }
 
@@ -271,7 +271,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         
@@ -296,7 +296,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         
@@ -321,7 +321,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         
@@ -346,7 +346,7 @@ class InfoController extends Controller
         
         // Verificar que el reporte pertenece a la misma clínica
         $paciente = $reporte->paciente;
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este reporte'], 403);
         }
         

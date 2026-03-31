@@ -19,8 +19,12 @@ class PacientePortalOtpMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $brand = trim((string) config('mail.from.name', ''));
+        $skip = ['', 'Example', 'Laravel'];
+        $suffix = ! in_array($brand, $skip, true) ? ' — '.$brand : '';
+
         return new Envelope(
-            subject: 'Código de verificación — '.config('app.name'),
+            subject: 'Código de verificación'.$suffix,
         );
     }
 

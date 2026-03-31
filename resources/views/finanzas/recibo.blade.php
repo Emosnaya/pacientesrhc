@@ -193,6 +193,9 @@
     <div class="footer-doc">
         <p>Este documento es un comprobante válido de pago. {{ $clinica->nombre ?? 'Clínica' }}</p>
         <p style="margin-top: 2px;">Para cualquier aclaración, favor de comunicarse a {{ $clinica->telefono ?? 'N/A' }}</p>
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 6px; color: #94a3b8;">
+            <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+        </div>
     </div>
 </body>
 </html>

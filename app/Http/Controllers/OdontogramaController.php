@@ -55,7 +55,7 @@ class OdontogramaController extends Controller
         try {
             // Verificar que el paciente pertenezca a la misma clínica
             $paciente = \App\Models\Paciente::find($request->paciente_id);
-            if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
             }
 
@@ -216,7 +216,7 @@ class OdontogramaController extends Controller
         $user = Auth::user();
 
         $paciente = \App\Models\Paciente::find($pacienteId);
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 
@@ -237,7 +237,7 @@ class OdontogramaController extends Controller
         $user = Auth::user();
 
         $paciente = \App\Models\Paciente::find($pacienteId);
-        if (!$paciente || $paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a los expedientes de este paciente'], 403);
         }
 

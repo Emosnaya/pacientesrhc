@@ -41,7 +41,7 @@ class PruebaEsfuerzoPulmonarController extends Controller
         
         // Verificar que el paciente existe y pertenece a la misma clínica
         $paciente = Paciente::findOrFail($pacienteId);
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 

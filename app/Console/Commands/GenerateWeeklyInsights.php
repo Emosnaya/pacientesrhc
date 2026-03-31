@@ -88,8 +88,8 @@ class GenerateWeeklyInsights extends Command
         try {
             $this->info("📊 Procesando clínica ID: {$clinicaId}");
 
-            // Obtener pacientes de la clínica
-            $pacientes = Paciente::where('clinica_id', $clinicaId)->get()->toArray();
+            // Obtener pacientes vinculados por clinica_paciente
+            $pacientes = Paciente::forClinicaWorkspace((int) $clinicaId)->get()->toArray();
 
             if (empty($pacientes)) {
                 $this->warn("⚠️  Clínica {$clinicaId} no tiene pacientes, saltando...");
@@ -97,17 +97,17 @@ class GenerateWeeklyInsights extends Command
             }
 
             // Obtener reportes de la última semana
-            $reportesNutri = ReporteNutri::whereHas('expediente.paciente', function($query) use ($clinicaId) {
-                $query->where('clinica_id', $clinicaId);
-            })->where('created_at', '>=', now()->subWeek())->get()->toArray();
+            $reportesNutri = ReporteNutri::where('clinica_id', $clinicaId)
+                ->whereHas('paciente', fn ($q) => $q->forClinicaWorkspace((int) $clinicaId))
+                ->where('created_at', '>=', now()->subWeek())->get()->toArray();
 
-            $reportesPsico = ReportePsico::whereHas('expediente.paciente', function($query) use ($clinicaId) {
-                $query->where('clinica_id', $clinicaId);
-            })->where('created_at', '>=', now()->subWeek())->get()->toArray();
+            $reportesPsico = ReportePsico::where('clinica_id', $clinicaId)
+                ->whereHas('paciente', fn ($q) => $q->forClinicaWorkspace((int) $clinicaId))
+                ->where('created_at', '>=', now()->subWeek())->get()->toArray();
 
-            $reportesFisio = ReporteFisio::whereHas('expediente.paciente', function($query) use ($clinicaId) {
-                $query->where('clinica_id', $clinicaId);
-            })->where('created_at', '>=', now()->subWeek())->get()->toArray();
+            $reportesFisio = ReporteFisio::where('clinica_id', $clinicaId)
+                ->whereHas('paciente', fn ($q) => $q->forClinicaWorkspace((int) $clinicaId))
+                ->where('created_at', '>=', now()->subWeek())->get()->toArray();
 
             $reportes = array_merge($reportesNutri, $reportesPsico, $reportesFisio);
 

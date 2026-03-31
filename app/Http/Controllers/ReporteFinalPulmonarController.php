@@ -50,7 +50,7 @@ class ReporteFinalPulmonarController extends Controller
         $paciente = $pruebaInicial->paciente;
         
         // Verificar que el paciente pertenece a la misma clínica
-        if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+        if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
             return response()->json(['error' => 'No tienes acceso a este paciente'], 403);
         }
 

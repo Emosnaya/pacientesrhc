@@ -20,8 +20,12 @@ class PacientePortalAccesoMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $brand = trim((string) config('mail.from.name', ''));
+        $skip = ['', 'Example', 'Laravel'];
+        $suffix = ! in_array($brand, $skip, true) ? ' — '.$brand : '';
+
         return new Envelope(
-            subject: 'Accede a tu portal de paciente — '.config('app.name'),
+            subject: 'Accede a tu portal de paciente'.$suffix,
         );
     }
 

@@ -50,7 +50,7 @@ class FinanzasController extends Controller
         if ($request->filled('paciente_id')) {
             // Verificar que el paciente pertenece a la misma clínica
             $paciente = Paciente::findOrFail($request->paciente_id);
-            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json([
                     'message' => 'No tienes permiso para registrar pagos de este paciente'
                 ], 403);
@@ -75,7 +75,7 @@ class FinanzasController extends Controller
             }
         }
 
-        $clinicaId = $paciente ? $paciente->clinica_id : $user->clinica_efectiva_id;
+        $clinicaId = (int) $user->clinica_efectiva_id;
         $sucursalId = $paciente
             ? $paciente->sucursal_id
             : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $user->sucursal_id);
@@ -146,7 +146,7 @@ class FinanzasController extends Controller
         $paciente = null;
         if ($request->filled('paciente_id')) {
             $paciente = Paciente::findOrFail($request->paciente_id);
-            if ($paciente->clinica_id !== $user->clinica_efectiva_id) {
+            if (! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
                 return response()->json([
                     'message' => 'No tienes permiso para asignar pagos a este paciente'
                 ], 403);
@@ -170,7 +170,7 @@ class FinanzasController extends Controller
             }
         }
 
-        $clinicaId = $paciente ? $paciente->clinica_id : $pago->clinica_id;
+        $clinicaId = (int) $user->clinica_efectiva_id;
         $sucursalId = $paciente
             ? $paciente->sucursal_id
             : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $pago->sucursal_id);
@@ -695,7 +695,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
 
         // Verificar que el paciente pertenece a la clínica efectiva (puede ser consultorio activo)
-        $paciente = Paciente::where('clinica_id', $user->clinica_efectiva_id)
+        $paciente = Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)
             ->findOrFail($pacienteId);
 
         $pagos = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
