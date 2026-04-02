@@ -743,12 +743,21 @@
                 </table>
                 <p class="f-bold f-15 mb-0">Estudios: <span class="f-normal">{{$data->estudios}}</span></p>
                 <p class="f-bold f-15 mb-0">Plan: <span class="f-normal">{{$data->plan}}</span></p>
-                @if(isset($firmaBase64) && $firmaBase64)
-                <p class="f-bold mt-2 mb-0 f-15">Realizó: <span class="f-normal">{{ $user->nombre_con_titulo }}</span></p>
+                
+                {{-- Siempre mostrar quién elaboró el documento --}}
+                @if(isset($autor) && $autor)
+                <p class="f-bold mt-2 mb-0 f-15">Elaboró: <span class="f-normal">{{ $autor->nombre_completo }}</span></p>
+                @if($autor->cedula)
+                <p class="f-10 mb-0" style="color: #64748b;">Cédula Profesional: {{ $autor->cedula }}</p>
+                @endif
+                @endif
+                
+                {{-- Solo mostrar firma si el usuario actual es el autor --}}
+                @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
                 <div style="position: fixed; bottom: 40px; left: 0; right: 0; text-align: center;">
                     <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 50px; width: auto;"><br>
                     <div style="border-top: 1px solid #333; width: 150px; margin: 2px auto 0 auto;"></div>
-                    <span style="font-size: 9px;">{{ $user->nombre_con_titulo }}</span>
+                    <span style="font-size: 9px;">{{ $autor->nombre_completo ?? $user->nombre_con_titulo }}</span>
                 </div>
                 @endif
     </main>

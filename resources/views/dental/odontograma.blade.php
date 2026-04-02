@@ -863,24 +863,22 @@
         <div style="padding: 5px; font-size: 8px; line-height: 1.4; white-space: pre-wrap;">{{ $data->observaciones }}</div>
         @endif
 
-        <!-- Firma -->
+        <!-- Elaboró y Firma -->
         <div class="firma-section">
-            @if(isset($firmaBase64) && $firmaBase64)
-                <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
-            @endif
-            <hr>
-            @if($user)
-                <p class="mb-0 f-10">
-                    <span class="f-bold">{{ $user->nombre_con_titulo }}</span><br>
-                    @if($user->cedula)
-                        Cédula Profesional: {{ $user->cedula }}
+            {{-- Siempre mostrar quién elaboró --}}
+            @if(isset($autor) && $autor)
+                <p class="mb-0 f-10" style="margin-bottom: 8px;">
+                    <span class="f-bold">Elaboró: {{ $autor->nombre_completo }}</span><br>
+                    @if($autor->cedula)
+                        <span style="color: #64748b;">Cédula Profesional: {{ $autor->cedula }}</span>
                     @endif
                 </p>
-            @else
-                <p class="mb-0 f-10">
-                    <span class="f-bold">Médico</span><br>
-                    Cédula Profesional: N/A
-                </p>
+            @endif
+            
+            {{-- Solo mostrar firma si es el autor --}}
+            @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
+                <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
+                <hr>
             @endif
         </div>
     </div>

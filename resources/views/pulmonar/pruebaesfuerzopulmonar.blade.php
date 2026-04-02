@@ -481,7 +481,22 @@
         <div class="f-9" style="text-align: justify; margin-left: 10px;">{!! nl2br(e($data->plan_manejo_complementario)) !!}</div>
         @endif
 
-        @if(isset($firmaBase64) && $firmaBase64)
+        {{-- Siempre mostrar quién elaboró el documento --}}
+        <div style="margin-top: 20px; text-align: center;">
+            <p class="f-10 f-bold mb-1">Elaboró:
+                @if(isset($autor) && $autor)
+                    {{ $autor->nombre_completo }}
+                    @if($autor->cedula)
+                        | Cédula: {{ $autor->cedula }}
+                    @endif
+                @elseif(isset($userParaFirma) && $userParaFirma)
+                    {{ $userParaFirma->nombre_con_titulo }}
+                @endif
+            </p>
+        </div>
+
+        {{-- Solo mostrar firma si el usuario actual es el autor --}}
+        @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
         <!-- Firma -->
         <div style="margin-top: 30px; text-align: center;">
             <img src="{{ $firmaBase64 }}" alt="Firma" style="max-width: 150px; height: auto">
