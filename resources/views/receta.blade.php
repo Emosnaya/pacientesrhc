@@ -519,7 +519,21 @@
     @endif
     @endif
 
-    @if($seccion === 'firma' && isset($firmaBase64) && $firmaBase64)
+    @if($seccion === 'firma')
+    {{-- Siempre mostrar quién elaboró la receta --}}
+    @if(isset($autor) && $autor)
+    <div style="text-align: center; margin-bottom: 10px;">
+        <p style="font-size: 10px; color: #475569; margin: 0;">
+            <strong>Elaboró:</strong> {{ $autor->nombre_completo }}
+            @if($autor->cedula)
+            <br><span style="font-size: 9px; color: #64748b;">Cédula Profesional: {{ $autor->cedula }}</span>
+            @endif
+        </p>
+    </div>
+    @endif
+    
+    {{-- Solo mostrar firma si el usuario actual es el autor --}}
+    @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
     <div class="firma-section">
         <div class="firma-box">
             <img src="{{ $firmaBase64 }}" alt="Firma" class="firma-image">
@@ -557,6 +571,7 @@
         <p>✓ Receta médica validada</p>
         <p>No se acepta si presenta tachaduras o enmendaduras</p>
     </div>
+    @endif
     @endif
     @endif
 @endforeach

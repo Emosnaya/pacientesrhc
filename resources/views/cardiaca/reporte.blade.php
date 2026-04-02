@@ -502,7 +502,21 @@
     <div class="paciente mt-4">
       <p  class="f-15 f-normal mb-5">Agradeciendo su confianza y preferencia. Aprovecho para enviarle un cordial saludo y quedo a sus órdenes.</p>
     </div>
-    @if(isset($firmaBase64) && $firmaBase64)
+    {{-- Siempre mostrar quién elaboró el documento --}}
+    <div class="paciente mt-3">
+      <p class="f-15 f-normal mb-1"><strong>Elaboró:</strong>
+        @if(isset($autor) && $autor)
+          {{ $autor->nombre_completo }}
+          @if($autor->cedula)
+            | Cédula: {{ $autor->cedula }}
+          @endif
+        @else
+          {{ $user->nombre_con_titulo }}
+        @endif
+      </p>
+    </div>
+    {{-- Solo mostrar firma si el usuario actual es el autor --}}
+    @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
     <div class="paciente mt-5">
       <p  class="f-15 f-normal mb-5">Atentamente,</p>
     </div>

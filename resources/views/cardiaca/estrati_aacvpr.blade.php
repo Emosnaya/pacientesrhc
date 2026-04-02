@@ -704,8 +704,21 @@
     </div>
     @endif
 
-    <!-- Firma (posición fija abajo) -->
-    @if(isset($firmaBase64) && $firmaBase64)
+    {{-- Siempre mostrar quién elaboró el documento --}}
+    <div style="margin-top: 10px; font-size: 9px;">
+        <strong>Elaboró:</strong>
+        @if(isset($autor) && $autor)
+            {{ $autor->nombre_completo }}
+            @if($autor->cedula)
+                | Cédula: {{ $autor->cedula }}
+            @endif
+        @else
+            {{ $user->nombre_con_titulo ?? $user->name ?? '' }}
+        @endif
+    </div>
+
+    {{-- Solo mostrar firma si el usuario actual es el autor --}}
+    @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
     <div class="signature-wrapper">
         <img src="{{ $firmaBase64 }}" alt="Firma"><br>
         <div class="signature-line"></div>

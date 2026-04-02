@@ -445,7 +445,22 @@
             </tr>
         </table>
 
-        @if(isset($firmaBase64) && $firmaBase64)
+        {{-- Siempre mostrar quién elaboró el documento --}}
+        <div style="margin-top: 15px; text-align: center;">
+            <p class="f-bold mb-1">Elaboró:
+                @if(isset($autor) && $autor)
+                    {{ $autor->nombre_completo }}
+                    @if($autor->cedula)
+                        | Cédula: {{ $autor->cedula }}
+                    @endif
+                @else
+                    {{ $user->nombre_con_titulo }}
+                @endif
+            </p>
+        </div>
+
+        {{-- Solo mostrar firma si el usuario actual es el autor --}}
+        @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
         <!-- Firma Digital -->
         <div class="firma-section">
             <img src="{{ $firmaBase64 }}" alt="Firma Digital" class="firma-image">

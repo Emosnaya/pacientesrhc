@@ -172,14 +172,21 @@
             </tr>
         </table>
 
-        @if(isset($firmaBase64) && $firmaBase64)
+        {{-- Siempre mostrar quién elaboró --}}
+        @if(isset($autor) && $autor)
+        <div style="text-align: center; margin-top: 1rem;">
+            <p style="font-size: 10px; margin: 0;"><strong>Elaboró:</strong> {{ $autor->nombre_completo }}</p>
+            @if($autor->cedula)
+            <p style="font-size: 9px; color: #64748b; margin: 0;">Cédula Profesional: {{ $autor->cedula }}</p>
+            @endif
+        </div>
+        @endif
+
+        {{-- Solo mostrar firma si es el autor --}}
+        @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
         <div class="signature">
             <img src="{{ $firmaBase64 }}" alt="Firma">
             <div class="signature-line"></div>
-            <p class="signature-text f-bold mb-0">{{ $user->nombre_con_titulo }}</p>
-            @if($user->cedula ?? null)
-            <p class="signature-text mb-0">Cédula: {{ $user->cedula }}</p>
-            @endif
         </div>
         @endif
     </main>

@@ -746,14 +746,21 @@
         </table>
         @endif
 
-        @if(isset($firmaBase64) && $firmaBase64)
-        <!-- Firma al lado derecho al final -->
+        {{-- Siempre mostrar quién elaboró el documento --}}
+        @if(isset($autor) && $autor)
+        <div style="margin-top: 1rem; text-align: right; padding-right: 2rem;">
+            <p class="f-bold mb-0" style="font-size: 10px;">Elaboró: {{ $autor->nombre_completo }}</p>
+            @if($autor->cedula)
+            <p style="font-size: 9px; color: #64748b; margin: 0;">Cédula Profesional: {{ $autor->cedula }}</p>
+            @endif
+        </div>
+        @endif
+
+        {{-- Solo mostrar firma si el usuario actual es el autor --}}
+        @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
         <div style="margin-top: 0.5rem; text-align: right; padding-right: 2rem;">
             <img src="{{ $firmaBase64 }}" alt="Firma" style="max-height: 60px; max-width: 150px; display: block; margin-left: auto; margin-bottom: 0.5rem;">
-            <p class="f-bold mb-0" style="text-align: right; font-size: 10px;">{{ $user->nombre_con_titulo }}</p>
-            @if($user->cedula)
-            <p class="" style="text-align: right; font-size: 10px;">Cédula Profesional: {{ $user->cedula }}</p>
-            @endif
+            <div style="border-top: 1px solid #333; width: 150px; margin-left: auto;"></div>
         </div>
         @endif
     </main>

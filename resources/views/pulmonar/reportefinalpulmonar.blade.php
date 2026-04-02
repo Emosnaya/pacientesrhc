@@ -350,7 +350,22 @@
 
         <p class="f-9 mt-3">Quedo a sus órdenes para cualquier duda o aclaración.</p>
 
-        @if(isset($firmaBase64) && $firmaBase64)
+        {{-- Siempre mostrar quién elaboró el documento --}}
+        <div style="margin-top: 15px;">
+            <p class="f-9 f-bold mb-0">Elaboró:
+                @if(isset($autor) && $autor)
+                    {{ $autor->nombre_completo }}
+                    @if($autor->cedula)
+                        | Cédula: {{ $autor->cedula }}
+                    @endif
+                @else
+                    {{ $user->nombre_con_titulo }}
+                @endif
+            </p>
+        </div>
+
+        {{-- Solo mostrar firma si el usuario actual es el autor --}}
+        @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
         <!-- Firma del médico -->
         <div class="signature">
             <img src="{{ $firmaBase64 }}" alt="Firma">

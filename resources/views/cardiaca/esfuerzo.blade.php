@@ -534,15 +534,20 @@
   <div class="paciente mt-1 mb-1">
     <p  class="f-bold">Conclusiones: <span class="f-normal">{{ $data->conclusiones}}</span></p> 
     <p class="m-t-0 mb-0"><span class="f-bold">  Riesgo general de la prueba: <span class="f-normal">{{$data->riesgo}}</span></span></p>
-    @if(isset($firmaBase64) && $firmaBase64)
-    <p class="mt-0 mb-0"><span class="f-bold">Realizó: <span class="f-normal">{{ $user->nombre_con_titulo }}</span></span></p>
+    {{-- Siempre mostrar quién elaboró --}}
+    @if(isset($autor) && $autor)
+    <p class="mt-0 mb-0"><span class="f-bold">Elaboró: <span class="f-normal">{{ $autor->nombre_completo }}</span></span></p>
+    @if($autor->cedula)
+    <p class="mt-0 mb-0" style="font-size: 9px; color: #64748b;">Cédula Profesional: {{ $autor->cedula }}</p>
+    @endif
     @endif
   </div>
-  @if(isset($firmaBase64) && $firmaBase64)
+  {{-- Solo mostrar firma si es el autor --}}
+  @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
   <div style="position: fixed; bottom: 40px; left: 0; right: 0; text-align: center;">
     <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 50px; width: auto;"><br>
     <div style="border-top: 1px solid #333; width: 150px; margin: 2px auto 0 auto;"></div>
-    <span style="font-size: 9px;">{{ $user->nombre_con_titulo }}</span>
+    <span style="font-size: 9px;">{{ $autor->nombre_completo ?? $user->nombre_con_titulo }}</span>
   </div>
   @endif
   <div class="contenedor">

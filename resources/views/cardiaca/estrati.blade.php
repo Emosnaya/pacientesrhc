@@ -822,12 +822,20 @@
           <p class="mb-0  f-bold f-10 m-t-1">Fc Diana :<span class="ml-1 f-normal">{{round($data->fc_diana)}} lpm</span> <span class="ml-4 f-bold">Dp Diana: <span class="f-normal">{{$data->dp_diana}} mmHg*lpm</span> </span>  <span class="ml-4 f-bold">Carga Inicial:<span class="ml-3 f-normal"> {{$data->carga_inicial}}Watts</span></span></p>
           <p class="f-bold f-10 f-10 mt-0 mb-0">{{$data->fc_diana_str}}: <span class="f-normal">Método(Borg,Karvonen,Blakburn,Narita)</span> </p>
       </div>
+      {{-- Siempre mostrar quién elaboró el documento --}}
       <div class="mt-1 mb-0">
-        @if(isset($firmaBase64) && $firmaBase64)
-        <span class="f-bold mt-0 mb-0 f-10">Realizó:</span><span class="f-10 ml-2">{{ $user->nombre_con_titulo }}</span>
+        <span class="f-bold mt-0 mb-0 f-10">Elaboró:</span>
+        @if(isset($autor) && $autor)
+          <span class="f-10 ml-2">{{ $autor->nombre_completo }}</span>
+          @if($autor->cedula)
+            <span class="f-10 ml-2">| Cédula: {{ $autor->cedula }}</span>
+          @endif
+        @else
+          <span class="f-10 ml-2">{{ $user->nombre_con_titulo }}</span>
         @endif
       </div>
-      @if(isset($firmaBase64) && $firmaBase64)
+      {{-- Solo mostrar firma si el usuario actual es el autor --}}
+      @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
       <div style="position: fixed; bottom: 30px; left: 0; right: 0; text-align: center;">
         <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 40px; width: auto;"><br>
         <div style="border-top: 1px solid #333; width: 120px; margin: 2px auto 0 auto;"></div>
