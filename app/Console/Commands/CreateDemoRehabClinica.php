@@ -302,7 +302,35 @@ class CreateDemoRehabClinica extends Command
             'updated_at' => now(),
         ]);
         
+        // Crear solo 2 pacientes de ejemplo para el consultorio
+        $nombresPacientes = [
+            ['Carlos', 'Mendoza', 'Ruiz'],
+            ['Elena', 'Vargas', 'Luna'],
+        ];
+        
+        foreach ($nombresPacientes as $i => $n) {
+            $fechaNac = Carbon::now()->subYears(35 + ($i * 10));
+            Paciente::create([
+                'registro' => 'NUT-' . str_pad($i + 1, 4, '0', STR_PAD_LEFT),
+                'nombre' => $n[0],
+                'apellidoPat' => $n[1],
+                'apellidoMat' => $n[2],
+                'telefono' => '55 1234 ' . str_pad($i + 1, 4, '0', STR_PAD_LEFT),
+                'email' => strtolower($n[0]) . '.' . strtolower($n[1]) . '.nutri.c' . $consultorio->id . '@ejemplo.com',
+                'fechaNacimiento' => $fechaNac,
+                'edad' => $fechaNac->age,
+                'genero' => $i % 2,
+                'domicilio' => 'Calle Nutrición ' . ($i + 1) . ', Col. Salud',
+                'motivo_consulta' => 'Consulta nutricional',
+                'user_id' => $doctor->id,
+                'clinica_id' => $consultorio->id,
+                'sucursal_id' => $sucursalConsultorio->id,
+                'color' => ['#10B981', '#F59E0B'][$i],
+            ]);
+        }
+        
         $this->info('  ✓ Consultorio adicional creado: ' . $consultorio->nombre . ' (ID: ' . $consultorio->id . ')');
+        $this->info('    → 2 pacientes de ejemplo creados');
         $this->info('    → Dr. Martínez ahora tiene acceso a 2 espacios de trabajo');
         
         return $consultorio;
@@ -421,32 +449,62 @@ class CreateDemoRehabClinica extends Command
     {
         $exp = $config['expedientes'];
         $fecha = now()->subDays(5)->format('Y-m-d');
-        $contenido = 'Contenido de demostración. Datos de prueba para expediente.';
 
         foreach ($pacientes as $idx => $paciente) {
             $tipoP = $paciente->tipo_paciente;
             $tieneFisio = ($tipoP === 'fisioterapia');
 
+            // Solo crear expedientes con campos mínimos requeridos (sin 'contenido')
             if (in_array('clinico', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                Clinico::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                Clinico::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                    'diagnostico_general' => 'Expediente demo - Rehabilitación cardiopulmonar',
+                    'plan' => 'Plan de rehabilitación integral',
+                ]);
             }
             if (in_array('esfuerzo', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                Esfuerzo::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                Esfuerzo::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('estratificacion', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                Estratificacion::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                Estratificacion::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('reporte_final', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                ReporteFinal::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                ReporteFinal::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('reporte_nutri', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                ReporteNutri::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                ReporteNutri::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('reporte_psico', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                ReportePsico::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                ReportePsico::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('reporte_fisio', $exp, true) && $tieneFisio) {
-                ReporteFisio::create(['paciente_id' => $paciente->id, 'user_id' => $doctor->id, 'fecha' => $fecha, 'contenido' => $contenido]);
+                ReporteFisio::create([
+                    'paciente_id' => $paciente->id,
+                    'user_id' => $doctor->id,
+                    'fecha' => $fecha,
+                ]);
             }
             if (in_array('historia_fisio', $exp, true) && $tieneFisio) {
                 HistoriaClinicaFisioterapia::create([
