@@ -454,7 +454,7 @@ class CreateDemoRehabClinica extends Command
             $tipoP = $paciente->tipo_paciente;
             $tieneFisio = ($tipoP === 'fisioterapia');
 
-            // Solo crear expedientes con campos mínimos requeridos (sin 'contenido')
+            // Clinico: tiene 'fecha'
             if (in_array('clinico', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
                 Clinico::create([
                     'paciente_id' => $paciente->id,
@@ -464,6 +464,8 @@ class CreateDemoRehabClinica extends Command
                     'plan' => 'Plan de rehabilitación integral',
                 ]);
             }
+            
+            // Esfuerzo: tiene 'fecha'
             if (in_array('esfuerzo', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
                 Esfuerzo::create([
                     'paciente_id' => $paciente->id,
@@ -471,13 +473,17 @@ class CreateDemoRehabClinica extends Command
                     'fecha' => $fecha,
                 ]);
             }
+            
+            // Estratificacion: usa 'estrati_fecha' NO 'fecha'
             if (in_array('estratificacion', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
                 Estratificacion::create([
                     'paciente_id' => $paciente->id,
                     'user_id' => $doctor->id,
-                    'fecha' => $fecha,
+                    'estrati_fecha' => $fecha,
                 ]);
             }
+            
+            // ReporteFinal: tiene 'fecha'
             if (in_array('reporte_final', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
                 ReporteFinal::create([
                     'paciente_id' => $paciente->id,
@@ -485,27 +491,25 @@ class CreateDemoRehabClinica extends Command
                     'fecha' => $fecha,
                 ]);
             }
+            
+            // ReporteNutri: NO tiene user_id ni fecha directa, solo created_at
             if (in_array('reporte_nutri', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
                 ReporteNutri::create([
                     'paciente_id' => $paciente->id,
-                    'user_id' => $doctor->id,
-                    'fecha' => $fecha,
                 ]);
             }
-            if (in_array('reporte_psico', $exp, true) && in_array($tipoP, ['cardiaca', 'pulmonar', 'ambos'], true)) {
-                ReportePsico::create([
-                    'paciente_id' => $paciente->id,
-                    'user_id' => $doctor->id,
-                    'fecha' => $fecha,
-                ]);
-            }
+            
+            // ReportePsico: tabla vacía, omitir
+            // ReporteFisio: solo tiene paciente_id, clinica_id, sucursal_id
             if (in_array('reporte_fisio', $exp, true) && $tieneFisio) {
                 ReporteFisio::create([
                     'paciente_id' => $paciente->id,
-                    'user_id' => $doctor->id,
-                    'fecha' => $fecha,
+                    'clinica_id' => $paciente->clinica_id,
+                    'sucursal_id' => $paciente->sucursal_id,
                 ]);
             }
+            
+            // Historia Fisioterapia
             if (in_array('historia_fisio', $exp, true) && $tieneFisio) {
                 HistoriaClinicaFisioterapia::create([
                     'paciente_id' => $paciente->id,
@@ -533,6 +537,8 @@ class CreateDemoRehabClinica extends Command
                     'pronostico' => 'Favorable',
                 ]);
             }
+            
+            // Nota Evolución Fisioterapia
             if (in_array('evolucion_fisio', $exp, true) && $tieneFisio) {
                 NotaEvolucionFisioterapia::create([
                     'paciente_id' => $paciente->id,
@@ -550,6 +556,8 @@ class CreateDemoRehabClinica extends Command
                     'plan' => 'Continuar 3 sesiones más',
                 ]);
             }
+            
+            // Nota Alta Fisioterapia (solo primeros 4)
             if (in_array('alta_fisio', $exp, true) && $tieneFisio && $idx < 4) {
                 NotaAltaFisioterapia::create([
                     'paciente_id' => $paciente->id,

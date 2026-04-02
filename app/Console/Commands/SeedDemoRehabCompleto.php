@@ -78,8 +78,10 @@ class SeedDemoRehabCompleto extends Command
 
         DB::transaction(function () {
             $clinica = $this->createClinica();
-            $sucursal = $this->createSucursal($clinica);
-            $users = $this->createUsersAndPivots($clinica, $sucursal);
+            $sucursales = $this->createSucursales($clinica);
+            $sucursalPrincipal = $sucursales['principal'];
+            $sucursalSur = $sucursales['sur'];
+            $users = $this->createUsersAndPivots($clinica, $sucursalPrincipal);
 
             $doctor = $users['doctor'];
             $admin = $users['admin'];
@@ -87,37 +89,41 @@ class SeedDemoRehabCompleto extends Command
             $psico = $users['psicologo'];
             $fisio = $users['fisioterapeuta'];
 
-            $pacientes = $this->createPacientes($clinica, $sucursal, $doctor);
-            $this->linkClinicaPaciente($clinica, $sucursal, $doctor, $pacientes);
+            // Crear consultorio de ginecología para el doctor
+            $this->createConsultorioGinecologia($doctor);
+
+            $pacientes = $this->createPacientes($clinica, $sucursalPrincipal, $doctor);
+            $this->linkClinicaPaciente($clinica, $sucursalPrincipal, $doctor, $pacientes);
             $this->createPortalPacienteUser($pacientes[0]);
 
-            $citas = $this->createCitas($pacientes, $admin, $doctor, $clinica, $sucursal);
-            $this->createPagos($pacientes, $citas, $admin, $clinica, $sucursal);
-            $this->createEgresos($clinica, $sucursal, $admin);
+            $citas = $this->createCitas($pacientes, $admin, $doctor, $clinica, $sucursalPrincipal);
+            $this->createPagos($pacientes, $citas, $admin, $clinica, $sucursalPrincipal);
+            $this->createEgresos($clinica, $sucursalPrincipal, $admin);
 
             $pacienteCompleto = $pacientes[0];
             $this->createAllExpedientesForPaciente(
                 $pacienteCompleto,
                 $clinica,
-                $sucursal,
+                $sucursalPrincipal,
                 $doctor,
                 $nutri,
                 $psico,
                 $fisio
             );
-            $this->createSparseExpedientesForOthers(array_slice($pacientes, 1), $doctor, $clinica, $sucursal, $fisio);
+            $this->createSparseExpedientesForOthers(array_slice($pacientes, 1), $doctor, $clinica, $sucursalPrincipal, $fisio);
 
-            $this->createRecetas($pacienteCompleto, $doctor, $clinica, $sucursal);
+            $this->createRecetas($pacienteCompleto, $doctor, $clinica, $sucursalPrincipal);
         });
 
         $this->newLine();
         $this->info('Demo lista. Email clínica: ' . self::CLINICA_EMAIL);
+        $this->info('Sucursales: Principal (Centro) + Sur (Coyoacán)');
         $this->table(
             ['Usuario', 'Email', 'Notas'],
             [
                 ['Superadmin', 'demo-rehab-superadmin@lynkamed.mx', 'isSuperAdmin + isAdmin'],
                 ['Admin', 'demo-rehab-admin@lynkamed.mx', 'isAdmin'],
-                ['Doctor (recetas)', 'demo-rehab-dr-garcia@lynkamed.mx', 'doctor'],
+                ['Doctor (recetas)', 'demo-rehab-dr-garcia@lynkamed.mx', 'doctor + consultorio ginecología'],
                 ['Nutriólogo', 'demo-rehab-nutri@lynkamed.mx', 'nutriologo'],
                 ['Psicólogo', 'demo-rehab-psico@lynkamed.mx', 'psicologo'],
                 ['Fisioterapeuta', 'demo-rehab-fisio@lynkamed.mx', 'fisioterapeuta'],
@@ -127,6 +133,7 @@ class SeedDemoRehabCompleto extends Command
         );
         $this->info('Contraseña común (staff y portal paciente demo): ' . self::PASSWORD);
         $this->info('Paciente con todos los expedientes: registro R9999-DEMO — portal: demo-rehab-paciente-completo@lynkamed.mx');
+        $this->info('El Dr. García también tiene acceso a un consultorio de Ginecología con 2 pacientes demo.');
 
         return self::SUCCESS;
     }
@@ -151,12 +158,17 @@ class SeedDemoRehabCompleto extends Command
         ]);
     }
 
-    protected function createSucursal(Clinica $clinica): Sucursal
+    /**
+     * Crea 2 sucursales para la clínica demo.
+     *
+     * @return array{principal: Sucursal, sur: Sucursal}
+     */
+    protected function createSucursales(Clinica $clinica): array
     {
-        return Sucursal::create([
+        $principal = Sucursal::create([
             'clinica_id' => $clinica->id,
-            'nombre' => 'Sucursal Principal Demo Rehab',
-            'codigo' => 'SUC-RH-' . str_pad((string) $clinica->id, 3, '0', STR_PAD_LEFT),
+            'nombre' => 'Sucursal Principal - Centro',
+            'codigo' => 'SUC-RH-' . str_pad((string) $clinica->id, 3, '0', STR_PAD_LEFT) . '-P',
             'direccion' => $clinica->direccion,
             'telefono' => $clinica->telefono,
             'email' => 'demo-rehab-sucursal@lynkamed.mx',
@@ -165,8 +177,119 @@ class SeedDemoRehabCompleto extends Command
             'codigo_postal' => '03100',
             'es_principal' => true,
             'activa' => true,
-            'notas' => 'Solo datos de demostración',
+            'notas' => 'Sucursal principal demo - Centro',
         ]);
+
+        $sur = Sucursal::create([
+            'clinica_id' => $clinica->id,
+            'nombre' => 'Sucursal Sur - Coyoacán',
+            'codigo' => 'SUC-RH-' . str_pad((string) $clinica->id, 3, '0', STR_PAD_LEFT) . '-S',
+            'direccion' => 'Av. Universidad 1500, Col. Coyoacán, CDMX',
+            'telefono' => '+52 55 5555 0202',
+            'email' => 'demo-rehab-sur@lynkamed.mx',
+            'ciudad' => 'Ciudad de México',
+            'estado' => 'CDMX',
+            'codigo_postal' => '04510',
+            'es_principal' => false,
+            'activa' => true,
+            'notas' => 'Sucursal sur demo - Coyoacán',
+        ]);
+
+        return ['principal' => $principal, 'sur' => $sur];
+    }
+
+    /**
+     * Crea un consultorio de Ginecología y lo vincula al doctor.
+     * Incluye 2 pacientes demo.
+     */
+    protected function createConsultorioGinecologia(User $doctor): void
+    {
+        // Crear clínica de ginecología
+        $clinicaGineco = Clinica::create([
+            'nombre' => 'Consultorio Ginecología Dr. García (Demo)',
+            'tipo_clinica' => 'ginecologia',
+            'modulos_habilitados' => ['expediente_gineco', 'control_prenatal', 'ultrasonido'],
+            'email' => 'demo-gineco-dr-garcia@lynkamed.mx',
+            'telefono' => '+52 55 5555 0303',
+            'direccion' => 'Av. Insurgentes Sur 500, Col. Roma, CDMX',
+            'plan' => 'basico',
+            'pagado' => true,
+            'activa' => true,
+            'permite_multiples_sucursales' => false,
+            'max_sucursales' => 1,
+            'max_usuarios' => 5,
+            'max_pacientes' => 100,
+            'fecha_vencimiento' => now()->addYear(),
+        ]);
+
+        // Crear sucursal para el consultorio
+        $sucursalGineco = Sucursal::create([
+            'clinica_id' => $clinicaGineco->id,
+            'nombre' => 'Consultorio Principal',
+            'codigo' => 'SUC-GIN-' . str_pad((string) $clinicaGineco->id, 3, '0', STR_PAD_LEFT),
+            'direccion' => $clinicaGineco->direccion,
+            'telefono' => $clinicaGineco->telefono,
+            'email' => $clinicaGineco->email,
+            'ciudad' => 'Ciudad de México',
+            'estado' => 'CDMX',
+            'codigo_postal' => '06700',
+            'es_principal' => true,
+            'activa' => true,
+            'notas' => 'Consultorio ginecología demo',
+        ]);
+
+        // Vincular doctor al consultorio de ginecología via user_clinicas
+        DB::table('user_clinicas')->insert([
+            'user_id' => $doctor->id,
+            'clinica_id' => $clinicaGineco->id,
+            'rol_en_clinica' => 'propietario',
+            'isAdmin' => true,
+            'isSuperAdmin' => true,
+            'activa' => true,
+            'invitado_por' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Crear 2 pacientes demo para ginecología
+        $pacientesGineco = [
+            ['nombre' => 'Lucía', 'apellidoPat' => 'Ramírez', 'apellidoMat' => 'Ortega'],
+            ['nombre' => 'Fernanda', 'apellidoPat' => 'Torres', 'apellidoMat' => 'Mendoza'],
+        ];
+
+        foreach ($pacientesGineco as $i => $datos) {
+            $fechaNac = Carbon::now()->subYears(28 + ($i * 5));
+            $paciente = Paciente::create([
+                'registro' => 'G' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT) . '-DEMO',
+                'nombre' => $datos['nombre'],
+                'apellidoPat' => $datos['apellidoPat'],
+                'apellidoMat' => $datos['apellidoMat'],
+                'telefono' => '55 6000 ' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
+                'email' => 'demo-gineco-' . strtolower($datos['nombre']) . '@lynkamed.mx',
+                'fechaNacimiento' => $fechaNac,
+                'edad' => $fechaNac->age,
+                'genero' => 1, // Femenino
+                'domicilio' => 'Calle Gineco Demo ' . ($i + 1) . ', Col. Roma',
+                'motivo_consulta' => 'Consulta ginecológica de rutina (demo)',
+                'tipo_paciente' => 'ginecologia',
+                'user_id' => $doctor->id,
+                'clinica_id' => $clinicaGineco->id,
+                'sucursal_id' => $sucursalGineco->id,
+                'color' => ['#EC4899', '#F472B6'][$i],
+            ]);
+
+            // Vincular paciente con la clínica
+            DB::table('clinica_paciente')->insert([
+                'clinica_id' => $clinicaGineco->id,
+                'paciente_id' => $paciente->id,
+                'sucursal_id' => $sucursalGineco->id,
+                'user_id' => $doctor->id,
+                'tipo_paciente' => 'ginecologia',
+                'vinculado_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     /**
@@ -860,7 +983,21 @@ class SeedDemoRehabCompleto extends Command
 
     protected function purgeDemoClinica(Clinica $clinica): void
     {
-        $cid = $clinica->id;
+        // También eliminar la clínica de ginecología del doctor si existe
+        $clinicaGineco = Clinica::where('email', 'demo-gineco-dr-garcia@lynkamed.mx')->first();
+        if ($clinicaGineco) {
+            $this->purgeClinicaById($clinicaGineco->id);
+        }
+
+        // Eliminar la clínica principal de rehab
+        $this->purgeClinicaById($clinica->id);
+    }
+
+    /**
+     * Elimina una clínica y todos sus datos relacionados.
+     */
+    protected function purgeClinicaById(int $cid): void
+    {
         $pids = Paciente::where('clinica_id', $cid)->pluck('id')->all();
         $userIds = User::where('clinica_id', $cid)->pluck('id')->all();
 
