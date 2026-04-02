@@ -325,6 +325,7 @@ class CreateDemoRehabClinica extends Command
         
         $pacientes = [];
         $offset = $prefix === 'SUC2' ? 100 : 0; // Offset para IDs únicos
+        $clinicaSuffix = 'c' . $clinica->id; // Sufijo único por clínica para evitar duplicados
         
         foreach ($nombres as $i => $n) {
             $fechaNac = Carbon::now()->subYears(50 + ($i % 25));
@@ -335,7 +336,7 @@ class CreateDemoRehabClinica extends Command
                 'apellidoPat' => $n[1],
                 'apellidoMat' => $n[2],
                 'telefono' => '55 ' . str_pad($i + 1 + $offset, 4, '0', STR_PAD_LEFT) . ' ' . str_pad(($i + 2) * 1111, 4, '0', STR_PAD_LEFT),
-                'email' => strtolower($n[0]) . '.' . strtolower($n[1]) . ($prefix ? '.suc2' : '') . '@ejemplo.com',
+                'email' => strtolower($n[0]) . '.' . strtolower($n[1]) . ($prefix ? '.suc2' : '') . '.' . $clinicaSuffix . '@ejemplo.com',
                 'fechaNacimiento' => $fechaNac,
                 'edad' => $fechaNac->age,
                 'genero' => $i % 2,
