@@ -20,14 +20,13 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'https://pacientesrhc.com',
         'https://www.pacientesrhc.com',
         'https://api.pacientesrhc.com',
         'https://app.pacientesrhc.com',
+        'https://lynkamed.mx',
+        'https://www.lynkamed.mx',
+        'https://app.lynkamed.mx',
+        'https://api.lynkamed.mx',
     ],
 
     'allowed_origins_patterns' => ['/localhost.*/'],
