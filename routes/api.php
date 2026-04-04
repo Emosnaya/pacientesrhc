@@ -44,6 +44,12 @@ use App\Http\Controllers\InternalConsultorioProvisionController;
 use App\Http\Controllers\PacienteConsentimientoController;
 use App\Http\Controllers\PacientePortalAuthController;
 use App\Http\Controllers\PacientePortalController;
+use App\Http\Controllers\HistoriaClinicaCardiologiaController;
+use App\Http\Controllers\EcocardiogramaController;
+use App\Http\Controllers\ElectrocardiogramaController;
+use App\Http\Controllers\HistoriaGinecologicaController;
+use App\Http\Controllers\HistoriaObstetricaController;
+use App\Http\Controllers\ControlPrenatalController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -148,6 +154,11 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         return $user;
     });
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // ==========================================
+    // SOPORTE / AYUDA
+    // ==========================================
+    Route::post('/soporte/ticket', [\App\Http\Controllers\SoporteController::class, 'crearTicket']);
     
     // Rutas de perfil
     Route::get('/profile/{id}', [ProfileController::class, 'show']);
@@ -450,6 +461,78 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::get('/{id}/print', [PruebaEsfuerzoPulmonarController::class, 'generatePDF']);
         Route::get('/{id}/download', [PruebaEsfuerzoPulmonarController::class, 'downloadPDF']);
     });
+
+    // ==========================================
+    // MÓDULO CARDIOLOGÍA (Expedientes)
+    // ==========================================
+    
+    // Historia Clínica Cardiológica
+    Route::prefix('cardiologia/historia')->group(function () {
+        Route::get('/paciente/{pacienteId}', [HistoriaClinicaCardiologiaController::class, 'index']);
+        Route::post('/', [HistoriaClinicaCardiologiaController::class, 'store']);
+        Route::get('/{id}', [HistoriaClinicaCardiologiaController::class, 'show']);
+        Route::put('/{id}', [HistoriaClinicaCardiologiaController::class, 'update']);
+        Route::delete('/{id}', [HistoriaClinicaCardiologiaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [HistoriaClinicaCardiologiaController::class, 'pdf']);
+    });
+
+    // Ecocardiograma
+    Route::prefix('cardiologia/ecocardiograma')->group(function () {
+        Route::get('/paciente/{pacienteId}', [EcocardiogramaController::class, 'index']);
+        Route::post('/', [EcocardiogramaController::class, 'store']);
+        Route::get('/{id}', [EcocardiogramaController::class, 'show']);
+        Route::put('/{id}', [EcocardiogramaController::class, 'update']);
+        Route::delete('/{id}', [EcocardiogramaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [EcocardiogramaController::class, 'pdf']);
+        Route::get('/compare/{id1}/{id2}', [EcocardiogramaController::class, 'compare']);
+    });
+
+    // Electrocardiograma
+    Route::prefix('cardiologia/ecg')->group(function () {
+        Route::get('/paciente/{pacienteId}', [ElectrocardiogramaController::class, 'index']);
+        Route::post('/', [ElectrocardiogramaController::class, 'store']);
+        Route::get('/{id}', [ElectrocardiogramaController::class, 'show']);
+        Route::put('/{id}', [ElectrocardiogramaController::class, 'update']);
+        Route::delete('/{id}', [ElectrocardiogramaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [ElectrocardiogramaController::class, 'pdf']);
+        Route::get('/compare/{id1}/{id2}', [ElectrocardiogramaController::class, 'compare']);
+    });
+
+    // ==========================================
+    // MÓDULO GINECOLOGÍA Y OBSTETRICIA
+    // ==========================================
+    
+    // Historia Ginecológica
+    Route::prefix('ginecologia/historia')->group(function () {
+        Route::get('/paciente/{pacienteId}', [HistoriaGinecologicaController::class, 'index']);
+        Route::post('/', [HistoriaGinecologicaController::class, 'store']);
+        Route::get('/{id}', [HistoriaGinecologicaController::class, 'show']);
+        Route::put('/{id}', [HistoriaGinecologicaController::class, 'update']);
+        Route::delete('/{id}', [HistoriaGinecologicaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [HistoriaGinecologicaController::class, 'pdf']);
+    });
+
+    // Historia Obstétrica
+    Route::prefix('obstetricia/historia')->group(function () {
+        Route::get('/paciente/{pacienteId}', [HistoriaObstetricaController::class, 'index']);
+        Route::post('/', [HistoriaObstetricaController::class, 'store']);
+        Route::get('/{id}', [HistoriaObstetricaController::class, 'show']);
+        Route::put('/{id}', [HistoriaObstetricaController::class, 'update']);
+        Route::delete('/{id}', [HistoriaObstetricaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [HistoriaObstetricaController::class, 'pdf']);
+    });
+
+    // Control Prenatal
+    Route::prefix('obstetricia/control-prenatal')->group(function () {
+        Route::get('/paciente/{pacienteId}', [ControlPrenatalController::class, 'index']);
+        Route::post('/', [ControlPrenatalController::class, 'store']);
+        Route::get('/{id}', [ControlPrenatalController::class, 'show']);
+        Route::put('/{id}', [ControlPrenatalController::class, 'update']);
+        Route::delete('/{id}', [ControlPrenatalController::class, 'destroy']);
+        Route::get('/{id}/pdf', [ControlPrenatalController::class, 'pdf']);
+        Route::get('/resumen/{historiaObstetricaId}', [ControlPrenatalController::class, 'resumenEmbarazo']);
+    });
+
     // ==========================================
     // MÓDULO CONSULTORIO PRIVADO
     // ==========================================
@@ -531,4 +614,63 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function () {
     Route::post('/clinica/upload-logo', [\App\Http\Controllers\ClinicaController::class, 'uploadLogo']);
     Route::post('/clinica/{id}/upload-logo', [\App\Http\Controllers\ClinicaController::class, 'uploadLogo']);
     Route::delete('/clinica/{id}/delete-logo', [\App\Http\Controllers\ClinicaController::class, 'deleteLogo']);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// RUTAS INTERNAL - Panel interno de Lynkamed (Backoffice)
+// Solo para usuarios internos de Lynkamed (AdminUser)
+// ═══════════════════════════════════════════════════════════════════
+use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminClinicasController;
+use App\Http\Controllers\AdminConsultoriosController;
+
+// Autenticación internal (pública)
+Route::prefix('internal')->group(function () {
+    Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1');
+});
+
+// Rutas protegidas de internal
+Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(function () {
+    // Auth
+    Route::post('/logout', [AdminAuthController::class, 'logout']);
+    Route::get('/me', [AdminAuthController::class, 'me']);
+
+    // Dashboard stats
+    Route::get('/dashboard/stats', function () {
+        return response()->json([
+            'success' => true,
+            'stats' => [
+                'total_clinicas' => \App\Models\Clinica::where('es_consultorio_privado', false)->count(),
+                'total_consultorios' => \App\Models\Clinica::where('es_consultorio_privado', true)->count(),
+                'total_usuarios' => \App\Models\User::count(),
+                'suscripciones_activas' => \App\Models\Clinica::where('es_consultorio_privado', true)
+                    ->where('pagado', true)
+                    ->where(function ($q) {
+                        $q->whereNull('fecha_vencimiento')
+                          ->orWhere('fecha_vencimiento', '>=', now());
+                    })
+                    ->count(),
+            ],
+        ]);
+    });
+
+    // Clínicas
+    Route::get('/clinicas', [AdminClinicasController::class, 'index']);
+    Route::get('/clinicas/stats', [AdminClinicasController::class, 'stats']);
+    Route::get('/clinicas/tipos', [\App\Http\Controllers\ClinicaController::class, 'getTipos']); // tipos de clínica
+    Route::post('/clinicas', [AdminClinicasController::class, 'store']); // Crear clínica + usuario (sin pago)
+    Route::get('/clinicas/{clinica}', [AdminClinicasController::class, 'show']);
+    Route::put('/clinicas/{clinica}', [AdminClinicasController::class, 'update']);
+    Route::post('/clinicas/{clinica}/toggle-status', [AdminClinicasController::class, 'toggleStatus']);
+
+    // Consultorios (son clínicas con es_consultorio_privado = true)
+    Route::get('/consultorios', [AdminConsultoriosController::class, 'index']);
+    Route::get('/consultorios/stats', [AdminConsultoriosController::class, 'stats']);
+    Route::get('/consultorios/{consultorio}', [AdminConsultoriosController::class, 'show'])
+        ->where('consultorio', '[0-9]+');
+    Route::post('/consultorios/provisionar', [AdminConsultoriosController::class, 'provisionar']);
+    Route::post('/consultorios/{consultorio}/extender', [AdminConsultoriosController::class, 'extenderSuscripcion'])
+        ->where('consultorio', '[0-9]+');
+    Route::post('/consultorios/{consultorio}/toggle-status', [AdminConsultoriosController::class, 'toggleStatus'])
+        ->where('consultorio', '[0-9]+');
 });

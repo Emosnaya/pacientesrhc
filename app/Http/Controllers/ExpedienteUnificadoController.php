@@ -21,6 +21,9 @@ use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
 use App\Models\NotaSeguimientoPulmonar;
 use App\Models\EstratiAacvpr;
+use App\Models\HistoriaClinicaCardiologia;
+use App\Models\Ecocardiograma;
+use App\Models\Electrocardiograma;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -322,6 +325,51 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 30. Historia Clínica Cardiológica
+        $historiasCardiologia = HistoriaClinicaCardiologia::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 30,
+                    'fecha' => $item->fecha_consulta,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Clínica Cardiológica'
+                ];
+            });
+
+        // 31. Ecocardiograma
+        $ecocardiogramas = Ecocardiograma::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 31,
+                    'fecha' => $item->fecha_estudio,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Ecocardiograma'
+                ];
+            });
+
+        // 32. Electrocardiograma
+        $electrocardiogramas = Electrocardiograma::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 32,
+                    'fecha' => $item->fecha_estudio,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Electrocardiograma'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -341,7 +389,10 @@ class ExpedienteUnificadoController extends Controller
             ->merge($historiasDentales)
             ->merge($odontogramas)
             ->merge($notasSeguimientoPulmonar)
-            ->merge($estratiAacvprs);
+            ->merge($estratiAacvprs)
+            ->merge($historiasCardiologia)
+            ->merge($ecocardiogramas)
+            ->merge($electrocardiogramas);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

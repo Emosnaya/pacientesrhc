@@ -57,75 +57,36 @@ class SuscripcionConsultorioController extends Controller
     public function planes(): JsonResponse
     {
         $planes = [
-            'basico' => [
-                'nombre' => 'Básico',
-                'descripcion' => 'Perfecto para comenzar tu consultorio',
-                'precio_mensual' => 299,
-                'precio_anual' => 2999,
+            'consultorio' => [
+                'nombre' => 'Consultorio Privado',
+                'descripcion' => 'Todo lo que necesitas para tu consulta privada',
+                'precio_mensual' => 1800,
+                'precio_anual' => 18000,
+                'ahorro_anual' => 3600, // 2 meses gratis
                 'caracteristicas' => [
-                    '1 consultorio privado',
-                    'Hasta 100 pacientes',
-                    'Agenda y citas',
-                    'Expedientes digitales',
-                    'Recetas médicas',
-                    'Soporte por email',
+                    'Expediente clínico NOM-024',
+                    'Agenda en línea con recordatorios',
+                    'Portal del paciente para consultas y resultados',
+                    'Recetas con firma electrónica',
+                    'Transcripción por voz con IA',
+                    'Caja básica y recibos digitales',
+                    'Soporte por WhatsApp',
                 ],
                 'limites' => [
-                    'max_pacientes' => 100,
-                    'max_usuarios' => 2,
-                    'consultorios_incluidos' => 1,
-                ]
-            ],
-            'profesional' => [
-                'nombre' => 'Profesional',
-                'descripcion' => 'Para consultorios en crecimiento',
-                'precio_mensual' => 599,
-                'precio_anual' => 5999,
-                'caracteristicas' => [
-                    '1 consultorio privado',
-                    'Hasta 500 pacientes',
-                    'Agenda y citas',
-                    'Expedientes completos',
-                    'Recetas y estudios',
-                    'Reportes y analíticas',
-                    'Asistente médico con IA',
-                    'Soporte prioritario',
-                ],
-                'limites' => [
-                    'max_pacientes' => 500,
+                    'max_pacientes' => 999999,
                     'max_usuarios' => 5,
                     'consultorios_incluidos' => 1,
                 ],
                 'destacado' => true,
             ],
-            'premium' => [
-                'nombre' => 'Premium',
-                'descripcion' => 'Para profesionales establecidos',
-                'precio_mensual' => 999,
-                'precio_anual' => 9999,
-                'caracteristicas' => [
-                    '1 consultorio privado',
-                    'Pacientes ilimitados',
-                    'Todas las funciones profesional',
-                    'Expedientes avanzados',
-                    'Plantillas personalizadas',
-                    'Integraciones avanzadas',
-                    'API access',
-                    'Soporte 24/7',
-                ],
-                'limites' => [
-                    'max_pacientes' => 999999,
-                    'max_usuarios' => 10,
-                    'consultorios_incluidos' => 1,
-                ]
-            ]
         ];
 
         return response()->json([
             'success' => true,
             'planes' => $planes,
-            'precio_consultorio_adicional_mensual' => 199,
-            'precio_consultorio_adicional_anual' => 1999,
+            'precio_consultorio_adicional_mensual' => 1250,
+            'precio_consultorio_adicional_anual' => 15000,
+            'ahorro_consultorio_adicional' => 3000, // vs $18,000
         ]);
     }
 
@@ -137,7 +98,7 @@ class SuscripcionConsultorioController extends Controller
     public function iniciarTrial(Request $request): JsonResponse
     {
         $request->validate([
-            'plan' => 'required|in:basico,profesional,premium',
+            'plan' => 'required|in:consultorio',
         ]);
 
         /** @var User $user */
@@ -175,7 +136,7 @@ class SuscripcionConsultorioController extends Controller
     public function crearSuscripcion(Request $request): JsonResponse
     {
         $request->validate([
-            'plan' => 'required|in:basico,profesional,premium',
+            'plan' => 'required|in:consultorio',
             'ciclo' => 'required|in:mensual,anual',
             'payment_method_id' => 'nullable|string', // Stripe Payment Method ID
         ]);
