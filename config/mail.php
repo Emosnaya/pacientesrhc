@@ -114,4 +114,15 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support Email
+    |--------------------------------------------------------------------------
+    |
+    | Email where support tickets will be sent.
+    |
+    */
+
+    'soporte_email' => env('MAIL_SOPORTE_ADDRESS', 'soporte@lynkamed.com'),
+
 ];

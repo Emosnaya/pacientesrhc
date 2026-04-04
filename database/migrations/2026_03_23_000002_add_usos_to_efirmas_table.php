@@ -13,8 +13,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('efirmas', function (Blueprint $table) {
-            $table->boolean('usar_para_recetas')->default(true)->after('activa');
-            $table->boolean('usar_para_facturacion')->default(false)->after('usar_para_recetas');
+            if (!Schema::hasColumn('efirmas', 'usar_para_recetas')) {
+                $table->boolean('usar_para_recetas')->default(true)->after('activa');
+            }
+            if (!Schema::hasColumn('efirmas', 'usar_para_facturacion')) {
+                $table->boolean('usar_para_facturacion')->default(false)->after('usar_para_recetas');
+            }
         });
     }
 

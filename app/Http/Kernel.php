@@ -70,5 +70,6 @@ class Kernel extends HttpKernel
         'clinic.registration' => \App\Http\Middleware\EnsureClinicRegistrationUnlocked::class,
         'internal.consultorio.setup' => \App\Http\Middleware\EnsureInternalConsultorioUnlocked::class,
         'facturacion.addon' => \App\Http\Middleware\EnsureFacturacionAddonActive::class,
+        'admin.auth' => \App\Http\Middleware\AdminAuth::class,
     ];
 }
