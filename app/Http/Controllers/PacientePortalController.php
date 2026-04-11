@@ -416,4 +416,26 @@ class PacientePortalController extends Controller
             ], 501),
         };
     }
+
+    /**
+     * Obtener UUID público del paciente para generar QR de vinculación.
+     */
+    public function miQr(): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        // Si no tiene UUID, generarlo
+        if (empty($paciente->uuid_publico)) {
+            $paciente->uuid_publico = \Illuminate\Support\Str::uuid()->toString();
+            $paciente->save();
+        }
+
+        return response()->json([
+            'uuid' => $paciente->uuid_publico,
+            'nombre_completo' => trim("{$paciente->nombre} {$paciente->apellidoPat} {$paciente->apellidoMat}"),
+        ]);
+    }
 }
