@@ -113,6 +113,11 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
     Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
     Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
+    Route::get('/paciente-portal/mi-qr', [PacientePortalController::class, 'miQr']);
+    // Soporte - Tickets del paciente
+    Route::post('/paciente-portal/soporte/ticket', [\App\Http\Controllers\Api\SoporteTicketController::class, 'store']);
+    Route::get('/paciente-portal/soporte/mis-tickets', [\App\Http\Controllers\Api\SoporteTicketController::class, 'misTickets']);
+    Route::get('/paciente-portal/soporte/ticket/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'show']);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -159,6 +164,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     // SOPORTE / AYUDA
     // ==========================================
     Route::post('/soporte/ticket', [\App\Http\Controllers\SoporteController::class, 'crearTicket']);
+    Route::get('/soporte/mis-tickets', [\App\Http\Controllers\SoporteController::class, 'misTickets']);
+    Route::get('/soporte/ticket/{id}', [\App\Http\Controllers\SoporteController::class, 'show']);
     
     // Rutas de perfil
     Route::get('/profile/{id}', [ProfileController::class, 'show']);
@@ -673,4 +680,10 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
         ->where('consultorio', '[0-9]+');
     Route::post('/consultorios/{consultorio}/toggle-status', [AdminConsultoriosController::class, 'toggleStatus'])
         ->where('consultorio', '[0-9]+');
+
+    // Tickets de Soporte
+    Route::get('/soporte/tickets', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminIndex']);
+    Route::get('/soporte/tickets/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminShow']);
+    Route::put('/soporte/tickets/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminUpdate']);
+    Route::post('/soporte/tickets/{id}/responder', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminResponder']);
 });

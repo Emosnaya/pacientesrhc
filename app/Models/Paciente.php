@@ -6,10 +6,25 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class Paciente extends Model
 {
     use HasFactory, Auditable, Notifiable;
+
+    /**
+     * Boot the model - auto-generate UUID on creation.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($paciente) {
+            if (empty($paciente->uuid_publico)) {
+                $paciente->uuid_publico = Str::uuid()->toString();
+            }
+        });
+    }
 
      /**
      * The attributes that are mass assignable.
@@ -17,6 +32,7 @@ class Paciente extends Model
      * @var array
      */
     protected $fillable = [
+        'uuid_publico',
         'registro',
         'nombre',
         'apellidoPat',
