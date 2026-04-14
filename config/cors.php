@@ -20,15 +20,13 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'https://pacientesrhc.com/',
-        'https://pacientesrhc.com',
-        'https://www.pacientesrhc.com',
         'https://api.pacientesrhc.com',
         'https://app.pacientesrhc.com',
         'https://lynkamed.mx',
         'https://www.lynkamed.mx',
         'https://app.lynkamed.mx',
         'https://api.lynkamed.mx',
+        'https://bo.lynkamed.com',
     ],
 
     'allowed_origins_patterns' => ['/localhost.*/'],
