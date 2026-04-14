@@ -26,7 +26,7 @@ return [
         'https://www.lynkamed.mx',
         'https://app.lynkamed.mx',
         'https://api.lynkamed.mx',
-        'https://bo.lynkamed.com',
+        'https://bo.lynkamed.mx',
     ],
 
     'allowed_origins_patterns' => ['/localhost.*/'],
