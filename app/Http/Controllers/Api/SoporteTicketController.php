@@ -21,6 +21,7 @@ class SoporteTicketController extends Controller
             'asunto' => 'required|string|max:255',
             'mensaje' => 'required|string|max:5000',
             'clinica_id' => 'nullable|exists:clinicas,id',
+            'origen' => 'nullable|string|max:50',
         ]);
 
         $user = Auth::user();
@@ -30,6 +31,12 @@ class SoporteTicketController extends Controller
         if ($request->clinica_id) {
             $clinica = Clinica::find($request->clinica_id);
             $clinicaNombre = $clinica?->nombre;
+        }
+
+        // Determinar origen: portal_paciente, dashboard, etc.
+        $origen = $request->origen ?? 'dashboard';
+        if ($user->paciente_id || $user->es_paciente_portal) {
+            $origen = 'portal_paciente';
         }
 
         $ticket = SoporteTicket::create([
@@ -43,6 +50,7 @@ class SoporteTicketController extends Controller
             'clinica_nombre' => $clinicaNombre,
             'status' => 'nuevo',
             'prioridad' => 'media',
+            'origen' => $origen,
         ]);
 
         return response()->json([

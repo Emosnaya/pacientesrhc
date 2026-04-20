@@ -26,6 +26,7 @@ class SoporteTicket extends Model
         'respuesta',
         'resuelto_por',
         'resuelto_at',
+        'origen',
     ];
 
     protected $casts = [

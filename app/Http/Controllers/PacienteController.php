@@ -211,6 +211,9 @@ class PacienteController extends Controller
         
         $tipoPivot = $request->tipo_paciente ?? $paciente->tipo_paciente ?? 'cardiaca';
 
+        // Generar numero_expediente local para esta clínica (usa el mismo que el registro global al crear)
+        $numeroExpediente = $request->numero_expediente ?? $paciente->registro ?? null;
+
         // Crear la vinculación en la tabla pivot (motivo y tipo por clínica)
         $paciente->clinicas()->attach($clinicaId, [
             'sucursal_id' => $sucursalId,
@@ -218,6 +221,7 @@ class PacienteController extends Controller
             'vinculado_at' => now(),
             'motivo_consulta' => $request->motivo_consulta ?? null,
             'tipo_paciente' => $tipoPivot,
+            'numero_expediente' => $numeroExpediente,
         ]);
 
         // LFPDPPP: invitación por correo para aceptar aviso y términos (si hay email)
@@ -279,12 +283,16 @@ class PacienteController extends Controller
             $tipoNuevoVinculo = $paciente->tipo_paciente ?: 'general';
         }
 
+        // Generar numero_expediente secuencial para esta clínica
+        $nuevoExpediente = $this->generarNumeroExpedienteClinica($clinicaId);
+
         $paciente->clinicas()->attach($clinicaId, [
             'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
             'vinculado_at' => now(),
             'motivo_consulta' => null,
             'tipo_paciente' => $tipoNuevoVinculo,
+            'numero_expediente' => $nuevoExpediente,
         ]);
 
         $paciente->refresh();
@@ -406,6 +414,10 @@ class PacienteController extends Controller
             }
             if ($request->has('tipo_paciente')) {
                 $pivotUpdates['tipo_paciente'] = $request->tipo_paciente;
+            }
+            // numero_expediente local de la clínica (si se envía)
+            if ($request->has('numero_expediente')) {
+                $pivotUpdates['numero_expediente'] = $request->numero_expediente;
             }
             if ($pivotUpdates !== []) {
                 $paciente->clinicas()->updateExistingPivot($efectiva, $pivotUpdates);
@@ -530,6 +542,7 @@ class PacienteController extends Controller
             'vinculado_at' => now(),
             'motivo_consulta' => $request->motivo_consulta,
             'tipo_paciente' => $paciente->tipo_paciente ?? 'dental',
+            'numero_expediente' => $paciente->registro,
         ]);
 
         // Crear cita automática marcada como completada (ya está en consulta)
@@ -700,6 +713,36 @@ class PacienteController extends Controller
         });
 
         return response()->json(['message' => 'Documentos visibles en el portal actualizados']);
+    }
+
+    /**
+     * Genera un número de expediente secuencial para una clínica específica.
+     * Formato: número entero secuencial (1, 2, 3...) 
+     * Es único por clínica en la tabla clinica_paciente.
+     */
+    private function generarNumeroExpedienteClinica(int $clinicaId): string
+    {
+        $ultimoExpediente = DB::table('clinica_paciente')
+            ->where('clinica_id', $clinicaId)
+            ->whereNotNull('numero_expediente')
+            ->where('numero_expediente', '!=', '')
+            ->orderByRaw('CAST(numero_expediente AS UNSIGNED) DESC')
+            ->value('numero_expediente');
+
+        // Si hay expediente anterior numérico, incrementar
+        if ($ultimoExpediente && is_numeric($ultimoExpediente)) {
+            return (string) ((int) $ultimoExpediente + 1);
+        }
+
+        // Si no hay expedientes o el último no es numérico, buscar el máximo numérico
+        $maxNumerico = DB::table('clinica_paciente')
+            ->where('clinica_id', $clinicaId)
+            ->whereNotNull('numero_expediente')
+            ->where('numero_expediente', '!=', '')
+            ->whereRaw("numero_expediente REGEXP '^[0-9]+$'")
+            ->max(DB::raw('CAST(numero_expediente AS UNSIGNED)'));
+
+        return (string) (($maxNumerico ?? 0) + 1);
     }
 }
 

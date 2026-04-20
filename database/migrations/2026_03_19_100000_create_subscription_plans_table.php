@@ -30,8 +30,8 @@ return new class extends Migration
                 'name' => 'Plan Profesional',
                 'slug' => 'profesional',
                 'description' => 'Incluye 1 consultorio privado con todas las funciones',
-                'price_monthly' => 499.00,
-                'price_yearly' => 4990.00, // 2 meses gratis (499*10)
+                'price_monthly' => 1800.00,
+                'price_yearly' => 18000.00, // 2 meses gratis
                 'max_pacientes' => 999999, // Ilimitados
                 'max_usuarios' => 5, // Por consultorio
                 'max_sucursales' => 3, // Por consultorio

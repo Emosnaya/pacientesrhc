@@ -66,6 +66,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
         'multi.tenant' => \App\Http\Middleware\MultiTenantMiddleware::class,
+        'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
         'patient.portal' => \App\Http\Middleware\EnsurePatientPortalFullAccount::class,
         'clinic.registration' => \App\Http\Middleware\EnsureClinicRegistrationUnlocked::class,
         'internal.consultorio.setup' => \App\Http\Middleware\EnsureInternalConsultorioUnlocked::class,
