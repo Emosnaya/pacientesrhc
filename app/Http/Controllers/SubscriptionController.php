@@ -43,6 +43,94 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Verificar si un email ya está registrado
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $exists = User::where('email', $request->email)->exists();
+
+        return response()->json([
+            'success' => true,
+            'exists' => $exists,
+            'message' => $exists 
+                ? 'Este correo ya está registrado. Por favor usa otro o inicia sesión.' 
+                : 'Correo disponible'
+        ]);
+    }
+
+    /**
+     * Validar código promocional
+     */
+    public function validatePromoCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'plan_id' => 'required|exists:subscription_plans,id',
+            'billing_cycle' => 'required|in:mensual,anual'
+        ]);
+
+        $code = strtoupper(trim($request->code));
+        
+        // Lista de códigos promocionales válidos
+        $promoCodes = [
+            'LANZAMIENTO2026' => [
+                'type' => 'percentage',
+                'value' => 20,
+                'message' => '¡Código válido! 20% de descuento aplicado',
+                'valid_until' => '2026-12-31'
+            ],
+            'PROMO50' => [
+                'type' => 'fixed',
+                'value' => 50,
+                'message' => '¡Código válido! $50 MXN de descuento aplicado',
+                'valid_until' => null
+            ],
+        ];
+
+        if (!isset($promoCodes[$code])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Código promocional inválido'
+            ], 422);
+        }
+
+        $promo = $promoCodes[$code];
+
+        // Verificar fecha de expiración
+        if ($promo['valid_until'] && now()->gt($promo['valid_until'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este código promocional ha expirado'
+            ], 422);
+        }
+
+        $plan = SubscriptionPlan::findOrFail($request->plan_id);
+        $price = $request->billing_cycle === 'anual' 
+            ? $plan->price_yearly 
+            : $plan->price_monthly;
+
+        // Calcular descuento
+        $discountAmount = $promo['type'] === 'percentage'
+            ? ($price * $promo['value'] / 100)
+            : $promo['value'];
+
+        return response()->json([
+            'success' => true,
+            'code' => $code,
+            'message' => $promo['message'],
+            'discount_type' => $promo['type'],
+            'discount_value' => $promo['value'],
+            'discount_amount' => round($discountAmount, 2),
+            'original_price' => $price,
+            'final_price' => round($price - $discountAmount, 2)
+        ]);
+    }
+
+    /**
      * Crear sesión de checkout de Stripe
      */
     public function createCheckoutSession(Request $request): JsonResponse
@@ -54,11 +142,13 @@ class SubscriptionController extends Controller
             'user_data.nombre' => 'required|string|max:255',
             'user_data.apellidoPat' => 'required|string|max:255',
             'user_data.email' => 'required|email|unique:users,email',
-            'user_data.cedula' => 'required|string|max:50',
+            'user_data.cedula' => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
             'user_data.password' => 'required|string|min:6',
             'consultorio_data' => 'required|array',
             'consultorio_data.nombre' => 'required|string|max:255',
             'consultorio_data.tipo_clinica' => 'required|string',
+        ], [
+            'user_data.cedula.regex' => 'La cédula profesional debe contener entre 7 y 8 dígitos numéricos',
         ]);
 
         try {
@@ -543,6 +633,7 @@ class SubscriptionController extends Controller
 
     /**
      * Verificar sesión de pago y retornar token de autenticación
+     * FALLBACK: Si el webhook no procesó el pago, lo procesamos aquí
      */
     public function verifySession(Request $request, $sessionId): JsonResponse
     {
@@ -565,10 +656,36 @@ class SubscriptionController extends Controller
                 ->with(['clinica', 'clinicaActiva', 'sucursal'])
                 ->first();
 
+            // FALLBACK: Si el usuario no existe después de 5 segundos, procesar manualmente
+            if (!$user) {
+                Log::warning('Webhook no procesó el pago, ejecutando fallback', [
+                    'session_id' => $sessionId,
+                    'email' => $userData['email']
+                ]);
+
+                try {
+                    // Verificar que sea un registro nuevo (no renovación)
+                    if ($metadata->type ?? 'consultorio_signup' === 'consultorio_signup' || !isset($metadata->type)) {
+                        $this->fulfillOrder($session);
+                        
+                        // Intentar obtener el usuario recién creado
+                        $user = User::where('email', $userData['email'])
+                            ->with(['clinica', 'clinicaActiva', 'sucursal'])
+                            ->first();
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error en fallback de fulfillOrder: ' . $e->getMessage());
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error procesando el registro. Por favor contacta a soporte con este código: ' . $sessionId
+                    ], 500);
+                }
+            }
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no encontrado. El webhook aún no ha procesado el pago.'
+                    'message' => 'No se pudo completar el registro. Por favor contacta a soporte con el código: ' . $sessionId
                 ], 404);
             }
 

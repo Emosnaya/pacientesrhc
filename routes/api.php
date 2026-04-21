@@ -72,6 +72,8 @@ use Illuminate\Support\Facades\Route;
 // ═══════════════════════════════════════════════════════════════════
 Route::prefix('registro')->group(function() {
     Route::get('/planes', [SubscriptionController::class, 'getPlans']);
+    Route::post('/check-email', [SubscriptionController::class, 'checkEmail']);
+    Route::post('/validate-promo', [SubscriptionController::class, 'validatePromoCode']);
     Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
