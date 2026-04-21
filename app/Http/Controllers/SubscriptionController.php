@@ -43,6 +43,94 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Verificar si un email ya está registrado
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $exists = User::where('email', $request->email)->exists();
+
+        return response()->json([
+            'success' => true,
+            'exists' => $exists,
+            'message' => $exists 
+                ? 'Este correo ya está registrado. Por favor usa otro o inicia sesión.' 
+                : 'Correo disponible'
+        ]);
+    }
+
+    /**
+     * Validar código promocional
+     */
+    public function validatePromoCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'plan_id' => 'required|exists:subscription_plans,id',
+            'billing_cycle' => 'required|in:mensual,anual'
+        ]);
+
+        $code = strtoupper(trim($request->code));
+        
+        // Lista de códigos promocionales válidos
+        $promoCodes = [
+            'LANZAMIENTO2026' => [
+                'type' => 'percentage',
+                'value' => 20,
+                'message' => '¡Código válido! 20% de descuento aplicado',
+                'valid_until' => '2026-12-31'
+            ],
+            'PROMO50' => [
+                'type' => 'fixed',
+                'value' => 50,
+                'message' => '¡Código válido! $50 MXN de descuento aplicado',
+                'valid_until' => null
+            ],
+        ];
+
+        if (!isset($promoCodes[$code])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Código promocional inválido'
+            ], 422);
+        }
+
+        $promo = $promoCodes[$code];
+
+        // Verificar fecha de expiración
+        if ($promo['valid_until'] && now()->gt($promo['valid_until'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este código promocional ha expirado'
+            ], 422);
+        }
+
+        $plan = SubscriptionPlan::findOrFail($request->plan_id);
+        $price = $request->billing_cycle === 'anual' 
+            ? $plan->price_yearly 
+            : $plan->price_monthly;
+
+        // Calcular descuento
+        $discountAmount = $promo['type'] === 'percentage'
+            ? ($price * $promo['value'] / 100)
+            : $promo['value'];
+
+        return response()->json([
+            'success' => true,
+            'code' => $code,
+            'message' => $promo['message'],
+            'discount_type' => $promo['type'],
+            'discount_value' => $promo['value'],
+            'discount_amount' => round($discountAmount, 2),
+            'original_price' => $price,
+            'final_price' => round($price - $discountAmount, 2)
+        ]);
+    }
+
+    /**
      * Crear sesión de checkout de Stripe
      */
     public function createCheckoutSession(Request $request): JsonResponse
@@ -54,11 +142,13 @@ class SubscriptionController extends Controller
             'user_data.nombre' => 'required|string|max:255',
             'user_data.apellidoPat' => 'required|string|max:255',
             'user_data.email' => 'required|email|unique:users,email',
-            'user_data.cedula' => 'required|string|max:50',
+            'user_data.cedula' => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
             'user_data.password' => 'required|string|min:6',
             'consultorio_data' => 'required|array',
             'consultorio_data.nombre' => 'required|string|max:255',
             'consultorio_data.tipo_clinica' => 'required|string',
+        ], [
+            'user_data.cedula.regex' => 'La cédula profesional debe contener entre 7 y 8 dígitos numéricos',
         ]);
 
         try {
@@ -128,10 +218,19 @@ class SubscriptionController extends Controller
             if ($event->type === 'checkout.session.completed') {
                 $session = $event->data->object;
                 
-                // Verificar si es consultorio adicional o suscripción principal
+                // Verificar tipo de operación
                 $metadata = $session->metadata;
-                if (isset($metadata->type) && $metadata->type === 'consultorio_adicional') {
-                    $this->fulfillConsultorioAdicional($session);
+                if (isset($metadata->type)) {
+                    switch ($metadata->type) {
+                        case 'consultorio_adicional':
+                            $this->fulfillConsultorioAdicional($session);
+                            break;
+                        case 'consultorio_renewal':
+                            $this->fulfillConsultorioRenewal($session);
+                            break;
+                        default:
+                            $this->fulfillOrder($session);
+                    }
                 } else {
                     $this->fulfillOrder($session);
                 }
@@ -421,6 +520,97 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Procesar RENOVACIÓN de suscripción de consultorio después de pago exitoso
+     */
+    private function fulfillConsultorioRenewal($session): void
+    {
+        try {
+            $metadata = $session->metadata;
+            $clinicaId = $metadata->clinica_id ?? null;
+            $userId = $metadata->user_id ?? null;
+            $billingCycle = $metadata->billing_cycle ?? 'mensual';
+            $duracionDias = $metadata->duracion_dias ?? ($billingCycle === 'anual' ? 365 : 30);
+
+            if (!$clinicaId) {
+                Log::error('Renovación de consultorio: clinica_id no encontrado en metadata');
+                return;
+            }
+
+            $clinica = Clinica::find($clinicaId);
+            
+            if (!$clinica) {
+                Log::error("Renovación de consultorio: Clínica {$clinicaId} no encontrada");
+                return;
+            }
+
+            DB::beginTransaction();
+
+            // Calcular nueva fecha de vencimiento
+            $fechaBase = $clinica->fecha_vencimiento && $clinica->fecha_vencimiento->greaterThan(now())
+                ? $clinica->fecha_vencimiento
+                : now();
+            
+            $nuevaFechaVencimiento = $fechaBase->addDays($duracionDias);
+
+            // Actualizar clínica
+            $clinica->update([
+                'activa' => true,
+                'pagado' => true,
+                'fecha_vencimiento' => $nuevaFechaVencimiento,
+                'stripe_subscription_id' => $session->subscription ?? $session->id,
+                'billing_cycle' => $billingCycle,
+            ]);
+
+            // Si hay usuario propietario, actualizar también su suscripción
+            if ($userId) {
+                $user = User::find($userId);
+                if ($user) {
+                    $user->update([
+                        'tiene_suscripcion_consultorio' => true,
+                        'ciclo_facturacion' => $billingCycle,
+                        'suscripcion_fin' => $nuevaFechaVencimiento,
+                        'stripe_subscription_id' => $session->subscription ?? $session->id,
+                    ]);
+                }
+            }
+
+            // Registrar pago
+            Payment::create([
+                'clinica_id' => $clinica->id,
+                'user_id' => $userId,
+                'amount' => $session->amount_total / 100,
+                'currency' => strtoupper($session->currency ?? 'mxn'),
+                'status' => 'completed',
+                'payment_method' => 'stripe',
+                'stripe_payment_id' => $session->payment_intent ?? $session->id,
+                'stripe_invoice_id' => $session->invoice ?? null,
+                'metadata' => [
+                    'type' => 'consultorio_renewal',
+                    'billing_cycle' => $billingCycle,
+                    'session_id' => $session->id,
+                    'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->format('Y-m-d'),
+                ],
+            ]);
+
+            DB::commit();
+
+            Log::info("Renovación de consultorio exitosa", [
+                'clinica_id' => $clinica->id,
+                'clinica_nombre' => $clinica->nombre,
+                'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->format('Y-m-d'),
+                'billing_cycle' => $billingCycle,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error procesando renovación de consultorio: ' . $e->getMessage(), [
+                'session_id' => $session->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
      * Manejar cancelación de suscripción
      */
     private function handleSubscriptionCancellation($subscription): void
@@ -443,6 +633,7 @@ class SubscriptionController extends Controller
 
     /**
      * Verificar sesión de pago y retornar token de autenticación
+     * FALLBACK: Si el webhook no procesó el pago, lo procesamos aquí
      */
     public function verifySession(Request $request, $sessionId): JsonResponse
     {
@@ -465,10 +656,36 @@ class SubscriptionController extends Controller
                 ->with(['clinica', 'clinicaActiva', 'sucursal'])
                 ->first();
 
+            // FALLBACK: Si el usuario no existe después de 5 segundos, procesar manualmente
+            if (!$user) {
+                Log::warning('Webhook no procesó el pago, ejecutando fallback', [
+                    'session_id' => $sessionId,
+                    'email' => $userData['email']
+                ]);
+
+                try {
+                    // Verificar que sea un registro nuevo (no renovación)
+                    if ($metadata->type ?? 'consultorio_signup' === 'consultorio_signup' || !isset($metadata->type)) {
+                        $this->fulfillOrder($session);
+                        
+                        // Intentar obtener el usuario recién creado
+                        $user = User::where('email', $userData['email'])
+                            ->with(['clinica', 'clinicaActiva', 'sucursal'])
+                            ->first();
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error en fallback de fulfillOrder: ' . $e->getMessage());
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error procesando el registro. Por favor contacta a soporte con este código: ' . $sessionId
+                    ], 500);
+                }
+            }
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no encontrado. El webhook aún no ha procesado el pago.'
+                    'message' => 'No se pudo completar el registro. Por favor contacta a soporte con el código: ' . $sessionId
                 ], 404);
             }
 
@@ -678,6 +895,170 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener uso de consultorios'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar estado de suscripción del usuario actual
+     * Usado para mostrar modal de renovación/contacto
+     */
+    public function checkUserSubscription(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
+        
+        if (!$clinicaId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario sin clínica asignada',
+            ], 400);
+        }
+
+        $clinica = Clinica::find($clinicaId);
+        
+        if (!$clinica) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Clínica no encontrada',
+            ], 404);
+        }
+
+        $esConsultorio = $clinica->es_consultorio_privado;
+        $fechaVencimiento = $clinica->fecha_vencimiento;
+        $now = now();
+        
+        // Calcular estado
+        $activa = $clinica->activa && $clinica->pagado;
+        $diasRestantes = $fechaVencimiento ? $now->diffInDays($fechaVencimiento, false) : null;
+        $vencida = $fechaVencimiento && $now->greaterThan($fechaVencimiento);
+        
+        // Para consultorios, también verificar suscripción del propietario
+        if ($esConsultorio && $clinica->propietario_user_id) {
+            $propietario = $clinica->propietario ?? $user;
+            if ($propietario && !$propietario->tieneSuscripcionConsultorioActiva()) {
+                $vencida = true;
+                $activa = false;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'subscription' => [
+                'clinica_id' => $clinica->id,
+                'clinica_nombre' => $clinica->nombre,
+                'es_consultorio' => $esConsultorio,
+                'plan' => $clinica->plan,
+                'activa' => $activa && !$vencida,
+                'vencida' => $vencida,
+                'fecha_vencimiento' => $fechaVencimiento?->format('Y-m-d'),
+                'dias_restantes' => $vencida ? null : $diasRestantes,
+                'dias_vencida' => $vencida ? abs($diasRestantes) : null,
+                'puede_renovar_online' => $esConsultorio,
+                'tipo_renovacion' => $esConsultorio ? 'stripe' : 'contacto_comercial',
+            ],
+            'planes_disponibles' => $esConsultorio ? [
+                'mensual' => [
+                    'precio' => 1800,
+                    'ciclo' => 'mensual',
+                ],
+                'anual' => [
+                    'precio' => 18000,
+                    'ciclo' => 'anual',
+                    'ahorro' => 3600,
+                ],
+            ] : null,
+        ]);
+    }
+
+    /**
+     * Crear sesión de checkout de Stripe para RENOVAR suscripción de consultorio
+     */
+    public function createRenewCheckoutSession(Request $request): JsonResponse
+    {
+        $request->validate([
+            'billing_cycle' => 'required|in:mensual,anual',
+        ]);
+
+        try {
+            $user = $request->user();
+            $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
+            
+            $clinica = Clinica::find($clinicaId);
+            
+            if (!$clinica) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Clínica no encontrada',
+                ], 404);
+            }
+
+            if (!$clinica->es_consultorio_privado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los consultorios privados pueden renovar online. Las clínicas deben contactar al equipo comercial.',
+                ], 400);
+            }
+
+            // Precios de renovación (alineados con landing)
+            $precios = [
+                'mensual' => 1800,
+                'anual' => 18000,
+            ];
+            
+            $precio = $precios[$request->billing_cycle];
+            $duracion = $request->billing_cycle === 'anual' ? 365 : 30;
+
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            // Crear sesión de Stripe Checkout
+            $session = Session::create([
+                'payment_method_types' => ['card'],
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'mxn',
+                        'product_data' => [
+                            'name' => "Renovación Consultorio - " . ucfirst($request->billing_cycle),
+                            'description' => "Renovación de suscripción para {$clinica->nombre}",
+                        ],
+                        'unit_amount' => round($precio * 100),
+                        'recurring' => [
+                            'interval' => $request->billing_cycle === 'anual' ? 'year' : 'month',
+                        ],
+                    ],
+                    'quantity' => 1,
+                ]],
+                'mode' => 'subscription',
+                'success_url' => config('app.frontend_url') . '/suscripcion/renovacion-exitosa?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => config('app.frontend_url') . '/suscripcion?cancelado=1',
+                'metadata' => [
+                    'type' => 'consultorio_renewal',
+                    'clinica_id' => $clinica->id,
+                    'user_id' => $user->id,
+                    'billing_cycle' => $request->billing_cycle,
+                    'duracion_dias' => $duracion,
+                ],
+                'customer_email' => $user->email,
+            ]);
+
+            Log::info('Sesión de renovación de consultorio creada', [
+                'session_id' => $session->id,
+                'clinica_id' => $clinica->id,
+                'user_id' => $user->id,
+                'billing_cycle' => $request->billing_cycle,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'checkout_url' => $session->url,
+                'session_id' => $session->id,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error creando sesión de renovación: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear sesión de pago: ' . $e->getMessage(),
             ], 500);
         }
     }

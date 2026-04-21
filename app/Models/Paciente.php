@@ -175,14 +175,15 @@ class Paciente extends Model
                 'portal_visible_datos_basicos',
                 'portal_visible_expediente_resumen',
                 'motivo_consulta',
-                'tipo_paciente'
+                'tipo_paciente',
+                'numero_expediente'
             )
             ->withTimestamps();
     }
 
     /**
-     * Tras cargar la relación clinicas, expone motivo_consulta y tipo_paciente del vínculo con la clínica indicada
-     * (fallback a columnas en pacientes para datos legacy).
+     * Tras cargar la relación clinicas, expone motivo_consulta, tipo_paciente y numero_expediente 
+     * del vínculo con la clínica indicada (fallback a columnas en pacientes para datos legacy).
      */
     public function mergeClinicaPivotAttributes(?int $clinicaId): void
     {
@@ -191,6 +192,7 @@ class Paciente extends Model
         }
         $motivoLegacy = $this->getAttribute('motivo_consulta');
         $tipoLegacy = $this->getAttribute('tipo_paciente');
+        $registroGlobal = $this->getAttribute('registro');
 
         $row = $this->clinicas->firstWhere('id', $clinicaId);
         $pivot = $row?->pivot;
@@ -202,6 +204,11 @@ class Paciente extends Model
         $tipoPivot = $pivot?->tipo_paciente;
         $usarTipo = $tipoPivot !== null && trim((string) $tipoPivot) !== '';
         $this->setAttribute('tipo_paciente', $usarTipo ? $tipoPivot : $tipoLegacy);
+
+        // numero_expediente local de la clínica (fallback al registro global)
+        $expedientePivot = $pivot?->numero_expediente;
+        $usarExpediente = $expedientePivot !== null && trim((string) $expedientePivot) !== '';
+        $this->setAttribute('numero_expediente', $usarExpediente ? $expedientePivot : $registroGlobal);
     }
 
     /**

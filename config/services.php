@@ -42,4 +42,15 @@ return [
         'secret' => env('INTERNAL_CONSULTORIO_SETUP_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stripe Payment Gateway
+    |--------------------------------------------------------------------------
+    */
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

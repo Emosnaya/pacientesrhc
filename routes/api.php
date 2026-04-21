@@ -72,6 +72,8 @@ use Illuminate\Support\Facades\Route;
 // ═══════════════════════════════════════════════════════════════════
 Route::prefix('registro')->group(function() {
     Route::get('/planes', [SubscriptionController::class, 'getPlans']);
+    Route::post('/check-email', [SubscriptionController::class, 'checkEmail']);
+    Route::post('/validate-promo', [SubscriptionController::class, 'validatePromoCode']);
     Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
@@ -103,7 +105,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/paciente-portal/set-password', [PacientePortalAuthController::class, 'setPassword']);
 });
 
-// Portal paciente: datos propios (requiere contraseña ya configurada)
+// ═══════════════════════════════════════════════════════════════════
+// RUTAS PARA SUSCRIPCIONES VENCIDAS - No requieren multi.tenant
+// Permiten a usuarios con suscripción vencida solicitar contacto o renovar
+// ═══════════════════════════════════════════════════════════════════
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Clínicas empresariales - Solicitar contacto comercial
+    Route::post('/clinica-contacto-comercial', [\App\Http\Controllers\ContactoComercialController::class, 'store']);
+    Route::get('/clinica-contacto-comercial/estado', [\App\Http\Controllers\ContactoComercialController::class, 'estado']);
+    
+    // Consultorios - Verificar y renovar suscripción
+    Route::get('/subscription/check', [\App\Http\Controllers\SubscriptionController::class, 'checkUserSubscription']);
+    Route::post('/subscription/renew-checkout', [\App\Http\Controllers\SubscriptionController::class, 'createRenewCheckoutSession']);
+});
+
+// Portal del paciente: datos propios (requiere contraseña ya configurada)
 Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(function () {
     Route::get('/paciente-portal/clinicas', [PacientePortalController::class, 'clinicas']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/resumen', [PacientePortalController::class, 'clinicaResumen']);
