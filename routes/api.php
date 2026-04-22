@@ -81,6 +81,10 @@ Route::prefix('registro')->group(function() {
 // Webhook de Stripe (sin autenticación, Stripe valida con signature)
 Route::post('/registro/webhook/stripe', [SubscriptionController::class, 'handleWebhook']);
 
+// Webhook de WhatsApp (sin autenticación, Twilio valida con signature)
+Route::post('/whatsapp/webhook', [\App\Http\Controllers\WhatsAppWebhookController::class, 'handle']);
+Route::post('/whatsapp/status', [\App\Http\Controllers\WhatsAppWebhookController::class, 'status']);
+
 // Desbloqueo por clave de operador (secreto en .env del servidor)
 Route::post('/public/access/clinic-registration', [InternalAccessController::class, 'unlockClinicRegistration'])
     ->middleware('throttle:10,1');

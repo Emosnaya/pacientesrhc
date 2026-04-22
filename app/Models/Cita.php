@@ -27,7 +27,10 @@ class Cita extends Model
         'primera_vez',
         'notas',
         'custom_email',
-        'motivo_cancelacion'
+        'motivo_cancelacion',
+        'recordatorio_enviado',
+        'recordatorio_enviado_at',
+        'confirmacion_whatsapp'
     ];
 
     /**
@@ -39,6 +42,8 @@ class Cita extends Model
         'fecha' => 'date:Y-m-d',
         'hora' => 'datetime:H:i',
         'primera_vez' => 'boolean',
+        'recordatorio_enviado' => 'boolean',
+        'recordatorio_enviado_at' => 'datetime',
     ];
 
     /**
