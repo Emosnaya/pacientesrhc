@@ -702,28 +702,53 @@ class CitaController extends Controller
      */
     private function sendMultipleCitasNotificationEmail($citas, $paciente, $admin)
     {
+        if (! $paciente->email) {
+            return;
+        }
+
         try {
-            if ($paciente->email) {
-                $clinica = $admin->clinica;
-                Mail::send('emails.cita-patient-notification', [
-                    'cita' => $citas[0], // Primera cita para compatibilidad
-                    'citas' => $citas,   // Todas las citas
-                    'paciente' => $paciente,
-                    'multiple' => count($citas) > 1,
-                    'clinica' => $clinica
-                ], function ($message) use ($paciente, $citas, $clinica) {
-                    $clinicaNombre = $clinica ? $clinica->nombre : 'Clínica Médica';
-                    $subject = count($citas) > 1 
-                        ? 'Confirmación de ' . count($citas) . ' Citas - ' . $clinicaNombre
-                        : 'Confirmación de Cita - ' . $clinicaNombre;
-                    $message->to($paciente->email)->subject($subject);
-                });
+            $clinica   = $admin->clinica;
+            $fromEmail = config('mail.from.address', 'contacto@lynkamed.mx');
+            $appName   = config('app.name', 'LynkaMed');
+
+            Mail::send('emails.cita-patient-notification', [
+                'cita'     => $citas[0],
+                'citas'    => $citas,
+                'paciente' => $paciente,
+                'multiple' => count($citas) > 1,
+                'clinica'  => $clinica,
+            ], function ($message) use ($paciente, $citas, $clinica, $fromEmail, $appName) {
+                $clinicaNombre = $clinica ? $clinica->nombre : 'Clínica Médica';
+                $subject = count($citas) > 1
+                    ? 'Confirmación de ' . count($citas) . ' Citas - ' . $clinicaNombre
+                    : 'Confirmación de Cita - ' . $clinicaNombre;
+
+                $message->to($paciente->email)->subject($subject);
+
+                $sym = $message->getSymfonyMessage();
+                $sym->getHeaders()
+                    ->addTextHeader('List-Unsubscribe', "<mailto:{$fromEmail}?subject=unsubscribe>")
+                    ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
+                    ->addTextHeader('X-Mailer', "{$appName} Mailer 1.0")
+                    ->addTextHeader('Precedence', 'transactional')
+                    ->addTextHeader('X-Priority', '3 (Normal)')
+                    ->addTextHeader('Importance', 'Normal')
+                    ->addTextHeader('Auto-Submitted', 'auto-generated');
+            });
+        } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, '550') || str_contains($msg, '551') ||
+                str_contains($msg, 'mailbox') || str_contains($msg, 'not found') ||
+                str_contains($msg, 'unavailable')) {
+                $paciente->email_invalido    = true;
+                $paciente->email_invalido_at = now();
+                $paciente->save();
             }
+            \Log::error('Error sending cita notification email: ' . $msg);
         } catch (\Exception $e) {
             \Log::error('Error sending multiple citas notification email: ' . $e->getMessage());
         }
     }
-
     /**
      * Enviar invitación de calendario al doctor y al paciente
      * 

@@ -34,6 +34,8 @@ use App\Http\Controllers\RadiografiaDentalController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Http\Controllers\ConsultorioController;
 use App\Http\Controllers\FinanzasController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\OrdenLaboratorioController;
 use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\EfirmaController;
 use App\Http\Controllers\FacturacionController;
@@ -91,6 +93,12 @@ Route::post('/public/access/clinic-registration', [InternalAccessController::cla
 Route::post('/public/access/internal-consultorio', [InternalAccessController::class, 'unlockInternalConsultorio'])
     ->middleware('throttle:10,1');
 
+// Documentos compartidos por enlace seguro (sin autenticación, token de 48 chars)
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/documento-compartido/{token}/info', [\App\Http\Controllers\DocumentoCompartidoPublicoController::class, 'info']);
+    Route::get('/documento-compartido/{token}', [\App\Http\Controllers\DocumentoCompartidoPublicoController::class, 'ver']);
+});
+
 // Aceptación de aviso de privacidad / términos (enlace del correo al paciente)
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/public/paciente/consentimiento', [PacienteConsentimientoController::class, 'verificar']);
@@ -138,6 +146,18 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::post('/paciente-portal/soporte/ticket', [\App\Http\Controllers\Api\SoporteTicketController::class, 'store']);
     Route::get('/paciente-portal/soporte/mis-tickets', [\App\Http\Controllers\Api\SoporteTicketController::class, 'misTickets']);
     Route::get('/paciente-portal/soporte/ticket/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'show']);
+    // Archivos del paciente (subidos por el mismo desde el portal)
+    Route::get('/paciente-portal/archivos', [\App\Http\Controllers\PacientePortalArchivoController::class, 'index']);
+    Route::get('/paciente-portal/archivos-clinica', [\App\Http\Controllers\PacientePortalArchivoController::class, 'indexClinica']);
+    Route::post('/paciente-portal/archivos', [\App\Http\Controllers\PacientePortalArchivoController::class, 'store']);
+    Route::delete('/paciente-portal/archivos/{id}', [\App\Http\Controllers\PacientePortalArchivoController::class, 'destroy']);
+    Route::get('/paciente-portal/archivos/{id}/ver', [\App\Http\Controllers\PacientePortalArchivoController::class, 'view']);
+    // Compartir archivos (paciente)
+    Route::get('/paciente-portal/archivos/{archivoId}/compartidos', [\App\Http\Controllers\PacientePortalCompartirController::class, 'compartidosArchivo']);
+    Route::post('/paciente-portal/archivos/{archivoId}/compartir-clinica', [\App\Http\Controllers\PacientePortalCompartirController::class, 'compartirConClinica']);
+    Route::get('/paciente-portal/links', [\App\Http\Controllers\PacientePortalCompartirController::class, 'indexLinks']);
+    Route::post('/paciente-portal/links', [\App\Http\Controllers\PacientePortalCompartirController::class, 'crearLink']);
+    Route::delete('/paciente-portal/links/{id}', [\App\Http\Controllers\PacientePortalCompartirController::class, 'revocarLink']);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -203,8 +223,19 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::post('/verify-otp', [\App\Http\Controllers\PacienteVerificationController::class, 'verifyOtp']);
     });
 
+    // Archivos por paciente (staff)
+    Route::get('/pacientes/{pacienteId}/archivos', [\App\Http\Controllers\PacienteArchivoController::class, 'index']);
+    Route::post('/pacientes/{pacienteId}/archivos', [\App\Http\Controllers\PacienteArchivoController::class, 'store']);
+    Route::patch('/pacientes/{pacienteId}/archivos/{id}/portal', [\App\Http\Controllers\PacienteArchivoController::class, 'togglePortal']);
+    Route::delete('/pacientes/{pacienteId}/archivos/{id}', [\App\Http\Controllers\PacienteArchivoController::class, 'destroy']);
+    Route::get('/pacientes/{pacienteId}/archivos/{id}/ver', [\App\Http\Controllers\PacienteArchivoController::class, 'view']);
+    Route::get('/pacientes/{pacienteId}/archivos/{id}/descargar', [\App\Http\Controllers\PacienteArchivoController::class, 'download']);
+    Route::get('/pacientes/{pacienteId}/archivos/{id}/ver-compartido', [\App\Http\Controllers\PacienteArchivoController::class, 'viewShared']);
+
     // Almacenar ordenes
     Route::put('/pacientes/{paciente}/portal-visibilidad', [PacienteController::class, 'updatePortalVisibilidad']);
+    Route::get('/pacientes/{paciente}/portal-status', [PacienteController::class, 'portalStatus']);
+    Route::post('/pacientes/{paciente}/reenviar-invitacion-portal', [PacienteController::class, 'reenviarInvitacionPortal']);
     Route::get('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'portalExpedientesCompartidos']);
     Route::put('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'syncPortalExpedientesCompartidos']);
     Route::apiResource('/pacientes', PacienteController::class);
@@ -332,6 +363,37 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         
         // Estadísticas financieras
         Route::get('/estadisticas', [FinanzasController::class, 'estadisticas']);
+    });
+
+    // ==========================================
+    // INVENTARIO
+    // ==========================================
+    Route::prefix('inventario')->group(function () {
+        Route::get('/',                                     [InventarioController::class, 'index']);
+        Route::post('/',                                    [InventarioController::class, 'store']);
+        Route::put('/{item}',                               [InventarioController::class, 'update']);
+        Route::delete('/{item}',                            [InventarioController::class, 'destroy']);
+        Route::get('/{item}/movimientos',                   [InventarioController::class, 'movimientos']);
+        Route::post('/{item}/movimiento',                   [InventarioController::class, 'registrarMovimiento']);
+    });
+
+    // LABORATORIOS
+    // ==========================================
+    Route::prefix('laboratorios')->group(function () {
+        Route::get('/',                          [OrdenLaboratorioController::class, 'indexLaboratorios']);
+        Route::post('/',                         [OrdenLaboratorioController::class, 'storeLaboratorio']);
+        Route::put('/{laboratorio}',             [OrdenLaboratorioController::class, 'updateLaboratorio']);
+        Route::delete('/{laboratorio}',          [OrdenLaboratorioController::class, 'destroyLaboratorio']);
+    });
+    Route::prefix('ordenes-laboratorio')->group(function () {
+        Route::get('/',                          [OrdenLaboratorioController::class, 'index']);
+        Route::post('/',                         [OrdenLaboratorioController::class, 'store']);
+        Route::put('/{orden}',                   [OrdenLaboratorioController::class, 'update']);
+        Route::delete('/{orden}',                [OrdenLaboratorioController::class, 'destroy']);
+        Route::get('/{orden}/pdf',               [OrdenLaboratorioController::class, 'pdf']);
+        Route::post('/{orden}/enviar-correo',    [OrdenLaboratorioController::class, 'enviarCorreo']);
+        Route::post('/{orden}/portal-token',     [OrdenLaboratorioController::class, 'generarToken']);
+        Route::post('/{orden}/modelo-dental',    [OrdenLaboratorioController::class, 'subirModeloDental']);
     });
 
     Route::get('/esfuerzo/imprimir/{id}',[PDFController::class, 'esfuerzoPdf']);
@@ -707,3 +769,7 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
     Route::put('/soporte/tickets/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminUpdate']);
     Route::post('/soporte/tickets/{id}/responder', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminResponder']);
 });
+
+// ── Portal Laboratorio (público, sin auth) ────────────────────────────────
+Route::get('/portal-laboratorio/{token}',   [OrdenLaboratorioController::class, 'portalShow']);
+Route::patch('/portal-laboratorio/{token}', [OrdenLaboratorioController::class, 'portalUpdate']);

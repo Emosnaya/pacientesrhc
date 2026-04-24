@@ -222,6 +222,8 @@ class PacienteController extends Controller
             'motivo_consulta' => $request->motivo_consulta ?? null,
             'tipo_paciente' => $tipoPivot,
             'numero_expediente' => $numeroExpediente,
+            'portal_visible_citas' => true,
+            'portal_visible_datos_basicos' => true,
         ]);
 
         // LFPDPPP: invitación por correo para aceptar aviso y términos (si hay email)
@@ -293,6 +295,8 @@ class PacienteController extends Controller
             'motivo_consulta' => null,
             'tipo_paciente' => $tipoNuevoVinculo,
             'numero_expediente' => $nuevoExpediente,
+            'portal_visible_citas' => true,
+            'portal_visible_datos_basicos' => true,
         ]);
 
         $paciente->refresh();
@@ -543,6 +547,8 @@ class PacienteController extends Controller
             'motivo_consulta' => $request->motivo_consulta,
             'tipo_paciente' => $paciente->tipo_paciente ?? 'dental',
             'numero_expediente' => $paciente->registro,
+            'portal_visible_citas' => true,
+            'portal_visible_datos_basicos' => true,
         ]);
 
         // Crear cita automática marcada como completada (ya está en consulta)
@@ -743,6 +749,54 @@ class PacienteController extends Controller
             ->max(DB::raw('CAST(numero_expediente AS UNSIGNED)'));
 
         return (string) (($maxNumerico ?? 0) + 1);
+    }
+
+    /**
+     * Estado del portal del paciente: si ya tiene usuario y si ya configuró contraseña.
+     */
+    public function portalStatus(Paciente $paciente)
+    {
+        $user = Auth::user();
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
+            return response()->json(['error' => 'Sin permisos'], 403);
+        }
+
+        $portalUser = \App\Models\User::where('paciente_id', $paciente->id)
+            ->where('rol', 'paciente')
+            ->first();
+
+        return response()->json([
+            'tiene_email'          => (bool) filter_var($paciente->email, FILTER_VALIDATE_EMAIL),
+            'email'                => $paciente->email,
+            'tiene_cuenta'         => (bool) $portalUser,
+            'acceso_configurado'   => $portalUser ? (bool) $portalUser->password_set_at : false,
+            'invitacion_enviada_at' => $paciente->consentimiento_email_enviado_at,
+        ]);
+    }
+
+    /**
+     * Reenvía el correo de invitación/acceso al portal del paciente.
+     */
+    public function reenviarInvitacionPortal(Paciente $paciente)
+    {
+        $user = Auth::user();
+        if (! $this->pacienteBelongsToWorkspace($paciente, $user)) {
+            return response()->json(['error' => 'Sin permisos'], 403);
+        }
+
+        if (! filter_var($paciente->email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['error' => 'El paciente no tiene un email válido registrado.'], 422);
+        }
+
+        $clinica = \App\Models\Clinica::find($user->clinica_efectiva_id);
+        $servicio = app(PacienteConsentimientoService::class);
+        $ok = $servicio->enviarInvitacion($paciente, $clinica, PacienteConsentimientoService::CONTEXTO_REGISTRO);
+
+        if (! $ok) {
+            return response()->json(['error' => 'No se pudo enviar el correo. Revisa la configuración de correo.'], 500);
+        }
+
+        return response()->json(['message' => 'Invitación enviada correctamente.']);
     }
 }
 

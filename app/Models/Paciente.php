@@ -39,6 +39,8 @@ class Paciente extends Model
         'apellidoMat',
         'telefono',
         'email',
+        'email_invalido',
+        'email_invalido_at',
         'fechaNacimiento',
         'edad',
         'genero',
@@ -110,6 +112,8 @@ class Paciente extends Model
         'aviso_privacidad_aceptado_at' => 'datetime',
         'consentimiento_token_expires_at' => 'datetime',
         'consentimiento_email_enviado_at' => 'datetime',
+        'email_invalido'       => 'boolean',
+        'email_invalido_at'    => 'datetime',
         'archivo_muerto' => 'boolean',
         'archivo_muerto_at' => 'datetime',
     ];

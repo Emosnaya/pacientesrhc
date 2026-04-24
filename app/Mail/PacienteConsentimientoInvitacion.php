@@ -4,12 +4,11 @@ namespace App\Mail;
 
 use App\Models\Paciente;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class PacienteConsentimientoInvitacion extends Mailable
+class PacienteConsentimientoInvitacion extends BaseMail
 {
     use Queueable, SerializesModels;
 
@@ -28,6 +27,12 @@ class PacienteConsentimientoInvitacion extends Mailable
 
         return new Envelope(
             subject: $subject,
+            replyTo: [
+                new \Illuminate\Mail\Mailables\Address(
+                    config('mail.from.address', 'contacto@lynkamed.mx'),
+                    config('app.name', 'LynkaMed'),
+                ),
+            ],
         );
     }
 

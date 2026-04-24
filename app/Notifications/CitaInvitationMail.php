@@ -90,8 +90,25 @@ class CitaInvitationMail extends Notification
             $clinicaLogoModel = $clinica;
         }
 
+        $fromEmail = config('mail.from.address', 'contacto@lynkamed.mx');
+        $appName   = config('app.name', 'LynkaMed');
+        $appUrl    = rtrim(config('app.url', 'https://lynkamed.mx'), '/');
+
         return (new MailMessage)
             ->subject($subject)
+            ->replyTo($fromEmail, $appName)
+            ->withSymfonyMessage(function (\Symfony\Component\Mime\Email $message) use ($fromEmail, $appName, $appUrl) {
+                $message->getHeaders()
+                    ->addTextHeader('List-Unsubscribe', "<mailto:{$fromEmail}?subject=unsubscribe>")
+                    ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
+                    ->addTextHeader('X-Mailer', "{$appName} Mailer 1.0")
+                    ->addTextHeader('Precedence', 'transactional')
+                    ->addTextHeader('X-Priority', '3 (Normal)')
+                    ->addTextHeader('Importance', 'Normal')
+                    ->addTextHeader('Auto-Submitted', 'auto-generated')
+                    ->addTextHeader('X-Application', $appName)
+                    ->addTextHeader('X-Application-URL', $appUrl);
+            })
             ->view('emails.cita-invitation', [
                 'cita' => $this->cita,
                 'paciente' => $paciente,
