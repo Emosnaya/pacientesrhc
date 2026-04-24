@@ -5,12 +5,12 @@ namespace App\Mail;
 use App\Models\Paciente;
 use App\Models\Clinica;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class PacienteOtpMail extends Mailable
+class PacienteOtpMail extends BaseMail
 {
     use Queueable, SerializesModels;
 
@@ -33,6 +33,12 @@ class PacienteOtpMail extends Mailable
             subject: $clinica !== ''
                 ? 'Código de verificación — '.$clinica
                 : 'Código de verificación',
+            replyTo: [
+                new Address(
+                    config('mail.from.address', 'contacto@lynkamed.mx'),
+                    config('app.name', 'LynkaMed'),
+                ),
+            ],
         );
     }
 

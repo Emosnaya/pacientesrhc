@@ -12,14 +12,25 @@ use Illuminate\Database\Eloquent\Builder;
 trait ClinicaScope
 {
     /**
-     * Obtener el ID de la clínica actual del usuario autenticado
+     * Obtener el ID de la clínica desde el request o del usuario autenticado
+     * IMPORTANTE: Usa clinica_efectiva_id para respetar workspaces y consultorios privados
      */
-    protected function getClinicaId(): ?int
+    protected function getClinicaIdFromRequest($request = null): ?int
     {
         $user = auth()->user();
         
         if (!$user) {
             return null;
+        }
+        
+        // Si viene en el header X-Clinica-ID (multi-tenant)
+        if ($request && $request->header('X-Clinica-ID')) {
+            return (int) $request->header('X-Clinica-ID');
+        }
+        
+        // PRIORIDAD 1: Usar clinica_efectiva_id (respeta workspace activo y consultorios privados)
+        if (property_exists($user, 'clinica_efectiva_id') && $user->clinica_efectiva_id) {
+            return (int) $user->clinica_efectiva_id;
         }
         
         // Si tiene clinica_id en sesión (multi-tenant)
@@ -38,6 +49,14 @@ trait ClinicaScope
         }
         
         return null;
+    }
+
+    /**
+     * Obtener el ID de la clínica actual del usuario autenticado
+     */
+    protected function getClinicaId(): ?int
+    {
+        return $this->getClinicaIdFromRequest();
     }
 
     /**

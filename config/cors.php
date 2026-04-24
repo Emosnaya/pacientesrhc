@@ -39,6 +39,8 @@ return [
         'X-Clinic-Registration-Token',
         'X-Internal-Consultorio-Token',
         'X-XSRF-TOKEN',
+        'X-Clinica-ID',
+        'X-Sucursal-ID',
     ],
 
     'exposed_headers' => [],

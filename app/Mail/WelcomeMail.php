@@ -6,33 +6,45 @@ use App\Models\User;
 use App\Models\Clinica;
 use App\Models\SubscriptionPlan;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class WelcomeMail extends Mailable
+class WelcomeMail extends BaseMail
 {
     use Queueable, SerializesModels;
 
-    public $user;
-    public $consultorio;
-    public $plan;
+    public User $user;
+    public Clinica $consultorio;
+    public SubscriptionPlan $plan;
 
-    /**
-     * Create a new message instance.
-     */
     public function __construct(User $user, Clinica $consultorio, SubscriptionPlan $plan)
     {
-        $this->user = $user;
+        $this->user        = $user;
         $this->consultorio = $consultorio;
-        $this->plan = $plan;
+        $this->plan        = $plan;
     }
 
-    /**
-     * Build the message.
-     */
-    public function build()
+    public function envelope(): Envelope
     {
-        return $this->subject('¡Bienvenido a ' . config('app.name', 'PacientesRHC') . '!')
-                    ->view('emails.welcome');
+        $appName = config('app.name', 'LynkaMed');
+
+        return new Envelope(
+            subject: '¡Bienvenido a '.$appName.'!',
+            replyTo: [
+                new Address(
+                    config('mail.from.address', 'contacto@lynkamed.mx'),
+                    $appName,
+                ),
+            ],
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            html: 'emails.welcome',
+        );
     }
 }

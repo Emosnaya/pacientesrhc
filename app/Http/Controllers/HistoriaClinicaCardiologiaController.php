@@ -193,16 +193,39 @@ class HistoriaClinicaCardiologiaController extends Controller
                 ->with(['user', 'paciente', 'clinica', 'sucursal'])
                 ->firstOrFail();
 
+            $firmaUser = $historia->user;
+
+            // Preparar firma digital si existe
+            $firmaBase64 = null;
+            if ($firmaUser && $firmaUser->firma_digital && file_exists(public_path('storage/' . $firmaUser->firma_digital))) {
+                $imagePath = public_path('storage/' . $firmaUser->firma_digital);
+                $imageData = file_get_contents($imagePath);
+                $imageType = mime_content_type($imagePath);
+                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+            }
+
+            // Logo de la clínica
+            $clinicaLogo = null;
+            $clinicaObj = $historia->clinica;
+            if ($clinicaObj && $clinicaObj->logo && file_exists(public_path('storage/' . $clinicaObj->logo))) {
+                $logoPath = public_path('storage/' . $clinicaObj->logo);
+                $logoData = file_get_contents($logoPath);
+                $logoType = mime_content_type($logoPath);
+                $clinicaLogo = 'data:' . $logoType . ';base64,' . base64_encode($logoData);
+            }
+
             $pdf = Pdf::loadView('pdfs.historia-clinica-cardiologia', [
                 'historia' => $historia,
                 'paciente' => $historia->paciente,
-                'clinica' => $historia->clinica,
-                'user' => $historia->user,
+                'clinica' => $clinicaObj,
+                'user' => $firmaUser,
+                'firmaBase64' => $firmaBase64,
+                'clinicaLogo' => $clinicaLogo,
             ]);
 
             $pdf->setPaper('letter', 'portrait');
 
-            $filename = "historia_cardiologia_{$historia->paciente->registro}_{$historia->fecha->format('Y-m-d')}.pdf";
+            $filename = "historia_cardiologia_{$historia->paciente->registro}_{$historia->fecha_consulta->format('Y-m-d')}.pdf";
 
             if ($request->query('download') === 'true') {
                 return $pdf->download($filename);

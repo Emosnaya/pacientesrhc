@@ -24,6 +24,9 @@ use App\Models\EstratiAacvpr;
 use App\Models\HistoriaClinicaCardiologia;
 use App\Models\Ecocardiograma;
 use App\Models\Electrocardiograma;
+use App\Models\HistoriaGinecologica;
+use App\Models\HistoriaObstetrica;
+use App\Models\ControlPrenatal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -370,6 +373,51 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 33. Historia Ginecológica
+        $historiasGinecologia = HistoriaGinecologica::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 33,
+                    'fecha' => $item->fecha_consulta ?? $item->created_at,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Ginecológica'
+                ];
+            });
+
+        // 34. Historia Obstétrica
+        $historiasObstetrica = HistoriaObstetrica::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 34,
+                    'fecha' => $item->created_at,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Obstétrica'
+                ];
+            });
+
+        // 35. Control Prenatal
+        $controlesPrenatales = ControlPrenatal::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 35,
+                    'fecha' => $item->fecha_control,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Control Prenatal'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -392,7 +440,10 @@ class ExpedienteUnificadoController extends Controller
             ->merge($estratiAacvprs)
             ->merge($historiasCardiologia)
             ->merge($ecocardiogramas)
-            ->merge($electrocardiogramas);
+            ->merge($electrocardiogramas)
+            ->merge($historiasGinecologia)
+            ->merge($historiasObstetrica)
+            ->merge($controlesPrenatales);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

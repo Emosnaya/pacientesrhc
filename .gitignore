@@ -22,3 +22,4 @@ yarn-error.log
 check_citas.php
 extract_new_patient.php
 generate_*.php
+.env.example

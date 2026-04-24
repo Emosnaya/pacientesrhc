@@ -3,12 +3,12 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class PacientePortalOtpMail extends Mailable
+class PacientePortalOtpMail extends BaseMail
 {
     use Queueable, SerializesModels;
 
@@ -25,6 +25,12 @@ class PacientePortalOtpMail extends Mailable
 
         return new Envelope(
             subject: 'Código de verificación'.$suffix,
+            replyTo: [
+                new Address(
+                    config('mail.from.address', 'contacto@lynkamed.mx'),
+                    config('app.name', 'LynkaMed'),
+                ),
+            ],
         );
     }
 

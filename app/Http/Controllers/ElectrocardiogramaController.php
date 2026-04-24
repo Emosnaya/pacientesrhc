@@ -213,16 +213,36 @@ class ElectrocardiogramaController extends Controller
                 ->with(['user', 'paciente', 'clinica', 'sucursal'])
                 ->firstOrFail();
 
+            $firmaUser = $ecg->user;
+            $firmaBase64 = null;
+            if ($firmaUser && $firmaUser->firma_digital && file_exists(public_path('storage/' . $firmaUser->firma_digital))) {
+                $imagePath = public_path('storage/' . $firmaUser->firma_digital);
+                $imageData = file_get_contents($imagePath);
+                $imageType = mime_content_type($imagePath);
+                $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
+            }
+
+            $clinicaObj = $ecg->clinica;
+            $clinicaLogo = null;
+            if ($clinicaObj && $clinicaObj->logo && file_exists(public_path('storage/' . $clinicaObj->logo))) {
+                $logoPath = public_path('storage/' . $clinicaObj->logo);
+                $logoData = file_get_contents($logoPath);
+                $logoType = mime_content_type($logoPath);
+                $clinicaLogo = 'data:' . $logoType . ';base64,' . base64_encode($logoData);
+            }
+
             $pdf = Pdf::loadView('pdfs.electrocardiograma', [
                 'ecg' => $ecg,
                 'paciente' => $ecg->paciente,
-                'clinica' => $ecg->clinica,
-                'user' => $ecg->user,
+                'clinica' => $clinicaObj,
+                'user' => $firmaUser,
+                'firmaBase64' => $firmaBase64,
+                'clinicaLogo' => $clinicaLogo,
             ]);
 
             $pdf->setPaper('letter', 'portrait');
 
-            $filename = "ecg_{$ecg->paciente->registro}_{$ecg->fecha->format('Y-m-d')}.pdf";
+            $filename = "ecg_{$ecg->paciente->registro}_{$ecg->fecha_estudio->format('Y-m-d')}.pdf";
 
             if ($request->query('download') === 'true') {
                 return $pdf->download($filename);

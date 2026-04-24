@@ -22,6 +22,15 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:weekly')
             ->weeklyOn(1, '8:00')
             ->timezone('America/Mexico_City');
+        
+        // Enviar recordatorios de citas por WhatsApp
+        // Se ejecuta todos los días a las 10:00 AM
+        $schedule->command('citas:recordatorios --dias=1')
+            ->dailyAt('10:00')
+            ->timezone('America/Mexico_City')
+            ->when(function () {
+                return config('services.twilio.enabled', false);
+            });
     }
 
     /**

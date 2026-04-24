@@ -4,12 +4,12 @@ namespace App\Mail;
 
 use App\Models\Paciente;
 use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class PacientePortalAccesoMail extends Mailable
+class PacientePortalAccesoMail extends BaseMail
 {
     use Queueable, SerializesModels;
 
@@ -26,6 +26,12 @@ class PacientePortalAccesoMail extends Mailable
 
         return new Envelope(
             subject: 'Accede a tu portal de paciente'.$suffix,
+            replyTo: [
+                new Address(
+                    config('mail.from.address', 'contacto@lynkamed.mx'),
+                    config('app.name', 'LynkaMed'),
+                ),
+            ],
         );
     }
 
