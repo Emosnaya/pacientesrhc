@@ -291,6 +291,14 @@ class Paciente extends Model
     }
 
     /**
+     * Presupuestos emitidos para este paciente.
+     */
+    public function presupuestos()
+    {
+        return $this->hasMany(Presupuesto::class);
+    }
+
+    /**
      * Relación con los reportes nutricionales
      */
     public function reporteNutris()

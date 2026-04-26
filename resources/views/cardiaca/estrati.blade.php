@@ -834,17 +834,18 @@
           <span class="f-10 ml-2">{{ $user->nombre_con_titulo }}</span>
         @endif
       </div>
+      <div class="mt-0">
+        <span class="f-bold mt-0 mb-0 f-10">Comentarios:</span><span class="f-10 ml-2">{{$data->comentarios}}</span>
+      </div>
+
       {{-- Solo mostrar firma si el usuario actual es el autor --}}
       @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
-      <div style="position: fixed; bottom: 30px; left: 0; right: 0; text-align: center;">
+      <div style="margin-top: 8px; text-align: center; page-break-inside: avoid;">
         <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 40px; width: auto;"><br>
         <div style="border-top: 1px solid #333; width: 120px; margin: 2px auto 0 auto;"></div>
         <span style="font-size: 8px;">{{ $user->nombre_con_titulo }}</span>
       </div>
       @endif
-      <div class="mt-0">
-        <span class="f-bold mt-0 mb-0 f-10">Comentarios:</span><span class="f-10 ml-2">{{$data->comentarios}}</span>
-      </div>
 
     </main>
     </div><!-- End content-wrapper -->

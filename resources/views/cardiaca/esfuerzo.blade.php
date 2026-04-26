@@ -544,7 +544,7 @@
   </div>
   {{-- Solo mostrar firma si es el autor --}}
   @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
-  <div style="position: fixed; bottom: 40px; left: 0; right: 0; text-align: center;">
+  <div style="margin-top: 8px; text-align: center; page-break-inside: avoid;">
     <img src="{{ $firmaBase64 }}" alt="Firma" style="height: 50px; width: auto;"><br>
     <div style="border-top: 1px solid #333; width: 150px; margin: 2px auto 0 auto;"></div>
     <span style="font-size: 9px;">{{ $autor->nombre_completo ?? $user->nombre_con_titulo }}</span>
