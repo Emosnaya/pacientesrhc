@@ -46,6 +46,7 @@ use App\Http\Controllers\InternalConsultorioProvisionController;
 use App\Http\Controllers\PacienteConsentimientoController;
 use App\Http\Controllers\PacientePortalAuthController;
 use App\Http\Controllers\PacientePortalController;
+use App\Http\Controllers\PresupuestoController;
 use App\Http\Controllers\HistoriaClinicaCardiologiaController;
 use App\Http\Controllers\EcocardiogramaController;
 use App\Http\Controllers\ElectrocardiogramaController;
@@ -142,6 +143,10 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
     Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
     Route::get('/paciente-portal/mi-qr', [PacientePortalController::class, 'miQr']);
+    Route::get('/paciente-portal/presupuestos', [PresupuestoController::class, 'portalIndex']);
+    Route::get('/paciente-portal/clinicas/{clinicaId}/presupuestos', [PresupuestoController::class, 'portalIndexByClinica']);
+    Route::get('/paciente-portal/presupuestos/{id}', [PresupuestoController::class, 'portalShow']);
+    Route::post('/paciente-portal/presupuestos/{id}/aceptar', [PresupuestoController::class, 'portalAceptar']);
     // Soporte - Tickets del paciente
     Route::post('/paciente-portal/soporte/ticket', [\App\Http\Controllers\Api\SoporteTicketController::class, 'store']);
     Route::get('/paciente-portal/soporte/mis-tickets', [\App\Http\Controllers\Api\SoporteTicketController::class, 'misTickets']);
@@ -241,6 +246,16 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/pacientes', PacienteController::class);
     Route::post('/pacientes/express', [PacienteController::class, 'createExpress']); // Flujo urgencias
     Route::post('/pacientes/{paciente}/vincular-clinica', [PacienteController::class, 'vincularClinica']);
+
+    // Presupuestos clínicos por paciente (solo admin/superadmin)
+    Route::prefix('pacientes/{pacienteId}/presupuestos')->group(function () {
+        Route::get('/', [PresupuestoController::class, 'indexByPaciente']);
+        Route::post('/', [PresupuestoController::class, 'store']);
+        Route::get('/{id}', [PresupuestoController::class, 'show']);
+        Route::put('/{id}', [PresupuestoController::class, 'update']);
+        Route::patch('/{id}/estado', [PresupuestoController::class, 'updateEstado']);
+        Route::delete('/{id}', [PresupuestoController::class, 'destroy']);
+    });
     
     // Rutas para el calendario de citas
     Route::apiResource('/citas', CitaController::class);
@@ -740,6 +755,59 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
                     })
                     ->count(),
             ],
+        ]);
+    });
+
+    // Monitoring / health (errores, cola, tickets)
+    Route::get('/dashboard/monitoring', function () {
+        $failedJobsCount = 0;
+        $failedJobs = [];
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('failed_jobs')) {
+            $failedJobsCount = \Illuminate\Support\Facades\DB::table('failed_jobs')->count();
+
+            $failedJobs = \Illuminate\Support\Facades\DB::table('failed_jobs')
+                ->select('id', 'queue', 'failed_at', 'exception')
+                ->orderByDesc('failed_at')
+                ->limit(8)
+                ->get()
+                ->map(function ($job) {
+                    $firstLine = trim(strtok((string) $job->exception, "\n"));
+                    return [
+                        'id' => $job->id,
+                        'queue' => $job->queue,
+                        'failed_at' => $job->failed_at,
+                        'message' => \Illuminate\Support\Str::limit($firstLine ?: 'Error no identificado', 180),
+                    ];
+                });
+        }
+
+        $ticketsNuevos = \App\Models\SoporteTicket::where('status', 'nuevo')->count();
+        $ticketsEnProceso = \App\Models\SoporteTicket::where('status', 'en_proceso')->count();
+
+        $consultoriosVencidos = \App\Models\Clinica::where('es_consultorio_privado', true)
+            ->whereNotNull('fecha_vencimiento')
+            ->where('fecha_vencimiento', '<', now())
+            ->count();
+
+        $ordenesLaboratorioHoy = \App\Models\OrdenLaboratorio::whereDate('created_at', now()->toDateString())->count();
+
+        return response()->json([
+            'success' => true,
+            'system' => [
+                'status' => 'operativo',
+                'server_time' => now()->toDateTimeString(),
+                'php_version' => PHP_VERSION,
+                'laravel_version' => app()->version(),
+            ],
+            'metrics' => [
+                'failed_jobs_count' => $failedJobsCount,
+                'tickets_nuevos' => $ticketsNuevos,
+                'tickets_en_proceso' => $ticketsEnProceso,
+                'consultorios_vencidos' => $consultoriosVencidos,
+                'ordenes_laboratorio_hoy' => $ordenesLaboratorioHoy,
+            ],
+            'recent_failed_jobs' => $failedJobs,
         ]);
     });
 

@@ -160,6 +160,9 @@ class AnalyticsController extends Controller
             // Pacientes por aseguradora (lista de aseguradoras con cantidad)
             $pacientesPorAseguradora = $this->getPacientesPorAseguradora($clinicaId, $sucursalId);
 
+            // Últimas citas realizadas/completadas
+            $ultimasCitasRealizadas = $this->getUltimasCitasRealizadas($clinicaId, $sucursalId);
+
             $analytics = [
                 'total_citas' => $totalCitas,
                 'total_pacientes' => $totalPacientes,
@@ -188,6 +191,7 @@ class AnalyticsController extends Controller
                 'pacientes_con_expediente_por_anio' => $pacientesConExpedientePorAnio,
                 'pacientes_por_categoria_pago' => $pacientesPorCategoriaPago,
                 'pacientes_por_aseguradora' => $pacientesPorAseguradora,
+                'ultimas_citas_realizadas' => $ultimasCitasRealizadas,
             ];
 
             return response()->json([
@@ -374,6 +378,49 @@ class AnalyticsController extends Controller
             'labels' => $labels,
             'data' => $data
         ];
+    }
+
+    private function getUltimasCitasRealizadas($clinicaId, $sucursalId = null)
+    {
+        $query = Cita::with(['paciente:id,nombre,apellidoPat,apellidoMat', 'user:id,nombre,apellidoPat,apellidoMat', 'sucursal:id,nombre'])
+            ->where('clinica_id', $clinicaId)
+            ->where('estado', 'completada');
+
+        if ($sucursalId) {
+            $query->where('sucursal_id', $sucursalId);
+        }
+
+        return $query
+            ->orderByDesc('fecha')
+            ->orderByDesc('hora')
+            ->limit(8)
+            ->get()
+            ->map(function (Cita $cita) {
+                $pacienteNombre = trim(implode(' ', array_filter([
+                    $cita->paciente?->nombre,
+                    $cita->paciente?->apellidoPat,
+                    $cita->paciente?->apellidoMat,
+                ])));
+
+                $doctorNombre = trim(implode(' ', array_filter([
+                    $cita->user?->nombre,
+                    $cita->user?->apellidoPat,
+                    $cita->user?->apellidoMat,
+                ])));
+
+                return [
+                    'id' => $cita->id,
+                    'fecha' => $cita->fecha?->format('Y-m-d'),
+                    'hora' => $cita->hora ? Carbon::parse($cita->hora)->format('H:i') : null,
+                    'estado' => $cita->estado,
+                    'paciente_nombre' => $pacienteNombre ?: 'Paciente sin nombre',
+                    'doctor_nombre' => $doctorNombre ?: 'Sin profesional asignado',
+                    'sucursal_nombre' => $cita->sucursal?->nombre,
+                    'primera_vez' => (bool) $cita->primera_vez,
+                    'notas' => $cita->notas,
+                ];
+            })
+            ->values();
     }
 
     private function getCitasPorSemana($startDate, $endDate, $clinicaId, $allTime = false, $sucursalId = null)

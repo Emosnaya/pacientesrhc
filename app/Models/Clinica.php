@@ -65,6 +65,11 @@ class Clinica extends Model
     {
         return $this->hasMany(Sucursal::class);
     }
+
+    public function presupuestos(): HasMany
+    {
+        return $this->hasMany(Presupuesto::class);
+    }
     
     /**
      * Obtiene la sucursal principal de la clínica

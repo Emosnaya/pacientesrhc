@@ -357,11 +357,9 @@
         
         /* Firma */
         .signature-wrapper {
-            position: fixed;
-            bottom: 35px;
-            left: 0;
-            right: 0;
+            margin-top: 8px;
             text-align: center;
+            page-break-inside: avoid;
         }
         .signature-wrapper img {
             height: 40px;
