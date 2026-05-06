@@ -14,7 +14,7 @@
             padding: 8px 18px;
         }
         /* === HEADER MODERNO === */
-        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 14px; padding: 10px 14px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 14px; padding: 10px 14px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; border: none; }
         .doctor-cell { padding-right: 14px; }
@@ -30,10 +30,10 @@
         .clinic-logo-wrap { width: 45px; height: 45px; background: white; border-radius: 6px; padding: 5px; text-align: center; display: block; margin: 0 auto; }
         .clinic-logo-wrap img { max-height: 35px; max-width: 35px; display: block; margin: 0 auto; }
         /* === FOOTER FIJO === */
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 18px; background: white; border-top: 2px solid #0A1628; font-size: 8px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 18px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 8px; }
         .page-footer-table { width: 100%; border-collapse: collapse; }
         .page-footer-table td { border: none; padding: 0; vertical-align: middle; }
-        .page-footer .clinic-name { font-weight: 700; color: #0A1628; font-size: 9px; }
+        .page-footer .clinic-name { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer .clinic-contact { color: #64748b; }
         .page-footer .clinic-address { color: #94a3b8; font-size: 7px; }
         .page-footer .sucursal-name { color: #3b82f6; font-size: 8px; }
@@ -91,7 +91,7 @@
         }
         .medicamentos-section .card-title {
             font-size: 10px;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         table.meds {
             width: 100%;
@@ -104,7 +104,7 @@
             font-weight: 600;
             color: #334155;
             padding: 8px 6px;
-            border-bottom: 2px solid #0A1628;
+            border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             background: #eef1f5;
         }
         table.meds td {
@@ -382,7 +382,7 @@
             @endif
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

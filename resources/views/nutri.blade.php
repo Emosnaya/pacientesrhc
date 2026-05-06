@@ -24,8 +24,8 @@
 
         /* === COLORS === */
         :root {
-            --primary: #0A1628;
-            --primary-light: #1e3a5f;
+            --primary: {!! $clinica->color_principal ?? '#0A1628' !!};
+            --primary-light: {!! $clinica->color_principal ?? '#0A1628' !!};
             --accent: #3b82f6;
             --accent-light: #60a5fa;
             --success: #10b981;
@@ -43,7 +43,7 @@
         /* === HEADER === */
         .header {
             width: 100%;
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             margin-bottom: 10px;
             padding: 8px 12px;
@@ -143,7 +143,7 @@
         .patient-name {
             font-size: 14px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 8px;
         }
 
@@ -193,9 +193,9 @@
         }
 
         .metrics-table td.highlight {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             color: white;
-            border-color: #0A1628;
+            border-color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .metric-label {
@@ -213,7 +213,7 @@
         .metric-value {
             font-size: 16px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .metrics-table td.highlight .metric-value {
@@ -239,12 +239,12 @@
         .section-title {
             font-size: 11px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 6px;
             padding-bottom: 4px;
-            border-bottom: 2px solid #0A1628;
+            border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .section-content {
@@ -289,7 +289,7 @@
 
         /* === DIAGNOSIS BOX === */
         .diagnosis-box {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 12px;
@@ -345,7 +345,7 @@
         .observations-title {
             font-size: 11px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 5px;
         }
 
@@ -452,7 +452,7 @@
 
         .diet-name {
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 10px;
         }
 
@@ -466,7 +466,7 @@
         .footer {
             margin-top: 20px;
             padding-top: 10px;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .professional-info {
@@ -476,7 +476,7 @@
         .professional-name {
             font-size: 12px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .professional-cedula {
@@ -492,7 +492,7 @@
             right: 0;
             padding: 8px 25px;
             background: white;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 9px;
         }
 
@@ -559,7 +559,7 @@
         .indicator-value {
             font-size: 14px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .indicator-value small {
@@ -584,7 +584,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

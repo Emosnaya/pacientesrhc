@@ -21,7 +21,7 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             color: white;
             padding: 30px 20px;
             text-align: center;
@@ -51,11 +51,11 @@
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
-            border-left: 4px solid #0A1628;
+            border-left: 4px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .patient-info h3 {
             margin-top: 0;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .patient-info p {
             margin: 8px 0;
@@ -64,7 +64,7 @@
             text-align: center;
             padding: 20px;
             background-color: #f8fafc;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .footer p {
             margin: 5px 0;
@@ -77,7 +77,7 @@
             margin-top: 10px;
         }
         strong {
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
     </style>
 </head>

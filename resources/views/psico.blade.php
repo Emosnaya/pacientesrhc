@@ -25,7 +25,7 @@
         /* === HEADER === */
         .header {
             width: 100%;
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             margin-bottom: 12px;
             padding: 10px 15px;
@@ -147,7 +147,7 @@
         .patient-name {
             font-size: 14px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 8px;
         }
 
@@ -258,7 +258,7 @@
         .section-title {
             font-size: 12px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -337,7 +337,7 @@
         }
 
         .questionnaire-title {
-            background: linear-gradient(135deg, #0A1628 0%, #1e3a5f 100%);
+            background: linear-gradient(135deg, {!! $clinica->color_principal ?? '#0A1628' !!} 0%, {!! $clinica->color_principal ?? '#0A1628' !!} 100%);
             color: white;
             padding: 12px 15px;
             font-size: 14px;
@@ -354,7 +354,7 @@
 
         .questionnaire-table thead th {
             background: #f1f5f9;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -392,7 +392,7 @@
 
         .answer-cell {
             font-weight: 600;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .answer-cell .badge {
@@ -422,7 +422,7 @@
         .footer {
             margin-top: 30px;
             padding-top: 15px;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .professional-info {
@@ -432,7 +432,7 @@
         .professional-name {
             font-size: 13px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .professional-cedula {
@@ -490,7 +490,7 @@
             right: 0;
             padding: 8px 25px;
             background: white;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 9px;
         }
 
@@ -539,7 +539,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

@@ -33,6 +33,7 @@ class Clinica extends Model
         'es_consultorio_privado',
         'propietario_user_id',
         'facturacion_addon_activo',
+        'color_principal',
     ];
 
     protected $casts = [

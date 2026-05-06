@@ -159,19 +159,23 @@ class EnsureSubscriptionActive
         }
 
         // Para consultorios: verificar también la suscripción del usuario propietario
+        // Solo si la clínica no tiene fecha_vencimiento válida en el futuro
         if ($esConsultorio && $clinica->propietario_user_id) {
             $propietario = $clinica->propietario ?? $user;
             if ($propietario && !$propietario->tieneSuscripcionConsultorioActiva()) {
-                return [
-                    'active' => false,
-                    'tipo' => 'consultorio_vencido',
-                    'message' => 'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
-                    'dias_vencido' => 0,
-                    'dias_restantes' => null,
-                    'puede_renovar_online' => true,
-                    'contacto_url' => null,
-                    'renovacion_url' => '/suscripcion',
-                ];
+                // Respetar fecha_vencimiento si está en el futuro
+                if (!$fechaVencimiento || !$now->lessThan($fechaVencimiento)) {
+                    return [
+                        'active' => false,
+                        'tipo' => 'consultorio_vencido',
+                        'message' => 'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
+                        'dias_vencido' => 0,
+                        'dias_restantes' => null,
+                        'puede_renovar_online' => true,
+                        'contacto_url' => null,
+                        'renovacion_url' => '/suscripcion',
+                    ];
+                }
             }
         }
 

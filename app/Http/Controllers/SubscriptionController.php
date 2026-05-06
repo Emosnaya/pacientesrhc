@@ -933,12 +933,19 @@ class SubscriptionController extends Controller
         $diasRestantes = $fechaVencimiento ? $now->diffInDays($fechaVencimiento, false) : null;
         $vencida = $fechaVencimiento && $now->greaterThan($fechaVencimiento);
         
-        // Para consultorios, también verificar suscripción del propietario
-        if ($esConsultorio && $clinica->propietario_user_id) {
+        // Para consultorios, verificar suscripción del propietario
+        // SOLO si la fecha de vencimiento de la clínica no está en el futuro
+        // (evitar falsos positivos cuando fecha_vencimiento > now pero tiene_suscripcion_consultorio = false)
+        if ($esConsultorio && $clinica->propietario_user_id && !$vencida) {
             $propietario = $clinica->propietario ?? $user;
+            // Solo marcar vencida si el propietario no tiene ni trial ni suscripción activa
+            // y además la clínica no tiene fecha_vencimiento en el futuro
             if ($propietario && !$propietario->tieneSuscripcionConsultorioActiva()) {
-                $vencida = true;
-                $activa = false;
+                // Si la clínica tiene fecha_vencimiento válida en el futuro, respetarla
+                if (!$fechaVencimiento || !$now->lessThan($fechaVencimiento)) {
+                    $vencida = true;
+                    $activa = false;
+                }
             }
         }
 
@@ -959,13 +966,15 @@ class SubscriptionController extends Controller
             ],
             'planes_disponibles' => $esConsultorio ? [
                 'mensual' => [
-                    'precio' => 1800,
+                    'precio' => 1499,
                     'ciclo' => 'mensual',
+                    'etiqueta' => 'Precio de lanzamiento',
                 ],
                 'anual' => [
-                    'precio' => 18000,
+                    'precio' => 14999,
                     'ciclo' => 'anual',
-                    'ahorro' => 3600,
+                    'ahorro' => 2989,
+                    'etiqueta' => 'Precio de lanzamiento',
                 ],
             ] : null,
         ]);
@@ -1002,8 +1011,8 @@ class SubscriptionController extends Controller
 
             // Precios de renovación (alineados con landing)
             $precios = [
-                'mensual' => 1800,
-                'anual' => 18000,
+                'mensual' => 1499,
+                'anual' => 14999,
             ];
             
             $precio = $precios[$request->billing_cycle];
@@ -1059,6 +1068,189 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear sesión de pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // FREE TRIAL — registro sin pago
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Códigos de referido / ventas que extienden el trial a 30 días.
+     * La clave es el código (en mayúsculas), el valor es un array con:
+     *   - days   : días de prueba (default 15)
+     *   - label  : mensaje de éxito
+     */
+    private function referralCodes(): array
+    {
+        return [
+            'AMIGO30'    => ['days' => 30, 'label' => '¡Código de amigo aplicado! Tienes 30 días de prueba gratis.'],
+            'VENTAS30'   => ['days' => 30, 'label' => '30 días especiales activados para ti.'],
+            'DEMO2026'   => ['days' => 30, 'label' => '¡Código demo activado! 30 días de acceso completo.'],
+            'BETA2026'   => ['days' => 30, 'label' => '¡Bienvenido beta tester! 30 días gratis.'],
+            'LYNKA30'    => ['days' => 30, 'label' => '¡Código LynkaMed especial! 30 días de prueba.'],
+        ];
+    }
+
+    /**
+     * POST /api/registro/validate-referral
+     * Valida un código de referido y retorna los días de prueba.
+     */
+    public function validateReferralCode(Request $request): JsonResponse
+    {
+        $request->validate(['code' => 'required|string']);
+        $code  = strtoupper(trim($request->code));
+        $codes = $this->referralCodes();
+
+        if (!isset($codes[$code])) {
+            return response()->json(['success' => false, 'message' => 'Código no válido.'], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'days'    => $codes[$code]['days'],
+            'label'   => $codes[$code]['label'],
+        ]);
+    }
+
+    /**
+     * POST /api/registro/free-trial
+     * Crea usuario + consultorio + sucursal con trial gratuito. No requiere Stripe.
+     */
+    public function startFreeTrial(Request $request): JsonResponse
+    {
+        $request->validate([
+            'user_data'                     => 'required|array',
+            'user_data.nombre'              => 'required|string|max:255',
+            'user_data.apellidoPat'         => 'required|string|max:255',
+            'user_data.apellidoMat'         => 'nullable|string|max:255',
+            'user_data.email'               => 'required|email|unique:users,email',
+            'user_data.cedula'              => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.password'            => 'required|string|min:6',
+            'consultorio_data'              => 'required|array',
+            'consultorio_data.nombre'       => 'required|string|max:255',
+            'consultorio_data.tipo_clinica' => 'required|string',
+            'consultorio_data.telefono'     => 'nullable|string',
+            'consultorio_data.email'        => 'nullable|email',
+            'consultorio_data.direccion'    => 'nullable|string',
+            'referral_code'                 => 'nullable|string',
+        ], [
+            'user_data.cedula.regex' => 'La cédula profesional debe contener entre 7 y 8 dígitos numéricos.',
+        ]);
+
+        // Determinar días de trial
+        $trialDays = 15;
+        $referralMsg = null;
+        if ($request->referral_code) {
+            $code  = strtoupper(trim($request->referral_code));
+            $codes = $this->referralCodes();
+            if (isset($codes[$code])) {
+                $trialDays   = $codes[$code]['days'];
+                $referralMsg = $codes[$code]['label'];
+            }
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $ud = $request->user_data;
+            $cd = $request->consultorio_data;
+
+            // 1. Crear usuario
+            $user = User::create([
+                'nombre'           => $ud['nombre'],
+                'apellidoPat'      => $ud['apellidoPat'],
+                'apellidoMat'      => $ud['apellidoMat'] ?? null,
+                'email'            => $ud['email'],
+                'cedula'           => $ud['cedula'],
+                'password'         => Hash::make($ud['password']),
+                'isAdmin'          => true,
+                'email_verified'   => true,
+                'email_verified_at'=> now(),
+                'imagen'           => 'perfiles/avatar-default.png',
+                // Suscripción
+                'tiene_suscripcion_consultorio' => true,
+                'plan_consultorio'              => 'consultorio',
+                'ciclo_facturacion'             => 'mensual',
+                'trial_ends_at'                 => now()->addDays($trialDays),
+            ]);
+
+            // 2. Crear consultorio en modo trial
+            $trialEndsAt = now()->addDays($trialDays);
+
+            $consultorio = Clinica::create([
+                'nombre'                      => $cd['nombre'],
+                'tipo_clinica'                => $cd['tipo_clinica'],
+                'email'                       => $cd['email'] ?? $user->email,
+                'telefono'                    => $cd['telefono'] ?? null,
+                'direccion'                   => $cd['direccion'] ?? null,
+                'plan'                        => 'profesional',
+                'plan_type'                   => 'profesional',
+                'billing_cycle'               => 'mensual',
+                'duration'                    => 'mensual',
+                'pagado'                      => false,
+                'activa'                      => true,
+                'es_consultorio_privado'      => true,
+                'propietario_user_id'         => $user->id,
+                'permite_multiples_sucursales'=> false,
+                'max_pacientes'               => 999999,
+                'max_usuarios'               => 3,
+                'max_sucursales'              => 1,
+                'trial_ends_at'              => $trialEndsAt,
+                'fecha_vencimiento'          => $trialEndsAt,
+                'modulos_habilitados'        => [],
+            ]);
+
+            // 3. Crear sucursal principal
+            $sucursal = Sucursal::create([
+                'clinica_id' => $consultorio->id,
+                'nombre'     => $cd['nombre'],
+                'es_principal'=> true,
+                'activa'     => true,
+                'direccion'  => $cd['direccion'] ?? null,
+                'telefono'   => $cd['telefono'] ?? null,
+            ]);
+
+            // 4. Vincular propietario
+            $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());
+
+            // 5. Activar workspace
+            $user->update([
+                'clinica_activa_id' => $consultorio->id,
+                'sucursal_id'       => $sucursal->id,
+            ]);
+
+            DB::commit();
+
+            // Generar token
+            $token = $user->createToken('authToken')->plainTextToken;
+
+            // Email de bienvenida (best-effort)
+            try {
+                Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user, $consultorio, null));
+            } catch (\Exception $e) {
+                Log::warning('Error sending trial welcome email: ' . $e->getMessage());
+            }
+
+            Log::info("Trial gratuito activado para: {$user->email} ({$trialDays} días)");
+
+            return response()->json([
+                'success'        => true,
+                'message'        => "¡Bienvenido! Tu prueba gratuita de {$trialDays} días ha comenzado.",
+                'referral_msg'   => $referralMsg,
+                'token'          => $token,
+                'user'           => $user->fresh(),
+                'trial_ends_at'  => $trialEndsAt->format('Y-m-d'),
+                'trial_days'     => $trialDays,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error starting free trial: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear tu cuenta: ' . $e->getMessage(),
             ], 500);
         }
     }

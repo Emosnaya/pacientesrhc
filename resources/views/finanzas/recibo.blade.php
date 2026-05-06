@@ -18,7 +18,7 @@
             width: 100%;
             margin-bottom: 12px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #0A1628;
+            border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .clinic-logo {
             display: table-cell;
@@ -40,7 +40,7 @@
         .clinic-name {
             font-size: 15px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin: 0 0 4px 0;
             letter-spacing: 0.02em;
         }
@@ -58,7 +58,7 @@
             margin-bottom: 10px;
             padding-bottom: 8px;
         }
-        .page-header h1 { font-size: 16px; font-weight: 700; color: #0A1628; margin: 0 0 2px 0; }
+        .page-header h1 { font-size: 16px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin: 0 0 2px 0; }
         .recibo-num { font-size: 10px; color: #64748b; margin: 0; }
         .recibo-fecha { font-size: 8px; color: #94a3b8; margin-top: 2px; }
         .fiscal-notice {
@@ -194,7 +194,7 @@
         <p>Este documento es un comprobante válido de pago. {{ $clinica->nombre ?? 'Clínica' }}</p>
         <p style="margin-top: 2px;">Para cualquier aclaración, favor de comunicarse a {{ $clinica->telefono ?? 'N/A' }}</p>
         <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 6px; color: #94a3b8;">
-            <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+            <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
         </div>
     </div>
 </body>

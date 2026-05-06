@@ -105,7 +105,7 @@
             line-height: 1.5;
         }
         /* === HEADER MODERNO === */
-        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .header-logo-cell { width: 60px; padding-right: 12px !important; }
@@ -121,12 +121,12 @@
         .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
         .patient-table { width: 100%; border-collapse: collapse; }
         .patient-table td { padding: 2px 6px; font-size: 10px; }
-        .patient-name { font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 6px; }
+        .patient-name { font-size: 13px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 6px; }
         .patient-label { color: #64748b; font-size: 9px; }
         .patient-value { font-weight: 600; color: #334155; }
         .patient-diagnosis { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 10px; }
         .patient-diagnosis-label { font-size: 9px; color: #64748b; font-weight: 600; }
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
         .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
         .page-footer .clinic-contact { text-align: right; color: #64748b; }
@@ -148,7 +148,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

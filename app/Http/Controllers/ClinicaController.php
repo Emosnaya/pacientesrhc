@@ -207,6 +207,7 @@ class ClinicaController extends Controller
             'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'pagado' => 'boolean',
             'activa' => 'boolean',
+            'color_principal' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
         ]);
 
         if ($validator->fails()) {
@@ -217,7 +218,7 @@ class ClinicaController extends Controller
         }
 
         try {
-            $data = $request->only(['nombre', 'tipo_clinica', 'email', 'telefono', 'direccion', 'pagado', 'activa']);
+            $data = $request->only(['nombre', 'tipo_clinica', 'email', 'telefono', 'direccion', 'pagado', 'activa', 'color_principal']);
 
             // Manejar logo si se subió
             if ($request->hasFile('logo')) {
@@ -403,6 +404,7 @@ class ClinicaController extends Controller
             'telefono' => 'nullable|string|max:20',
             'direccion' => 'nullable|string|max:500',
             'plan' => 'nullable|in:mensual,trimestral,anual',
+            'color_principal' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
         ]);
 
         if ($validator->fails()) {
@@ -414,6 +416,11 @@ class ClinicaController extends Controller
 
         try {
             $data = $request->only(['nombre', 'email', 'telefono', 'direccion']);
+
+            // Color de marca (cualquier usuario puede cambiarlo)
+            if ($request->has('color_principal')) {
+                $data['color_principal'] = $request->color_principal;
+            }
             
             // Solo superAdmin puede cambiar el plan
             if ($user->isSuperAdmin() && $request->has('plan')) {

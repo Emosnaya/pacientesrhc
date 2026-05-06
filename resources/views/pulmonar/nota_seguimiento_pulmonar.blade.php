@@ -27,8 +27,8 @@
         .medio { position: relative; }
         .texto-izquierda { text-align: left; position: absolute; left: 0; }
         .texto-derecha { text-align: right; position: absolute; right: 0; }
-        .section-label { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; padding-bottom: 3px; border-bottom: 2px solid #0A1628; margin-bottom: 5px; margin-top: 8px; }
-        .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #0A1628; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #334155; }
+        .section-label { font-size: 8px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; padding-bottom: 3px; border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 5px; margin-top: 8px; }
+        .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid {!! $clinica->color_principal ?? '#0A1628' !!}; padding: 6px 10px; margin-bottom: 8px; font-size: 10px; color: #334155; }
         .soap-section { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
         .soap-letter { width: 28px; color: white; font-weight: 700; font-size: 14px; text-align: center; padding: 8px 4px; vertical-align: top; }
         .soap-body { padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: none; vertical-align: top; }
@@ -39,7 +39,7 @@
         .signature-line { border-top: 1px solid #000; width: 250px; margin: 0.2rem auto 0.3rem; }
         .signature-text { font-size: 8px; text-align: center; margin: 0.2rem 0; }
         /* === HEADER MODERNO === */
-        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .header-logo-cell { width: 60px; padding-right: 12px !important; }
@@ -55,12 +55,12 @@
         .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
         .patient-table { width: 100%; border-collapse: collapse; }
         .patient-table td { padding: 2px 6px; font-size: 10px; }
-        .patient-name { font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 6px; }
+        .patient-name { font-size: 13px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 6px; }
         .patient-label { color: #64748b; font-size: 9px; }
         .patient-value { font-weight: 600; color: #334155; }
         .patient-diagnosis { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 10px; }
         .patient-diagnosis-label { font-size: 9px; color: #64748b; font-weight: 600; }
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
         .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
         .page-footer .clinic-contact { text-align: right; color: #64748b; }
@@ -82,7 +82,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>
@@ -137,7 +137,7 @@
 
         <table class="soap-section">
             <tr>
-                <td class="soap-letter" style="background:#0A1628;">S</td>
+                <td class="soap-letter" style="background:{!! $clinica->color_principal ?? '#0A1628' !!};">S</td>
                 <td class="soap-body">
                     <div class="soap-sublabel">Subjetivo</div>
                     <div class="soap-text">{{ $data->s_subjetivo ?: '—' }}</div>

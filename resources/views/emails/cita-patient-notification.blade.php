@@ -22,7 +22,7 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 32px 30px;
             text-align: center;
         }
@@ -55,7 +55,7 @@
         .content h2 {
             font-size: 20px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 20px;
         }
         .content p {
@@ -69,7 +69,7 @@
             font-weight: 600;
         }
         .appointment-card {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             color: white;
             border-radius: 8px;
             padding: 24px;
@@ -169,7 +169,7 @@
         }
         .footer {
             background: #f8fafc;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 24px 30px;
             text-align: center;
         }
@@ -180,7 +180,7 @@
             margin: 0;
         }
         .footer strong {
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 14px;
             display: block;
             margin-bottom: 6px;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SoporteTicket;
+use App\Models\SoporteMensaje;
 use App\Models\Clinica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +46,7 @@ class SoporteTicketController extends Controller
             'mensaje' => $request->mensaje,
             'user_id' => $user->id,
             'clinica_id' => $request->clinica_id,
-            'usuario_nombre' => $user->name,
+            'usuario_nombre' => trim(($user->nombre ?? '') . ' ' . ($user->apellidoPat ?? '') . ' ' . ($user->apellidoMat ?? '')),
             'usuario_email' => $user->email,
             'clinica_nombre' => $clinicaNombre,
             'status' => 'nuevo',
@@ -240,5 +241,219 @@ class SoporteTicketController extends Controller
             'message' => 'Ticket respondido y marcado como ' . $status,
             'ticket' => $ticket->fresh(),
         ]);
+    }
+
+    /* ──────────────────────────────────────────────────────────
+     * CHAT EN VIVO (mensajes por ticket)
+     * ────────────────────────────────────────────────────────── */
+
+    /**
+     * Obtener mensajes de chat de un ticket (usuario)
+     */
+    public function getMensajes(Request $request, $id)
+    {
+        $user   = Auth::user();
+        $ticket = SoporteTicket::where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $since = $request->query('since'); // timestamp ISO para polling incremental
+
+        $query = $ticket->mensajes()->with('sender:id,nombre,apellidoPat,apellidoMat');
+        if ($since) {
+            $query->where('created_at', '>', $since);
+        }
+        $mensajes = $query->get()->map(fn($m) => $this->formatMensaje($m));
+
+        // Marcar como leídos los mensajes de admin no leídos
+        $ticket->mensajes()
+            ->where('sender_type', 'admin')
+            ->whereNull('leido_at')
+            ->update(['leido_at' => now()]);
+
+        return response()->json(['mensajes' => $mensajes]);
+    }
+
+    /**
+     * Enviar mensaje en un ticket (usuario)
+     */
+    public function enviarMensaje(Request $request, $id)
+    {
+        $user   = Auth::user();
+        $ticket = SoporteTicket::where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $request->validate(['mensaje' => 'required|string|max:5000']);
+
+        // Reabrir si estaba cerrado/resuelto
+        if (in_array($ticket->status, ['resuelto', 'cerrado'])) {
+            $ticket->update(['status' => 'en_proceso']);
+        }
+
+        $mensaje = SoporteMensaje::create([
+            'ticket_id'   => $ticket->id,
+            'sender_id'   => $user->id,
+            'sender_type' => 'user',
+            'mensaje'     => $request->mensaje,
+        ]);
+
+        return response()->json(['mensaje' => $this->formatMensaje($mensaje->load('sender:id,nombre,apellidoPat,apellidoMat'))]);
+    }
+
+    /**
+     * Obtener mensajes de chat de un ticket (admin)
+     */
+    public function adminGetMensajes(Request $request, $id)
+    {
+        $ticket = SoporteTicket::findOrFail($id);
+        $since  = $request->query('since');
+
+        $query = $ticket->mensajes()->with('sender:id,nombre,apellidoPat,apellidoMat');
+        if ($since) {
+            $query->where('created_at', '>', $since);
+        }
+        $mensajes = $query->get()->map(fn($m) => $this->formatMensaje($m));
+
+        // Marcar como leídos los mensajes de user no leídos
+        $ticket->mensajes()
+            ->where('sender_type', 'user')
+            ->whereNull('leido_at')
+            ->update(['leido_at' => now()]);
+
+        return response()->json(['mensajes' => $mensajes]);
+    }
+
+    /**
+     * Enviar mensaje en un ticket (admin)
+     */
+    public function adminEnviarMensaje(Request $request, $id)
+    {
+        $ticket = SoporteTicket::findOrFail($id);
+
+        $request->validate(['mensaje' => 'required|string|max:5000']);
+
+        // Marcar ticket en proceso si estaba nuevo
+        if ($ticket->status === 'nuevo') {
+            $ticket->update(['status' => 'en_proceso']);
+        }
+
+        $mensaje = SoporteMensaje::create([
+            'ticket_id'   => $ticket->id,
+            'sender_id'   => Auth::id(),
+            'sender_type' => 'admin',
+            'mensaje'     => $request->mensaje,
+        ]);
+
+        return response()->json(['mensaje' => $this->formatMensaje($mensaje->load('sender:id,nombre,apellidoPat,apellidoMat'))]);
+    }
+
+    /**
+     * Número de mensajes no leídos de admin para el usuario
+     */
+    public function mensajesNoLeidos()
+    {
+        $userId = Auth::id();
+        $count = SoporteMensaje::whereHas('ticket', fn($q) => $q->where('user_id', $userId))
+            ->where('sender_type', 'admin')
+            ->whereNull('leido_at')
+            ->count();
+
+        return response()->json(['no_leidos' => $count]);
+    }
+
+    /**
+     * Número de mensajes no leídos de users para el admin
+     */
+    public function adminMensajesNoLeidos()
+    {
+        $count = SoporteMensaje::where('sender_type', 'user')
+            ->whereNull('leido_at')
+            ->count();
+
+        return response()->json(['no_leidos' => $count]);
+    }
+
+    /**
+     * Buscar usuarios para iniciar chat (admin)
+     */
+    public function buscarUsuarios(Request $request)
+    {
+        $q = $request->query('q', '');
+
+        $users = \App\Models\User::with('clinica:id,nombre')
+            ->where(function ($query) use ($q) {
+                $query->where('nombre', 'like', "%{$q}%")
+                      ->orWhere('apellidoPat', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%");
+            })
+            ->whereNull('paciente_id') // excluir pacientes del portal
+            ->orderBy('nombre')
+            ->limit(20)
+            ->get(['id', 'nombre', 'apellidoPat', 'apellidoMat', 'email', 'clinica_id'])
+            ->map(fn($u) => [
+                'id'           => $u->id,
+                'name'         => trim(($u->nombre ?? '') . ' ' . ($u->apellidoPat ?? '') . ' ' . ($u->apellidoMat ?? '')),
+                'email'        => $u->email,
+                'clinica'      => $u->clinica?->nombre,
+            ]);
+
+        return response()->json(['usuarios' => $users]);
+    }
+
+    /**
+     * Admin inicia un chat/ticket con un usuario específico
+     */
+    public function adminIniciarChat(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'asunto'  => 'required|string|max:255',
+            'mensaje' => 'required|string|max:5000',
+        ]);
+
+        $targetUser = \App\Models\User::findOrFail($request->user_id);
+
+        // Crear ticket en nombre del usuario destino
+        $ticket = SoporteTicket::create([
+            'categoria'      => 'otro',
+            'asunto'         => $request->asunto,
+            'mensaje'        => $request->mensaje,
+            'user_id'        => $targetUser->id,
+            'clinica_id'     => $targetUser->clinica_id,
+            'usuario_nombre' => trim(($targetUser->nombre ?? '') . ' ' . ($targetUser->apellidoPat ?? '') . ' ' . ($targetUser->apellidoMat ?? '')),
+            'usuario_email'  => $targetUser->email,
+            'clinica_nombre' => $targetUser->clinica?->nombre,
+            'status'         => 'en_proceso',
+            'prioridad'      => 'media',
+            'origen'         => 'admin_iniciado',
+        ]);
+
+        // Enviar el primer mensaje como admin
+        $mensaje = SoporteMensaje::create([
+            'ticket_id'   => $ticket->id,
+            'sender_id'   => Auth::id(),
+            'sender_type' => 'admin',
+            'mensaje'     => $request->mensaje,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'ticket'  => $ticket->fresh(),
+            'mensaje' => $this->formatMensaje($mensaje->load('sender:id,nombre,apellidoPat,apellidoMat')),
+        ]);
+    }
+
+    private function formatMensaje($m): array
+    {
+        return [
+            'id'          => $m->id,
+            'ticket_id'   => $m->ticket_id,
+            'sender_type' => $m->sender_type,
+            'sender_name' => $m->sender ? trim(($m->sender->nombre ?? '') . ' ' . ($m->sender->apellidoPat ?? '')) : 'Soporte',
+            'mensaje'     => $m->mensaje,
+            'leido_at'    => $m->leido_at,
+            'created_at'  => $m->created_at->toIso8601String(),
+        ];
     }
 }
