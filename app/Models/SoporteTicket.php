@@ -90,6 +90,14 @@ class SoporteTicket extends Model
     }
 
     /**
+     * Mensajes de chat en vivo de este ticket
+     */
+    public function mensajes()
+    {
+        return $this->hasMany(SoporteMensaje::class, 'ticket_id')->orderBy('created_at', 'asc');
+    }
+
+    /**
      * Relación con el admin que resolvió el ticket
      */
     public function resolvedBy()

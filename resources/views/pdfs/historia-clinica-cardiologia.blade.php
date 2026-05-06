@@ -23,7 +23,7 @@
         /* === HEADER === */
         .header {
             width: 100%;
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             margin-bottom: 10px;
             padding: 8px 12px;
@@ -55,7 +55,7 @@
         }
         .patient-table { width: 100%; border-collapse: collapse; }
         .patient-table td { padding: 2px 6px; font-size: 10px; }
-        .patient-name { font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 6px; }
+        .patient-name { font-size: 13px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 6px; }
         .patient-label { color: #64748b; font-size: 9px; }
         .patient-value { font-weight: 600; color: #334155; }
         /* === SECTIONS === */
@@ -66,7 +66,7 @@
             overflow: hidden;
         }
         .section-title {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             color: white;
             font-size: 9px;
             font-weight: 700;
@@ -123,7 +123,7 @@
             bottom: 0; left: 0; right: 0;
             padding: 6px 20px;
             background: white;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 9px;
         }
         .page-footer-table { width: 100%; }
@@ -150,7 +150,7 @@
         </tr>
         <tr>
             <td colspan="2" style="text-align:center;padding-top:4px;font-size:7px;color:#94a3b8;">
-                Generado con <strong style="color:#0A1628;">Lynkamed</strong>
+                Generado con <strong style="color:{!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
             </td>
         </tr>
     </table>
@@ -739,7 +739,7 @@
                 <img src="{{ $firmaBase64 }}" alt="Firma" style="height:50px;width:auto;"><br>
                 @endif
                 <div style="border-top:1px solid #334155;width:200px;margin:4px auto 0 auto;padding-top:6px;">
-                    <div style="font-size:10px;font-weight:700;color:#0A1628;">
+                    <div style="font-size:10px;font-weight:700;color:{!! $clinica->color_principal ?? '#0A1628' !!};">
                         {{ $user->nombre_con_titulo ?? $user->name ?? '' }}
                         @if($user->cedula_especialista ?? null) — {{ $user->cedula_especialista }}@endif
                     </div>

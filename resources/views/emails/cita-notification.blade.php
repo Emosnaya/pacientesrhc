@@ -22,7 +22,7 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 32px 30px;
             text-align: center;
         }
@@ -55,7 +55,7 @@
         .content h2 {
             font-size: 20px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 20px;
         }
         .content p {
@@ -71,13 +71,13 @@
         .appointment-details {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-left: 4px solid #0A1628;
+            border-left: 4px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             padding: 22px 24px;
             margin: 24px 0;
         }
         .appointment-details h3 {
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 16px;
             font-weight: 700;
             margin-bottom: 16px;
@@ -141,7 +141,7 @@
         }
         .footer {
             background: #f8fafc;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 24px 30px;
             text-align: center;
         }
@@ -152,7 +152,7 @@
             margin: 0;
         }
         .footer strong {
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 14px;
             display: block;
             margin-bottom: 6px;
@@ -228,7 +228,7 @@
                 @if($clinica->direccion ?? null){{ $clinica->direccion }}@endif
             </p>
             <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
-                <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                <span>Powered by</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
             </div>
         </div>
     </div>

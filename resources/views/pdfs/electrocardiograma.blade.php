@@ -13,7 +13,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1e293b; line-height: 1.4; margin: 20px 25px; }
         table { border-collapse: collapse; }
-        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .header-logo-cell { width: 60px; padding-right: 12px !important; }
@@ -29,11 +29,11 @@
         .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
         .patient-table { width: 100%; border-collapse: collapse; }
         .patient-table td { padding: 2px 6px; font-size: 10px; }
-        .patient-name { font-size: 13px; font-weight: 700; color: #0A1628; margin-bottom: 6px; }
+        .patient-name { font-size: 13px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 6px; }
         .patient-label { color: #64748b; font-size: 9px; }
         .patient-value { font-weight: 600; color: #334155; }
         .section { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
-        .section-title { background: #0A1628; color: white; font-size: 9px; font-weight: 700; padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-title { background: {!! $clinica->color_principal ?? '#0A1628' !!}; color: white; font-size: 9px; font-weight: 700; padding: 4px 10px; text-transform: uppercase; letter-spacing: 0.5px; }
         .section-body { padding: 8px 10px; }
         .row-table { width: 100%; border-collapse: collapse; }
         .row-table td { padding: 2px 4px; vertical-align: top; font-size: 9.5px; }
@@ -44,7 +44,7 @@
         .full-label { font-size: 9px; color: #64748b; margin-bottom: 2px; }
         .two-col { width: 50%; vertical-align: top; padding: 0 4px; }
         .urgente-badge { display: inline-block; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; }
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
         .clinic-name { font-weight: 700; color: #ef4444; }
         .clinic-contact { text-align: right; color: #64748b; }
@@ -64,7 +64,7 @@
         </tr>
         <tr>
             <td colspan="2" style="text-align:center;padding-top:4px;font-size:7px;color:#94a3b8;">
-                Generado con <strong style="color:#0A1628;">Lynkamed</strong>
+                Generado con <strong style="color:{!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
             </td>
         </tr>
     </table>
@@ -411,7 +411,7 @@
                 <img src="{{ $firmaBase64 }}" alt="Firma" style="height:50px;width:auto;"><br>
                 @endif
                 <div style="border-top:1px solid #334155;width:200px;margin:4px auto 0 auto;padding-top:6px;">
-                    <div style="font-size:10px;font-weight:700;color:#0A1628;">
+                    <div style="font-size:10px;font-weight:700;color:{!! $clinica->color_principal ?? '#0A1628' !!};">
                         {{ $ecg->medico_interpreta ?? $user->nombre_con_titulo ?? $user->name ?? '' }}
                     </div>
                     @if($ecg->cedula_medico ?? null)

@@ -7,7 +7,7 @@
 </head>
 <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; color: #1f2937; margin: 0; padding: 24px; background: #f8fafc;">
     <div style="max-width: 600px; margin: 0 auto; background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-        <div style="background: #071F4A; padding: 20px 24px;">
+        <div style="background: {!! $clinica->color_principal ?? '#0A1628' !!}; padding: 20px 24px;">
             <h1 style="margin: 0; color: #fff; font-size: 18px;">Tienes un nuevo presupuesto</h1>
             <p style="margin: 6px 0 0; color: #cbd5e1; font-size: 13px;">{{ $clinicaNombre }}</p>
         </div>
@@ -25,7 +25,7 @@
             </div>
 
             <p style="margin: 22px 0;">
-                <a href="{{ $portalUrl }}" style="display: inline-block; background: #071F4A; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600;">
+                <a href="{{ $portalUrl }}" style="display: inline-block; background: {!! $clinica->color_principal ?? '#0A1628' !!}; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600;">
                     Ir al portal para aceptar y firmar
                 </a>
             </p>
@@ -36,7 +36,7 @@
         </div>
 
         <div style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e5e7eb; font-size: 11px; color: #94a3b8; text-align: center;">
-            Powered by <strong style="color: #0A1628;">Lynkamed</strong>
+            Powered by <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
         </div>
     </div>
 </body>

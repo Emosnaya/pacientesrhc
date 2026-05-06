@@ -77,6 +77,8 @@ Route::prefix('registro')->group(function() {
     Route::get('/planes', [SubscriptionController::class, 'getPlans']);
     Route::post('/check-email', [SubscriptionController::class, 'checkEmail']);
     Route::post('/validate-promo', [SubscriptionController::class, 'validatePromoCode']);
+    Route::post('/validate-referral', [SubscriptionController::class, 'validateReferralCode']);
+    Route::post('/free-trial', [SubscriptionController::class, 'startFreeTrial']);
     Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
@@ -212,6 +214,20 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/soporte/mis-tickets', [\App\Http\Controllers\SoporteController::class, 'misTickets']);
     Route::get('/soporte/ticket/{id}', [\App\Http\Controllers\SoporteController::class, 'show']);
     
+    // Chat en vivo por ticket (usuario)
+    Route::get('/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'getMensajes']);
+    Route::post('/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'enviarMensaje']);
+    Route::get('/soporte/mensajes/no-leidos', [\App\Http\Controllers\Api\SoporteTicketController::class, 'mensajesNoLeidos']);
+
+    // Chat interno tipo Messenger (DM + grupos, solo operativos)
+    Route::get('/chat/conversaciones',                          [\App\Http\Controllers\Api\ChatController::class, 'conversaciones']);
+    Route::post('/chat/conversaciones',                         [\App\Http\Controllers\Api\ChatController::class, 'crear']);
+    Route::get('/chat/conversaciones/{id}/mensajes',            [\App\Http\Controllers\Api\ChatController::class, 'getMensajes']);
+    Route::post('/chat/conversaciones/{id}/mensajes',           [\App\Http\Controllers\Api\ChatController::class, 'enviarMensaje']);
+    Route::post('/chat/conversaciones/{id}/leido',              [\App\Http\Controllers\Api\ChatController::class, 'marcarLeido']);
+    Route::get('/chat/miembros',                                [\App\Http\Controllers\Api\ChatController::class, 'miembros']);
+    Route::get('/chat/no-leidos',                               [\App\Http\Controllers\Api\ChatController::class, 'noLeidos']);
+
     // Rutas de perfil
     Route::get('/profile/{id}', [ProfileController::class, 'show']);
     Route::put('/profile/{id}', [ProfileController::class, 'update']);
@@ -760,54 +776,130 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
 
     // Monitoring / health (errores, cola, tickets)
     Route::get('/dashboard/monitoring', function () {
+        $DB     = \Illuminate\Support\Facades\DB::class;
+        $Schema = \Illuminate\Support\Facades\Schema::class;
+
+        // ── Failed jobs ──────────────────────────────────────────────
         $failedJobsCount = 0;
         $failedJobs = [];
-
-        if (\Illuminate\Support\Facades\Schema::hasTable('failed_jobs')) {
-            $failedJobsCount = \Illuminate\Support\Facades\DB::table('failed_jobs')->count();
-
-            $failedJobs = \Illuminate\Support\Facades\DB::table('failed_jobs')
+        if ($Schema::hasTable('failed_jobs')) {
+            $failedJobsCount = $DB::table('failed_jobs')->count();
+            $failedJobs = $DB::table('failed_jobs')
                 ->select('id', 'queue', 'failed_at', 'exception')
                 ->orderByDesc('failed_at')
-                ->limit(8)
+                ->limit(10)
                 ->get()
                 ->map(function ($job) {
                     $firstLine = trim(strtok((string) $job->exception, "\n"));
                     return [
-                        'id' => $job->id,
-                        'queue' => $job->queue,
+                        'id'        => $job->id,
+                        'queue'     => $job->queue,
                         'failed_at' => $job->failed_at,
-                        'message' => \Illuminate\Support\Str::limit($firstLine ?: 'Error no identificado', 180),
+                        'message'   => \Illuminate\Support\Str::limit($firstLine ?: 'Error no identificado', 200),
                     ];
                 });
         }
 
-        $ticketsNuevos = \App\Models\SoporteTicket::where('status', 'nuevo')->count();
-        $ticketsEnProceso = \App\Models\SoporteTicket::where('status', 'en_proceso')->count();
-
-        $consultoriosVencidos = \App\Models\Clinica::where('es_consultorio_privado', true)
-            ->whereNotNull('fecha_vencimiento')
-            ->where('fecha_vencimiento', '<', now())
+        // ── Atención al cliente ──────────────────────────────────────
+        $ticketsByStatus = \App\Models\SoporteTicket::selectRaw('status, count(*) as total')
+            ->groupBy('status')->pluck('total', 'status');
+        $ticketsHoy = \App\Models\SoporteTicket::whereDate('created_at', now()->toDateString())->count();
+        $tickets7d  = \App\Models\SoporteTicket::where('created_at', '>=', now()->subDays(7))->count();
+        $tiempoRespuestaAvgHoras = \App\Models\SoporteTicket::where('status', 'cerrado')
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_h')
+            ->value('avg_h');
+        // Tickets sin respuesta del admin (solo mensajes del usuario)
+        $ticketsSinRespuesta = \App\Models\SoporteTicket::whereIn('status', ['nuevo', 'en_proceso'])
+            ->whereDoesntHave('mensajes', fn($q) => $q->where('sender_type', 'admin'))
             ->count();
 
-        $ordenesLaboratorioHoy = \App\Models\OrdenLaboratorio::whereDate('created_at', now()->toDateString())->count();
+        // ── Actividad / Accesos ──────────────────────────────────────
+        $logins24h = $DB::table('personal_access_tokens')
+            ->where('tokenable_type', 'App\\Models\\User')
+            ->where('created_at', '>=', now()->subHours(24))->count();
+        $logins7d  = $DB::table('personal_access_tokens')
+            ->where('tokenable_type', 'App\\Models\\User')
+            ->where('created_at', '>=', now()->subDays(7))->count();
+        // Logins por día últimos 7 días
+        $loginsPorDia = $DB::table('personal_access_tokens')
+            ->where('tokenable_type', 'App\\Models\\User')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->selectRaw('DATE(created_at) as fecha, count(*) as total')
+            ->groupBy('fecha')->orderBy('fecha')
+            ->pluck('total', 'fecha');
+
+        // ── Clínicas ─────────────────────────────────────────────────
+        $clinicasActivas    = \App\Models\Clinica::where('activa', true)->where('es_consultorio_privado', false)->count();
+        $clinicasNuevasMes  = \App\Models\Clinica::where('es_consultorio_privado', false)
+            ->where('created_at', '>=', now()->startOfMonth())->count();
+        $clinicasPorPlan    = \App\Models\Clinica::where('es_consultorio_privado', false)
+            ->selectRaw('plan, count(*) as total')->groupBy('plan')->pluck('total', 'plan');
+        $consultoriosActivos   = \App\Models\Clinica::where('es_consultorio_privado', true)->where('activa', true)->count();
+        $consultoriosVencidos  = \App\Models\Clinica::where('es_consultorio_privado', true)
+            ->whereNotNull('fecha_vencimiento')->where('fecha_vencimiento', '<', now())->count();
+        $consultoriosVencenProx7d = \App\Models\Clinica::where('es_consultorio_privado', true)
+            ->whereNotNull('fecha_vencimiento')
+            ->whereBetween('fecha_vencimiento', [now(), now()->addDays(7)])
+            ->count();
+
+        // ── Usuarios y pacientes ─────────────────────────────────────
+        $usuariosTotal     = \App\Models\User::whereNull('paciente_id')->count();
+        $usuariosNuevosMes = \App\Models\User::whereNull('paciente_id')
+            ->where('created_at', '>=', now()->startOfMonth())->count();
+        $pacientesTotal    = \App\Models\Paciente::count();
+        $pacientesHoy      = \App\Models\Paciente::whereDate('created_at', now()->toDateString())->count();
+        $pacientesEstaSemana = \App\Models\Paciente::where('created_at', '>=', now()->startOfWeek())->count();
+
+        // ── Laboratorio ──────────────────────────────────────────────
+        $ordenesHoy  = \App\Models\OrdenLaboratorio::whereDate('created_at', now()->toDateString())->count();
+        $ordenesMes  = \App\Models\OrdenLaboratorio::where('created_at', '>=', now()->startOfMonth())->count();
 
         return response()->json([
             'success' => true,
+            'generated_at' => now()->toDateTimeString(),
             'system' => [
-                'status' => 'operativo',
-                'server_time' => now()->toDateTimeString(),
-                'php_version' => PHP_VERSION,
+                'status'          => $failedJobsCount > 5 ? 'revisar' : 'operativo',
+                'server_time'     => now()->toDateTimeString(),
+                'php_version'     => PHP_VERSION,
                 'laravel_version' => app()->version(),
             ],
-            'metrics' => [
-                'failed_jobs_count' => $failedJobsCount,
-                'tickets_nuevos' => $ticketsNuevos,
-                'tickets_en_proceso' => $ticketsEnProceso,
-                'consultorios_vencidos' => $consultoriosVencidos,
-                'ordenes_laboratorio_hoy' => $ordenesLaboratorioHoy,
+            'soporte' => [
+                'por_status'          => $ticketsByStatus,
+                'hoy'                 => $ticketsHoy,
+                'ultimos_7_dias'      => $tickets7d,
+                'sin_respuesta_admin' => $ticketsSinRespuesta,
+                'tiempo_resp_avg_h'   => $tiempoRespuestaAvgHoras ? round($tiempoRespuestaAvgHoras, 1) : null,
             ],
-            'recent_failed_jobs' => $failedJobs,
+            'actividad' => [
+                'logins_24h'    => $logins24h,
+                'logins_7d'     => $logins7d,
+                'logins_por_dia'=> $loginsPorDia,
+            ],
+            'clinicas' => [
+                'activas'         => $clinicasActivas,
+                'nuevas_este_mes' => $clinicasNuevasMes,
+                'por_plan'        => $clinicasPorPlan,
+            ],
+            'consultorios' => [
+                'activos'          => $consultoriosActivos,
+                'vencidos'         => $consultoriosVencidos,
+                'vencen_7_dias'    => $consultoriosVencenProx7d,
+            ],
+            'usuarios' => [
+                'total'         => $usuariosTotal,
+                'nuevos_mes'    => $usuariosNuevosMes,
+                'pacientes'     => $pacientesTotal,
+                'pacientes_hoy' => $pacientesHoy,
+                'pacientes_semana' => $pacientesEstaSemana,
+            ],
+            'laboratorio' => [
+                'ordenes_hoy' => $ordenesHoy,
+                'ordenes_mes' => $ordenesMes,
+            ],
+            'infraestructura' => [
+                'failed_jobs_count' => $failedJobsCount,
+                'recent_failed_jobs'=> $failedJobs,
+            ],
         ]);
     });
 
@@ -836,6 +928,13 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
     Route::get('/soporte/tickets/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminShow']);
     Route::put('/soporte/tickets/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminUpdate']);
     Route::post('/soporte/tickets/{id}/responder', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminResponder']);
+    Route::post('/soporte/tickets/iniciar', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminIniciarChat']);
+    // Chat en vivo por ticket (admin)
+    Route::get('/soporte/tickets/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminGetMensajes']);
+    Route::post('/soporte/tickets/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminEnviarMensaje']);
+    Route::get('/soporte/mensajes/no-leidos', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminMensajesNoLeidos']);
+    // Búsqueda de usuarios para iniciar chat
+    Route::get('/soporte/usuarios/buscar', [\App\Http\Controllers\Api\SoporteTicketController::class, 'buscarUsuarios']);
 });
 
 // ── Portal Laboratorio (público, sin auth) ────────────────────────────────

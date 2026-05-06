@@ -263,7 +263,7 @@
         /* === HEADER === */
         .header {
             width: 100%;
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             border-radius: 8px;
             margin-bottom: 10px;
             padding: 8px 12px;
@@ -347,7 +347,7 @@
         .patient-name {
             font-size: 13px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 6px;
         }
         .patient-label {
@@ -377,7 +377,7 @@
             right: 0;
             padding: 6px 20px;
             background: white;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 9px;
         }
         .page-footer-table {
@@ -411,7 +411,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

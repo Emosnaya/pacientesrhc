@@ -21,7 +21,7 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
         .header {
-            background: #0A1628;
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 28px 30px 24px;
             text-align: center;
             color: #ffffff;
@@ -55,7 +55,7 @@
         .greeting {
             font-size: 18px;
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             margin-bottom: 12px;
         }
         .intro {
@@ -67,7 +67,7 @@
         .cita-details {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-left: 4px solid #0A1628;
+            border-left: 4px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 22px 24px;
             border-radius: 8px;
             margin: 22px 0;
@@ -173,11 +173,11 @@
             text-align: center;
             color: #64748b;
             font-size: 13px;
-            border-top: 2px solid #0A1628;
+            border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .footer .clinica-name {
             font-weight: 700;
-            color: #0A1628;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
             font-size: 16px;
             margin-bottom: 12px;
         }

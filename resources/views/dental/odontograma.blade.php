@@ -48,7 +48,7 @@
         }
         .section-title {
             background-color: #DDDEE1;
-            border-left: 3px solid #0A1628;
+            border-left: 3px solid {!! $clinica->color_principal ?? '#0A1628' !!};
             padding: 3px 5px;
             margin-top: 5px;
             margin-bottom: 3px;
@@ -260,7 +260,7 @@
             width: 250px;
         }
         /* === HEADER MODERNO === */
-        .header { width: 100%; background: #0A1628; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .header-logo-cell { width: 60px; padding-right: 12px !important; }
@@ -273,7 +273,7 @@
         .header-badge-label { font-size: 8px; text-transform: uppercase; color: #94a3b8; }
         .header-badge-value { font-size: 12px; font-weight: 700; color: white; }
         .header-date { font-size: 9px; color: #94a3b8; }
-        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid #0A1628; font-size: 9px; }
+        .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
         .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
         .page-footer .clinic-contact { text-align: right; color: #64748b; }
@@ -296,7 +296,7 @@
             </tr>
             <tr>
                 <td colspan="2" style="text-align: center; padding-top: 4px; font-size: 7px; color: #94a3b8;">
-                    <span>Generado con</span> <strong style="color: #0A1628;">Lynkamed</strong>
+                    <span>Generado con</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
                 </td>
             </tr>
         </table>

@@ -8,7 +8,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; margin: 0; padding: 0; background: #f3f4f6; }
         .wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px; }
         .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
-        .card-head { background: #0A1628; border-bottom: none; padding: 20px 24px; }
+        .card-head { background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-bottom: none; padding: 20px 24px; }
         .card-head h1 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; }
         .card-head p { margin: 4px 0 0 0; font-size: 13px; color: #94a3b8; }
         .card-body { padding: 24px; }
@@ -17,7 +17,7 @@
         .resumen p:last-child { margin-bottom: 0; }
         .resumen .monto { font-size: 20px; font-weight: 700; color: #15803d; }
         .mensaje { font-size: 14px; color: #4b5563; margin: 0 0 12px 0; }
-        .adjunto { font-size: 13px; color: #6b7280; padding: 12px; background: #f8fafc; border-radius: 6px; border-left: 4px solid #0A1628; }
+        .adjunto { font-size: 13px; color: #6b7280; padding: 12px; background: #f8fafc; border-radius: 6px; border-left: 4px solid {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #9ca3af; }
     </style>
 </head>
@@ -46,7 +46,7 @@
         <p class="footer">Este es un correo automático. No responder.</p>
     </div>
     <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
-        <span>Powered by</span> <strong style="color: #0A1628;">Lynkamed</strong>
+        <span>Powered by</span> <strong style="color: {!! $clinica->color_principal ?? '#0A1628' !!};">Lynkamed</strong>
     </div>
 </body>
 </html>

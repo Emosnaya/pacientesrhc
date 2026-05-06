@@ -13,7 +13,7 @@
     body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1e293b; background: #fff; margin: 20px 25px; }
 
     /* Header */
-    .header { background: #0A1628; color: #fff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; display: table; width: 100%; }
+    .header { background: {!! $clinica->color_principal ?? '#0A1628' !!}; color: #fff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; display: table; width: 100%; }
     .header-left { display: table-cell; vertical-align: middle; width: 70%; }
     .header-right { display: table-cell; vertical-align: middle; text-align: right; width: 30%; }
     .header .clinica-name { font-size: 11px; font-weight: 700; color: #e2e8f0; }
@@ -23,11 +23,11 @@
     .paciente-bar { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 12px; margin-bottom: 12px; display: table; width: 100%; }
     .paciente-bar .col { display: table-cell; vertical-align: top; padding-right: 12px; }
     .paciente-bar .label { font-size: 8px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
-    .paciente-bar .value { font-size: 10px; font-weight: 700; color: #0A1628; margin-top: 1px; }
+    .paciente-bar .value { font-size: 10px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-top: 1px; }
 
     /* Section */
     .section { margin-bottom: 12px; }
-    .section-title { background: #0A1628; color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 5px 10px; border-radius: 4px 4px 0 0; }
+    .section-title { background: {!! $clinica->color_principal ?? '#0A1628' !!}; color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 5px 10px; border-radius: 4px 4px 0 0; }
     .section-body { border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 4px 4px; padding: 10px 12px; }
 
     /* Grid */
@@ -45,7 +45,7 @@
 
     /* Table */
     .data-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-top: 6px; }
-    .data-table th { background: #1e3a5f; color: #fff; padding: 5px 7px; text-align: left; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .data-table th { background: {!! $clinica->color_principal ?? '#0A1628' !!}; color: #fff; padding: 5px 7px; text-align: left; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
     .data-table td { padding: 5px 7px; border-bottom: 1px solid #f1f5f9; color: #334155; }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:nth-child(even) td { background: #f8fafc; }
@@ -546,7 +546,7 @@
             <img src="{{ $firmaBase64 }}" alt="Firma" style="height:50px;width:auto;"><br>
             @endif
             <div style="border-top:1px solid #334155;width:200px;margin:4px auto 0 auto;padding-top:6px;">
-                <div style="font-size:10px;font-weight:700;color:#0A1628;">
+                <div style="font-size:10px;font-weight:700;color:{!! $clinica->color_principal ?? '#0A1628' !!};">
                     {{ $control->medico_nombre ?? ($user->nombre_con_titulo ?? ($user->name ?? '')) }}
                 </div>
                 @if($control->medico_cedula ?? null)
