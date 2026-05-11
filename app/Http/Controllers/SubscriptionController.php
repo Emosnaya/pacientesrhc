@@ -142,7 +142,7 @@ class SubscriptionController extends Controller
             'user_data.nombre' => 'required|string|max:255',
             'user_data.apellidoPat' => 'required|string|max:255',
             'user_data.email' => 'required|email|unique:users,email',
-            'user_data.cedula' => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.cedula' => ['nullable', 'string', 'regex:/^[0-9]{7,8}$/'],
             'user_data.password' => 'required|string|min:6',
             'consultorio_data' => 'required|array',
             'consultorio_data.nombre' => 'required|string|max:255',
@@ -277,9 +277,9 @@ class SubscriptionController extends Controller
                 'apellidoPat' => $userData['apellidoPat'],
                 'apellidoMat' => $userData['apellidoMat'] ?? null,
                 'email' => $userData['email'],
-                'cedula' => $userData['cedula'],
+                'cedula' => $userData['cedula'] ?? null,
                 'password' => Hash::make($userData['password']),
-                'rol' => $userData['rol'] ?? null,
+                'admin_rol' => $userData['rol'] ?? null,
                 'isAdmin' => true,
                 'email_verified' => true,
                 'email_verified_at' => now(),
@@ -313,7 +313,7 @@ class SubscriptionController extends Controller
                 'stripe_subscription_id' => $session->subscription,
                 'fecha_vencimiento' => $nextBilling,
                 'next_billing_date' => $nextBilling,
-                'modulos_habilitados' => [],
+                'modulos_habilitados' => $consultorioData['modulos_habilitados'] ?? [],
             ]);
 
             // 3. Crear sucursal principal
@@ -966,15 +966,17 @@ class SubscriptionController extends Controller
             ],
             'planes_disponibles' => $esConsultorio ? [
                 'mensual' => [
-                    'precio' => 1499,
+                    'precio' => 1299,
+                    'precio_normal' => 1699,
                     'ciclo' => 'mensual',
-                    'etiqueta' => 'Precio de lanzamiento',
+                    'etiqueta' => 'Precio lanzamiento (6 meses)',
                 ],
                 'anual' => [
-                    'precio' => 14999,
+                    'precio' => 11990,
+                    'precio_normal' => 14999,
                     'ciclo' => 'anual',
-                    'ahorro' => 2989,
-                    'etiqueta' => 'Precio de lanzamiento',
+                    'ahorro' => 3598,
+                    'etiqueta' => 'Precio lanzamiento (6 meses)',
                 ],
             ] : null,
         ]);
@@ -1011,8 +1013,8 @@ class SubscriptionController extends Controller
 
             // Precios de renovación (alineados con landing)
             $precios = [
-                'mensual' => 1499,
-                'anual' => 14999,
+                'mensual' => 1299,
+                'anual' => 11990,
             ];
             
             $precio = $precios[$request->billing_cycle];
@@ -1094,6 +1096,108 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Precios de registro según tipo de clínica/consultorio.
+     * Precios de lanzamiento activos los primeros 6 meses.
+     */
+    private function registroPricing(): array
+    {
+        return [
+            // tipo_clinica => [mensual_launch, mensual_normal, anual_launch, anual_normal]
+            'consultorio'                    => [1299, 1699, 11990, 14999],
+            'general'                        => [1299, 1699, 11990, 14999],
+            'dental'                         => [1699, 1999, 17999, 21999],
+            'rehabilitacion_cardiopulmonar'  => [2399, 2899, 26990, 32999],
+            'cardiologia'                    => [2399, 2899, 26990, 32999],
+            'neumologia'                     => [2399, 2899, 26990, 32999],
+            'fisioterapia'                   => [1699, 1999, 17999, 21999],
+            'nutricion'                      => [1299, 1699, 11990, 14999],
+            'ginecologia'                    => [1299, 1699, 11990, 14999],
+            'psicologia'                     => [1299, 1699, 11990, 14999],
+        ];
+    }
+
+    /**
+     * POST /api/registro/checkout-directo
+     * Crea sesión de Stripe Checkout para el registro público (sin plan_id).
+     * El precio se calcula según el tipo de clínica/consultorio.
+     */
+    public function createRegistroCheckout(Request $request): JsonResponse
+    {
+        $request->validate([
+            'billing_cycle'                 => 'required|in:mensual,anual',
+            'user_data'                     => 'required|array',
+            'user_data.nombre'              => 'required|string|max:255',
+            'user_data.apellidoPat'         => 'required|string|max:255',
+            'user_data.email'               => 'required|email|unique:users,email',
+            'user_data.cedula'              => ['nullable', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.rol'                 => 'nullable|string|max:50',
+            'user_data.password'            => 'required|string|min:6',
+            'consultorio_data'              => 'required|array',
+            'consultorio_data.nombre'       => 'required|string|max:255',
+            'consultorio_data.tipo_clinica' => 'required|string',
+            'es_consultorio'                => 'boolean',
+        ]);
+
+        try {
+            $billingCycle   = $request->billing_cycle;
+            $tipoClinica    = $request->consultorio_data['tipo_clinica'];
+            $pricing        = $this->registroPricing();
+            $prices         = $pricing[$tipoClinica] ?? $pricing['general'];
+
+            // [mensual_launch, mensual_normal, anual_launch, anual_normal]
+            $precio = $billingCycle === 'anual' ? $prices[2] : $prices[0];
+            $duracion = $billingCycle === 'anual' ? 365 : 30;
+
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $nombrePlan = "LynkaMed — " . ucfirst($tipoClinica) . " (" . ucfirst($billingCycle) . ")";
+
+            $session = Session::create([
+                'payment_method_types' => ['card'],
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'mxn',
+                        'product_data' => [
+                            'name' => $nombrePlan,
+                            'description' => "Suscripción LynkaMed — precio de lanzamiento",
+                        ],
+                        'unit_amount' => round($precio * 100),
+                        'recurring' => [
+                            'interval' => $billingCycle === 'anual' ? 'year' : 'month',
+                        ],
+                    ],
+                    'quantity' => 1,
+                ]],
+                'mode'        => 'subscription',
+                'success_url' => config('app.frontend_url') . '/registro/success?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url'  => config('app.frontend_url') . '/registro',
+                'customer_email' => $request->user_data['email'],
+                'metadata' => [
+                    'type'             => 'consultorio_signup',
+                    'billing_cycle'    => $billingCycle,
+                    'duracion_dias'    => $duracion,
+                    'user_data'        => json_encode($request->user_data),
+                    'consultorio_data' => json_encode($request->consultorio_data),
+                    'es_consultorio'   => $request->es_consultorio ? '1' : '1',
+                ],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'url'     => $session->url,
+                'session_id' => $session->id,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en checkout de registro: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al iniciar el pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * POST /api/registro/validate-referral
      * Valida un código de referido y retorna los días de prueba.
      */
@@ -1126,7 +1230,8 @@ class SubscriptionController extends Controller
             'user_data.apellidoPat'         => 'required|string|max:255',
             'user_data.apellidoMat'         => 'nullable|string|max:255',
             'user_data.email'               => 'required|email|unique:users,email',
-            'user_data.cedula'              => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.cedula'              => ['nullable', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.rol'                 => 'nullable|string|max:50',
             'user_data.password'            => 'required|string|min:6',
             'consultorio_data'              => 'required|array',
             'consultorio_data.nombre'       => 'required|string|max:255',
@@ -1134,6 +1239,8 @@ class SubscriptionController extends Controller
             'consultorio_data.telefono'     => 'nullable|string',
             'consultorio_data.email'        => 'nullable|email',
             'consultorio_data.direccion'    => 'nullable|string',
+            'consultorio_data.modulos_habilitados'   => 'nullable|array',
+            'consultorio_data.modulos_habilitados.*' => 'string',
             'referral_code'                 => 'nullable|string',
         ], [
             'user_data.cedula.regex' => 'La cédula profesional debe contener entre 7 y 8 dígitos numéricos.',
@@ -1163,7 +1270,8 @@ class SubscriptionController extends Controller
                 'apellidoPat'      => $ud['apellidoPat'],
                 'apellidoMat'      => $ud['apellidoMat'] ?? null,
                 'email'            => $ud['email'],
-                'cedula'           => $ud['cedula'],
+                'cedula'           => $ud['cedula'] ?? null,
+                'admin_rol'        => $ud['rol'] ?? null,
                 'password'         => Hash::make($ud['password']),
                 'isAdmin'          => true,
                 'email_verified'   => true,
@@ -1171,7 +1279,7 @@ class SubscriptionController extends Controller
                 'imagen'           => 'perfiles/avatar-default.png',
                 // Suscripción
                 'tiene_suscripcion_consultorio' => true,
-                'plan_consultorio'              => 'consultorio',
+                'plan_consultorio'              => 'profesional',
                 'ciclo_facturacion'             => 'mensual',
                 'trial_ends_at'                 => now()->addDays($trialDays),
             ]);
@@ -1199,7 +1307,7 @@ class SubscriptionController extends Controller
                 'max_sucursales'              => 1,
                 'trial_ends_at'              => $trialEndsAt,
                 'fecha_vencimiento'          => $trialEndsAt,
-                'modulos_habilitados'        => [],
+                'modulos_habilitados'        => $cd['modulos_habilitados'] ?? [],
             ]);
 
             // 3. Crear sucursal principal
