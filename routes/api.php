@@ -79,9 +79,7 @@ Route::prefix('registro')->group(function() {
     Route::post('/validate-promo', [SubscriptionController::class, 'validatePromoCode']);
     Route::post('/validate-referral', [SubscriptionController::class, 'validateReferralCode']);
     Route::post('/free-trial', [SubscriptionController::class, 'startFreeTrial']);
-    Route::post('/free-trial-clinica', [SubscriptionController::class, 'startFreeTrial']);
     Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
-    Route::post('/checkout-directo', [SubscriptionController::class, 'createRegistroCheckout']);
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
 
