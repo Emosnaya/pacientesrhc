@@ -92,7 +92,7 @@ class AdminAuditController extends Controller
 
     public function pacientes(Request $request): JsonResponse
     {
-        $q = Paciente::with(['clinica:id,nombre', 'creadoPor:id,nombre,apellidoPat'])
+        $q = Paciente::with(['clinica:id,nombre'])
             ->latest();
 
         if ($request->filled('search')) {
