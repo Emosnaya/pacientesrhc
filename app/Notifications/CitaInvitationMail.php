@@ -81,7 +81,7 @@ class CitaInvitationMail extends Notification
         );
 
         // URL del calendario frontend
-        $calendarUrl = env('FRONTEND_URL', 'http://localhost:3000').'/calendar';
+        $calendarUrl = rtrim((string) config('app.frontend_url'), '/').'/calendar';
 
         $clinicaLogoModel = $this->cita->clinica_id
             ? Clinica::query()->find($this->cita->clinica_id)
