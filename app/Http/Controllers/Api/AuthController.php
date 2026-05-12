@@ -40,7 +40,7 @@ class AuthController extends Controller
         ]);
 
         // Enviar correo de verificación
-        $verificationUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/verify-email/{$verificationToken}";
+        $verificationUrl = rtrim((string) config('app.frontend_url'), '/') . "/verify-email/{$verificationToken}";
         $clinica = $user->clinica;
         
         try {
@@ -182,7 +182,7 @@ class AuthController extends Controller
             'created_at' => now()
         ]);
 
-        $resetUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/reset-password/{$resetToken}";
+        $resetUrl = rtrim((string) config('app.frontend_url'), '/') . "/reset-password/{$resetToken}";
 
         try {
             Mail::send('emails.reset-password', [

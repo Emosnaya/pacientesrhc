@@ -339,7 +339,7 @@ class ConsultorioController extends Controller
         if (! isset($clinica) || ! $clinica) {
             $clinica = Clinica::find($clinicaId);
         }
-        $acceptUrl = env('FRONTEND_URL', 'http://localhost:3000') . "/invitacion/{$invitacion->token}";
+        $acceptUrl = rtrim((string) config('app.frontend_url'), '/') . "/invitacion/{$invitacion->token}";
 
         // Enviar email de invitación
         try {
