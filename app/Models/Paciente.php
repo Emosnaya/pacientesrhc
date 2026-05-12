@@ -204,15 +204,18 @@ class Paciente extends Model
         $motivoPivot = $pivot?->motivo_consulta;
         $usarMotivo = $motivoPivot !== null && trim((string) $motivoPivot) !== '';
         $this->setAttribute('motivo_consulta', $usarMotivo ? $motivoPivot : $motivoLegacy);
+        $this->syncOriginalAttribute('motivo_consulta');
 
         $tipoPivot = $pivot?->tipo_paciente;
         $usarTipo = $tipoPivot !== null && trim((string) $tipoPivot) !== '';
         $this->setAttribute('tipo_paciente', $usarTipo ? $tipoPivot : $tipoLegacy);
+        $this->syncOriginalAttribute('tipo_paciente');
 
         // numero_expediente local de la clínica (fallback al registro global)
         $expedientePivot = $pivot?->numero_expediente;
         $usarExpediente = $expedientePivot !== null && trim((string) $expedientePivot) !== '';
         $this->setAttribute('numero_expediente', $usarExpediente ? $expedientePivot : $registroGlobal);
+        $this->syncOriginalAttribute('numero_expediente');
     }
 
     /**

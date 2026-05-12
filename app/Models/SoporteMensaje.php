@@ -13,6 +13,7 @@ class SoporteMensaje extends Model
         'sender_id',
         'sender_type',
         'mensaje',
+        'imagen_url',
         'leido_at',
     ];
 

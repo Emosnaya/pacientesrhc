@@ -83,6 +83,8 @@ class SoporteController extends Controller
             'ticket' => [
                 'id' => $ticket->id,
                 'numero_ticket' => $ticket->numero_ticket,
+                'status' => $ticket->status,
+                'asunto' => $ticket->asunto,
             ]
         ]);
     }

@@ -117,7 +117,7 @@ class SuscripcionConsultorioController extends Controller
             'tiene_suscripcion_consultorio' => true,
             'plan_consultorio' => $request->plan,
             'ciclo_facturacion' => 'mensual',
-            'trial_ends_at' => now()->addDays(14),
+            'trial_ends_at' => now()->addDays(30)->endOfDay(),
             'consultorios_adicionales_comprados' => 0,
         ]);
 

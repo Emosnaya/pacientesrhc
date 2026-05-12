@@ -201,6 +201,8 @@ class ClinicaController extends Controller
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:255',
             'tipo_clinica' => 'nullable|string|in:' . implode(',', array_keys(config('clinica_tipos.tipos'))),
+            'modulos_habilitados'   => 'nullable|array',
+            'modulos_habilitados.*' => 'string|in:' . implode(',', array_keys(config('clinica_tipos.modulos_seleccionables'))),
             'email' => 'required|email|unique:clinicas,email,' . $id,
             'telefono' => 'nullable|string|max:20',
             'direccion' => 'nullable|string|max:500',
@@ -219,6 +221,11 @@ class ClinicaController extends Controller
 
         try {
             $data = $request->only(['nombre', 'tipo_clinica', 'email', 'telefono', 'direccion', 'pagado', 'activa', 'color_principal']);
+
+            // Actualizar módulos si se envían explícitamente
+            if ($request->has('modulos_habilitados')) {
+                $data['modulos_habilitados'] = $request->modulos_habilitados ?? [];
+            }
 
             // Manejar logo si se subió
             if ($request->hasFile('logo')) {

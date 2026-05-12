@@ -284,18 +284,32 @@ class SoporteTicketController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        $request->validate(['mensaje' => 'required|string|max:5000']);
+        $request->validate([
+            'mensaje'  => 'nullable|string|max:5000',
+            'imagen'   => 'nullable|image|max:5120', // 5 MB
+        ]);
+
+        if (!$request->filled('mensaje') && !$request->hasFile('imagen')) {
+            return response()->json(['error' => 'Debes enviar un mensaje o una imagen.'], 422);
+        }
 
         // Reabrir si estaba cerrado/resuelto
         if (in_array($ticket->status, ['resuelto', 'cerrado'])) {
             $ticket->update(['status' => 'en_proceso']);
         }
 
+        $imagenUrl = null;
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('soporte', 'public');
+            $imagenUrl = asset('storage/' . $path);
+        }
+
         $mensaje = SoporteMensaje::create([
             'ticket_id'   => $ticket->id,
             'sender_id'   => $user->id,
             'sender_type' => 'user',
-            'mensaje'     => $request->mensaje,
+            'mensaje'     => $request->input('mensaje', ''),
+            'imagen_url'  => $imagenUrl,
         ]);
 
         return response()->json(['mensaje' => $this->formatMensaje($mensaje->load('sender:id,nombre,apellidoPat,apellidoMat'))]);
@@ -331,18 +345,32 @@ class SoporteTicketController extends Controller
     {
         $ticket = SoporteTicket::findOrFail($id);
 
-        $request->validate(['mensaje' => 'required|string|max:5000']);
+        $request->validate([
+            'mensaje' => 'nullable|string|max:5000',
+            'imagen'  => 'nullable|image|max:5120',
+        ]);
+
+        if (!$request->filled('mensaje') && !$request->hasFile('imagen')) {
+            return response()->json(['error' => 'Debes enviar un mensaje o una imagen.'], 422);
+        }
 
         // Marcar ticket en proceso si estaba nuevo
         if ($ticket->status === 'nuevo') {
             $ticket->update(['status' => 'en_proceso']);
         }
 
+        $imagenUrl = null;
+        if ($request->hasFile('imagen')) {
+            $path = $request->file('imagen')->store('soporte', 'public');
+            $imagenUrl = asset('storage/' . $path);
+        }
+
         $mensaje = SoporteMensaje::create([
             'ticket_id'   => $ticket->id,
             'sender_id'   => Auth::id(),
             'sender_type' => 'admin',
-            'mensaje'     => $request->mensaje,
+            'mensaje'     => $request->input('mensaje', ''),
+            'imagen_url'  => $imagenUrl,
         ]);
 
         return response()->json(['mensaje' => $this->formatMensaje($mensaje->load('sender:id,nombre,apellidoPat,apellidoMat'))]);
@@ -452,6 +480,7 @@ class SoporteTicketController extends Controller
             'sender_type' => $m->sender_type,
             'sender_name' => $m->sender ? trim(($m->sender->nombre ?? '') . ' ' . ($m->sender->apellidoPat ?? '')) : 'Soporte',
             'mensaje'     => $m->mensaje,
+            'imagen_url'  => $m->imagen_url,
             'leido_at'    => $m->leido_at,
             'created_at'  => $m->created_at->toIso8601String(),
         ];
