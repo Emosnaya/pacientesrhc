@@ -954,6 +954,19 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
 
     // Actividad detallada (logins de usuarios + accesos portal pacientes)
     Route::get('/actividad', [AdminAuthController::class, 'actividadDetallada']);
+
+    // ── Audit Logs ────────────────────────────────────────────────────────────
+    Route::get('/audit-logs',                  [\App\Http\Controllers\AdminAuditController::class, 'index']);
+    Route::get('/audit-logs/{id}',             [\App\Http\Controllers\AdminAuditController::class, 'show']);
+    Route::get('/audit-logs/export/csv',       [\App\Http\Controllers\AdminAuditController::class, 'export']);
+
+    // ── Pacientes (lectura global) ────────────────────────────────────────────
+    Route::get('/pacientes',                   [\App\Http\Controllers\AdminAuditController::class, 'pacientes']);
+    Route::get('/pacientes/{id}/audit',        [\App\Http\Controllers\AdminAuditController::class, 'pacienteAudit']);
+
+    // ── Usuarios (lectura global) ─────────────────────────────────────────────
+    Route::get('/usuarios',                    [\App\Http\Controllers\AdminAuditController::class, 'usuarios']);
+    Route::get('/usuarios/{id}/audit',         [\App\Http\Controllers\AdminAuditController::class, 'usuarioAudit']);
 });
 
 // ── Portal Laboratorio (público, sin auth) ────────────────────────────────

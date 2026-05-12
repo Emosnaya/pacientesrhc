@@ -69,15 +69,31 @@
         }
         .diente {
             display: inline-block;
-            width: 24px;
+            width: 22px;
             height: 36px;
-            border: 2px solid #333;
+            border: 1.5px solid #555;
             margin: 0 1px;
             text-align: center;
-            padding: 3px 1px;
+            padding: 2px 1px;
             vertical-align: top;
             background-color: #f0f8ff;
             position: relative;
+            border-radius: 6px 6px 2px 2px;
+        }
+        /* Corona apunta hacia abajo en arcada inferior */
+        .diente.lower-tooth { border-radius: 2px 2px 6px 6px; }
+        /* Anchos por tipo */
+        .diente.tm { width: 26px; } /* molar */
+        .diente.tp { width: 21px; } /* premolar */
+        .diente.tc { width: 17px; } /* canino */
+        .diente.ti { width: 14px; } /* incisivo */
+        /* Estado ausente: rayado */
+        .diente.ausente {
+            background: repeating-linear-gradient(
+                45deg, #ccc, #ccc 2px, #999 2px, #999 4px
+            );
+            border-color: #555;
+            opacity: 0.7;
         }
         .diente-numero {
             font-weight: bold;
@@ -386,7 +402,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2); // Máximo 2 diagnósticos
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -421,7 +437,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -460,7 +476,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -495,7 +511,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -539,7 +555,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -574,7 +590,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -613,7 +629,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -648,7 +664,7 @@
                         $totalEstados = count($textoEstados);
                         $estadosMostrar = array_slice($textoEstados, 0, 2);
                     @endphp
-                    <div class="diente {{ $estadoPrincipal }}">
+                    <div class="diente {{ $estadoPrincipal }} {{ $numero%10 >= 6 ? 'tm' : ($numero%10 >= 4 ? 'tp' : ($numero%10 === 3 ? 'tc' : 'ti')) }} {{ ($numero >= 31 && $numero <= 48) || ($numero >= 71 && $numero <= 85) ? 'lower-tooth' : '' }}">
                         <div class="diente-numero">{{ $numero }}</div>
                         @if(count($estadosMostrar) > 0)
                             <div class="diente-estado">{{ implode(' ', $estadosMostrar) }}</div>
@@ -712,51 +728,120 @@
                 'pulpitis_irreversible' => 'Pulpitis Irreversible',
                 'lesiones_periapicales' => 'Lesiones Periapicales'
             ];
+            $estadoColores = [
+                'caries'                => ['bg' => '#ffcccc', 'border' => '#cc0000'],
+                'obturado'              => ['bg' => '#b3d9ff', 'border' => '#0066cc'],
+                'ausente'               => ['bg' => '#999999', 'border' => '#333333'],
+                'corona'                => ['bg' => '#e6ccff', 'border' => '#9933cc'],
+                'fracturado'            => ['bg' => '#ffcc99', 'border' => '#ff6600'],
+                'implante'              => ['bg' => '#99e6cc', 'border' => '#009966'],
+                'extraccion_indicada'   => ['bg' => '#ff9999', 'border' => '#cc0000'],
+                'calculo_supragingival' => ['bg' => '#e6f7cc', 'border' => '#84cc16'],
+                'calculo_infragingival' => ['bg' => '#d4ebcc', 'border' => '#65a30d'],
+                'movilidad_dental'      => ['bg' => '#fef3c7', 'border' => '#eab308'],
+                'bolsas_periodontales'  => ['bg' => '#fed7aa', 'border' => '#f97316'],
+                'pseudobolsas'          => ['bg' => '#fed7aa', 'border' => '#fb923c'],
+                'indice_placa'          => ['bg' => '#fef3c7', 'border' => '#fbbf24'],
+                'endo_defectuosa'       => ['bg' => '#fce7f3', 'border' => '#ec4899'],
+                'necrosis_pulpar'       => ['bg' => '#fce7f3', 'border' => '#db2777'],
+                'pulpitis_irreversible' => ['bg' => '#fae8ff', 'border' => '#c026d3'],
+                'lesiones_periapicales' => ['bg' => '#f3e8ff', 'border' => '#a855f7'],
+            ];
 
             foreach($dientes as $diente) {
-                $estados = $diente['estados'] ?? (isset($diente['estado']) ? [$diente['estado']] : ['sano']);
-                $diagnosticos = [];
+                $estados      = $diente['estados'] ?? (isset($diente['estado']) ? [$diente['estado']] : ['sano']);
+                $carasPorEst  = $diente['caras_por_estado'] ?? [];   // nuevo formato
+                $carasFlat    = $diente['caras_afectadas'] ?? [];    // backward-compat
+
+                $filas = [];
                 foreach($estados as $est) {
-                    if($est !== 'sano' && isset($estadoNombres[$est])) {
-                        $diagnosticos[] = $estadoNombres[$est];
-                    }
+                    if($est === 'sano' || !isset($estadoNombres[$est])) continue;
+                    // Caras para este estado específico, o las planas si no hay por-estado
+                    $carasEst = !empty($carasPorEst[$est]) ? $carasPorEst[$est] : [];
+                    $filas[] = [
+                        'estado'  => $est,
+                        'nombre'  => $estadoNombres[$est],
+                        'colores' => $estadoColores[$est] ?? ['bg' => '#f0f8ff', 'border' => '#333'],
+                        'caras'   => $carasEst,
+                    ];
                 }
-                if(count($diagnosticos) > 0) {
-                    $carasAfectadas = $diente['caras_afectadas'] ?? [];
-                    $notas = $diente['notas'] ?? '';
+
+                if(count($filas) > 0) {
                     $dientesConDiagnosticos[] = [
                         'numero' => $diente['numero'],
-                        'diagnosticos' => $diagnosticos,
-                        'caras' => $carasAfectadas,
-                        'notas' => $notas
+                        'filas'  => $filas,
+                        'notas'  => $diente['notas'] ?? '',
+                        // caras planas para dientes sin caras_por_estado
+                        'caras_flat' => $carasFlat,
                     ];
                 }
             }
         @endphp
 
         @if(count($dientesConDiagnosticos) > 0)
-        <div class="section-title">DETALLE DE DIAGNÓSTICOS</div>
+        <div class="section-title">DETALLE DE DIAGNÓSTICOS POR DIENTE</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 8px; margin-bottom: 10px;">
             <thead>
                 <tr style="background-color: #e8f4f8;">
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; width: 50px;">Diente</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold;">Diagnóstico(s)</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; width: 80px;">Caras</th>
-                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold;">Observaciones</th>
+                    <th style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; width: 40px;">Diente</th>
+                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold; width: 160px;">Diagnóstico</th>
+                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold;">Caras afectadas</th>
+                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left; font-weight: bold; width: 120px;">Observaciones</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($dientesConDiagnosticos as $d)
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold;">{{ $d['numero'] }}</td>
-                    <td style="border: 1px solid #ddd; padding: 4px;">{{ implode(', ', $d['diagnosticos']) }}</td>
-                    <td style="border: 1px solid #ddd; padding: 4px; text-align: center; font-size: 7px;">
-                        {{ count($d['caras']) > 0 ? implode(', ', $d['caras']) : '-' }}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 4px; font-size: 7px;">
-                        {{ $d['notas'] ?: '-' }}
-                    </td>
-                </tr>
+                    @php $rowspan = max(1, count($d['filas'])); @endphp
+                    @foreach($d['filas'] as $fi => $fila)
+                    <tr>
+                        @if($fi === 0)
+                        <td rowspan="{{ $rowspan }}"
+                            style="border: 1px solid #ddd; padding: 4px; text-align: center; font-weight: bold; vertical-align: middle; font-size: 10px;">
+                            {{ $d['numero'] }}
+                        </td>
+                        @endif
+
+                        {{-- Badge coloreado del diagnóstico --}}
+                        <td style="border: 1px solid #ddd; padding: 3px 5px;">
+                            <span style="display:inline-block; padding: 1px 6px; border-radius: 4px;
+                                background-color: {{ $fila['colores']['bg'] }};
+                                border: 1px solid {{ $fila['colores']['border'] }};
+                                font-weight: bold; font-size: 7.5px;">
+                                {{ $fila['nombre'] }}
+                            </span>
+                        </td>
+
+                        {{-- Caras para este diagnóstico --}}
+                        <td style="border: 1px solid #ddd; padding: 3px 5px; font-size: 7.5px;">
+                            @php
+                                // Si tiene caras específicas por estado úsalas; si no, caras planas solo en primera fila
+                                $mostrarCaras = !empty($fila['caras'])
+                                    ? $fila['caras']
+                                    : ($fi === 0 && !empty($d['caras_flat']) ? $d['caras_flat'] : []);
+                                // Abreviaciones
+                                $abrev = ['Mesial'=>'M','Distal'=>'D','Oclusal/Incisal'=>'O/I','Vestibular'=>'V','Lingual/Palatina'=>'L/P'];
+                            @endphp
+                            @if(count($mostrarCaras) > 0)
+                                @foreach($mostrarCaras as $cara)
+                                    <span style="display:inline-block; margin:1px; padding: 1px 4px;
+                                        background: #e0f2fe; border: 1px solid #0ea5e9;
+                                        border-radius: 3px; font-size: 7px; font-weight: bold; color: #0369a1;">
+                                        {{ $abrev[$cara] ?? $cara }}
+                                    </span>
+                                @endforeach
+                            @else
+                                <span style="color: #9ca3af;">—</span>
+                            @endif
+                        </td>
+
+                        @if($fi === 0)
+                        <td rowspan="{{ $rowspan }}"
+                            style="border: 1px solid #ddd; padding: 3px 5px; font-size: 7px; vertical-align: top; color: #374151;">
+                            {{ $d['notas'] ?: '—' }}
+                        </td>
+                        @endif
+                    </tr>
+                    @endforeach
                 @endforeach
             </tbody>
         </table>
