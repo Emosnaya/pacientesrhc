@@ -79,6 +79,7 @@ Route::prefix('registro')->group(function() {
     Route::post('/validate-promo', [SubscriptionController::class, 'validatePromoCode']);
     Route::post('/validate-referral', [SubscriptionController::class, 'validateReferralCode']);
     Route::post('/free-trial', [SubscriptionController::class, 'startFreeTrial']);
+    Route::post('/free-trial-clinica', [SubscriptionController::class, 'startFreeTrial']);
     Route::post('/checkout', [SubscriptionController::class, 'createCheckoutSession']);
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
@@ -132,6 +133,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Consultorios - Verificar y renovar suscripción
     Route::get('/subscription/check', [\App\Http\Controllers\SubscriptionController::class, 'checkUserSubscription']);
     Route::post('/subscription/renew-checkout', [\App\Http\Controllers\SubscriptionController::class, 'createRenewCheckoutSession']);
+    Route::post('/subscription/verify-payment', [\App\Http\Controllers\SubscriptionController::class, 'verifyPaymentSession']);
+
+    // Sucursales — comprar cupos adicionales
+    Route::get('/subscription/sucursal-quota', [\App\Http\Controllers\SubscriptionController::class, 'getSucursalQuota']);
+    Route::post('/subscription/sucursal-slot', [\App\Http\Controllers\SubscriptionController::class, 'createSucursalSlotCheckout']);
 });
 
 // Portal del paciente: datos propios (requiere contraseña ya configurada)
@@ -747,6 +753,8 @@ use App\Http\Controllers\AdminConsultoriosController;
 // Autenticación internal (pública)
 Route::prefix('internal')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/forgot-password', [AdminAuthController::class, 'forgotPassword'])->middleware('throttle:3,5');
+    Route::post('/reset-password', [AdminAuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 });
 
 // Rutas protegidas de internal
@@ -935,6 +943,17 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
     Route::get('/soporte/mensajes/no-leidos', [\App\Http\Controllers\Api\SoporteTicketController::class, 'adminMensajesNoLeidos']);
     // Búsqueda de usuarios para iniciar chat
     Route::get('/soporte/usuarios/buscar', [\App\Http\Controllers\Api\SoporteTicketController::class, 'buscarUsuarios']);
+
+    // Suscripciones y pagos
+    Route::get('/suscripciones', [AdminAuthController::class, 'suscripcionesStats']);
+
+    // Clínicas — detalle completo, acciones de suscripción
+    Route::get('/clinicas-detalle',                    [AdminAuthController::class, 'clinicasDetalle']);
+    Route::patch('/clinicas-detalle/{id}/toggle',      [AdminAuthController::class, 'clinicaToggle']);
+    Route::patch('/clinicas-detalle/{id}/dias-extra',  [AdminAuthController::class, 'clinicaDiasExtra']);
+
+    // Actividad detallada (logins de usuarios + accesos portal pacientes)
+    Route::get('/actividad', [AdminAuthController::class, 'actividadDetallada']);
 });
 
 // ── Portal Laboratorio (público, sin auth) ────────────────────────────────

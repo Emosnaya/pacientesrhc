@@ -43,12 +43,14 @@ class Clinica extends Model
         'es_consultorio_privado' => 'boolean',
         'facturacion_addon_activo' => 'boolean',
         'fecha_vencimiento' => 'date',
+        'trial_ends_at' => 'datetime',
         'modulos_habilitados' => 'array',
         'receta_pdf_config' => 'array'
     ];
 
     protected $appends = [
-        'logo_url'
+        'logo_url',
+        'modulos_efectivos',
     ];
 
     // Relaciones
@@ -102,7 +104,24 @@ class Clinica extends Model
     // Métodos auxiliares
     public function isActive(): bool
     {
-        return $this->activa && $this->pagado;
+        if (!$this->activa) return false;
+
+        // Pagada y no vencida
+        if ($this->pagado) {
+            return !$this->fecha_vencimiento || $this->fecha_vencimiento >= now();
+        }
+
+        // Trial activo (sin pago pero con trial_ends_at vigente)
+        if ($this->trial_ends_at && $this->trial_ends_at >= now()) {
+            return true;
+        }
+
+        // fecha_vencimiento vigente aunque no esté marcada como pagada
+        if ($this->fecha_vencimiento && $this->fecha_vencimiento >= now()) {
+            return true;
+        }
+
+        return false;
     }
 
     public function isExpired(): bool
@@ -111,16 +130,25 @@ class Clinica extends Model
     }
     
     /**
-     * Verifica si la clínica puede tener múltiples sucursales
+     * Verifica si la clínica puede crear más sucursales según su cuota.
+     * La sucursal principal siempre está incluida en el plan base.
+     * Las sucursales adicionales requieren haber comprado slots.
      */
     public function puedeCrearMasSucursales(): bool
     {
-        // Si no permite múltiples sucursales y ya tiene una, no puede crear más
-        if (!$this->permite_multiples_sucursales) {
-            return $this->sucursales()->count() === 0;
-        }
-        
-        return true;
+        $max = (int) ($this->max_sucursales ?? 1);
+        $actual = $this->sucursales()->count();
+        return $actual < $max;
+    }
+
+    /**
+     * Devuelve cuántos slots de sucursal aún están disponibles.
+     */
+    public function slotsSucursalesDisponibles(): int
+    {
+        $max = (int) ($this->max_sucursales ?? 1);
+        $actual = $this->sucursales()->count();
+        return max(0, $max - $actual);
     }
     
     /**
@@ -140,5 +168,50 @@ class Clinica extends Model
         // Construir URL completa usando el dominio de la API
         $baseUrl = config('app.url');
         return $baseUrl . '/storage/' . $this->logo;
+    }
+
+    /**
+     * Verifica si un módulo está habilitado en esta clínica.
+     * Si no hay módulos configurados, se considera acceso total (legacy).
+     * Para clínicas que recién se registran, los módulos se derivan del tipo.
+     */
+    public function hasModulo(string $key): bool
+    {
+        $modulos = $this->modulos_habilitados ?? [];
+
+        // Sin módulos explícitos → todos permitidos (clínicas legacy / sin configurar)
+        if (empty($modulos)) {
+            return true;
+        }
+
+        return in_array($key, $modulos, true);
+    }
+
+    /**
+     * Devuelve los módulos efectivos (claves seleccionables).
+     * - Si tiene modulos_habilitados configurados, los retorna.
+     * - Si no, infiere módulos a partir del tipo de clínica usando el mapeo
+     *   entre tipos y módulos seleccionables.
+     */
+    public function getModulosEfectivosAttribute(): array
+    {
+        $modulos = $this->modulos_habilitados ?? [];
+        if (!empty($modulos)) {
+            return $modulos;
+        }
+
+        // Mapeo tipo_clinica → módulos seleccionables por defecto
+        $defaults = [
+            'rehabilitacion_cardiopulmonar' => ['cardiaco', 'pulmonar', 'fisioterapia', 'nutricion', 'psicologia'],
+            'fisioterapia'  => ['fisioterapia'],
+            'nutricion'     => ['nutricion'],
+            'psicologia'    => ['psicologia'],
+            'dental'        => [],
+            'cardiologia'   => [],
+            'ginecologia'   => [],
+            // Las demás especialidades no usan módulos seleccionables
+        ];
+
+        return $defaults[$this->tipo_clinica] ?? [];
     }
 }

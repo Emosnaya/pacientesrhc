@@ -3,49 +3,194 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Precios base por especialidad primaria (lanzamiento / normal)
+    |--------------------------------------------------------------------------
+    */
+    'base_precios' => [
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 2399, 'anual' => 26990, 'mensual_normal' => 2899, 'anual_normal' => 32999],
+        'dental'       => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
+        'cardiologia'  => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
+        'fisioterapia' => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'ginecologia'  => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'pediatria'    => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'neurologia'   => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'neumologia'   => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'general'      => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'nutricion'    => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 13999],
+        'psicologia'   => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 13999],
+        'psiquiatria'  => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
+        'consultorio'  => ['mensual' => 1299, 'anual' => 11990, 'mensual_normal' => 1699, 'anual_normal' => 14999],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Precios de módulos add-on (especialidades secundarias)
+    |--------------------------------------------------------------------------
+    */
+    'addon_precios' => [
+        'nutricion'                     => ['mensual' => 299,  'anual' => 2990],
+        'psicologia'                    => ['mensual' => 299,  'anual' => 2990],
+        'fisioterapia'                  => ['mensual' => 399,  'anual' => 3990],
+        'dental'                        => ['mensual' => 599,  'anual' => 5990],
+        'ginecologia'                   => ['mensual' => 399,  'anual' => 3990],
+        'cardiologia'                   => ['mensual' => 499,  'anual' => 4990],
+        'pediatria'                     => ['mensual' => 399,  'anual' => 3990],
+        'neurologia'                    => ['mensual' => 399,  'anual' => 3990],
+        'neumologia'                    => ['mensual' => 399,  'anual' => 3990],
+        'psiquiatria'                   => ['mensual' => 399,  'anual' => 3990],
+        'general'                       => ['mensual' => 299,  'anual' => 2990],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 799,  'anual' => 7990],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Módulos Disponibles para Selección
     |--------------------------------------------------------------------------
     |
-    | Define los módulos que pueden ser habilitados/deshabilitados por clínica
+    | Define los módulos que pueden ser habilitados/deshabilitados por clínica.
+    | Ahora incluye tanto sub-módulos de rehab como especialidades add-on.
     |
     */
 
     'modulos_seleccionables' => [
+        // ── Sub-módulos de rehabilitación (incluidos en base rehab) ──
         'cardiaco' => [
-            'nombre' => 'Rehabilitación Cardíaca',
+            'nombre'      => 'Rehabilitación Cardíaca',
             'descripcion' => 'Expedientes cardíacos, pruebas de esfuerzo, estratificación',
             'expedientes' => ['clinico', 'esfuerzo', 'estratificacion', 'reporteFinal'],
-            'color' => '#EF4444',
-            'icon' => 'heart'
+            'color'       => '#EF4444',
+            'icon'        => 'heart',
+            'addon'       => false,
         ],
         'pulmonar' => [
-            'nombre' => 'Rehabilitación Pulmonar',
+            'nombre'      => 'Rehabilitación Pulmonar',
             'descripcion' => 'Expedientes y reportes pulmonares',
             'expedientes' => ['reportePulmonar', 'reporteFinalPulmonar'],
-            'color' => '#3B82F6',
-            'icon' => 'lungs'
+            'color'       => '#3B82F6',
+            'icon'        => 'lungs',
+            'addon'       => false,
         ],
         'fisioterapia' => [
-            'nombre' => 'Fisioterapia',
+            'nombre'      => 'Fisioterapia',
             'descripcion' => 'Reportes fisioterapéuticos y rehabilitación física',
             'expedientes' => ['reporteFisio'],
-            'color' => '#10B981',
-            'icon' => 'dumbbell'
+            'color'       => '#10B981',
+            'icon'        => 'dumbbell',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
         ],
         'nutricion' => [
-            'nombre' => 'Nutrición',
+            'nombre'      => 'Nutrición',
             'descripcion' => 'Evaluaciones y planes nutricionales',
             'expedientes' => ['reporteNutri'],
-            'color' => '#F59E0B',
-            'icon' => 'utensils'
+            'color'       => '#F59E0B',
+            'icon'        => 'utensils',
+            'addon'       => true,
+            'precio_mensual' => 299,
+            'precio_anual'   => 2990,
         ],
         'psicologia' => [
-            'nombre' => 'Psicología',
+            'nombre'      => 'Psicología',
             'descripcion' => 'Evaluaciones y seguimiento psicológico',
             'expedientes' => ['reportePsico'],
-            'color' => '#8B5CF6',
-            'icon' => 'brain'
-        ]
+            'color'       => '#8B5CF6',
+            'icon'        => 'brain',
+            'addon'       => true,
+            'precio_mensual' => 299,
+            'precio_anual'   => 2990,
+        ],
+        // ── Especialidades add-on ──
+        'dental' => [
+            'nombre'      => 'Dental / Odontología',
+            'descripcion' => 'Expediente dental, odontograma y tratamientos',
+            'expedientes' => ['historia_dental', 'odontograma'],
+            'color'       => '#3B82F6',
+            'icon'        => 'tooth',
+            'addon'       => true,
+            'precio_mensual' => 599,
+            'precio_anual'   => 5990,
+        ],
+        'ginecologia' => [
+            'nombre'      => 'Ginecología',
+            'descripcion' => 'Expedientes ginecológicos, obstetricia y control prenatal',
+            'expedientes' => ['historia_ginecologica', 'historia_obstetrica', 'control_prenatal'],
+            'color'       => '#EC4899',
+            'icon'        => 'hospital',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
+        ],
+        'cardiologia' => [
+            'nombre'      => 'Cardiología',
+            'descripcion' => 'Expedientes cardiológicos, ECG y ecocardiograma',
+            'expedientes' => ['historia_cardiologia', 'ecocardiograma', 'electrocardiograma'],
+            'color'       => '#EF4444',
+            'icon'        => 'heart',
+            'addon'       => true,
+            'precio_mensual' => 499,
+            'precio_anual'   => 4990,
+        ],
+        'pediatria' => [
+            'nombre'      => 'Pediatría',
+            'descripcion' => 'Consultas y seguimiento pediátrico',
+            'expedientes' => [],
+            'color'       => '#F97316',
+            'icon'        => 'hospital',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
+        ],
+        'neurologia' => [
+            'nombre'      => 'Neurología',
+            'descripcion' => 'Expedientes neurológicos',
+            'expedientes' => [],
+            'color'       => '#6366F1',
+            'icon'        => 'brain',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
+        ],
+        'neumologia' => [
+            'nombre'      => 'Neumología',
+            'descripcion' => 'Expedientes neumológicos',
+            'expedientes' => [],
+            'color'       => '#06B6D4',
+            'icon'        => 'lungs',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
+        ],
+        'psiquiatria' => [
+            'nombre'      => 'Psiquiatría',
+            'descripcion' => 'Evaluaciones y manejo psiquiátrico',
+            'expedientes' => [],
+            'color'       => '#6366F1',
+            'icon'        => 'brain',
+            'addon'       => true,
+            'precio_mensual' => 399,
+            'precio_anual'   => 3990,
+        ],
+        'general' => [
+            'nombre'      => 'Medicina General',
+            'descripcion' => 'Consultas de medicina general',
+            'expedientes' => [],
+            'color'       => '#64748B',
+            'icon'        => 'stethoscope',
+            'addon'       => true,
+            'precio_mensual' => 299,
+            'precio_anual'   => 2990,
+        ],
+        'rehabilitacion_cardiopulmonar' => [
+            'nombre'      => 'Rehab Cardiopulmonar',
+            'descripcion' => 'Rehabilitación cardíaca, pulmonar y fisioterapia',
+            'expedientes' => ['clinico', 'esfuerzo', 'estratificacion', 'reportePulmonar', 'reporteFisio'],
+            'color'       => '#3B82F6',
+            'icon'        => 'lungs',
+            'addon'       => true,
+            'precio_mensual' => 799,
+            'precio_anual'   => 7990,
+        ],
     ],
 
     /*

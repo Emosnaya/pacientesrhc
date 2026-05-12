@@ -15,29 +15,42 @@ class SucursalController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
+
         $query = Sucursal::with('clinica');
-        
-        // Si se especifica clinica_id, filtrar por esa clínica (prioridad)
-        if ($request->has('clinica_id')) {
+
+        if ($request->has('clinica_id') && $user->isSuperAdmin()) {
+            // Solo superadmin puede consultar otra clínica explícitamente
             $query->where('clinica_id', $request->clinica_id);
-        } 
-        // Si no es super admin, filtrar por clínica efectiva del usuario (workspace activo)
-        elseif (!$user->isSuperAdmin()) {
-            $query->where('clinica_id', $user->clinica_efectiva_id);
+        } else {
+            // Cualquier otro usuario (incluido admin) ve solo su clínica efectiva
+            $clinicaId = $user->clinica_efectiva_id;
+            if (!$clinicaId) {
+                return response()->json(['success' => true, 'data' => [], 'quota' => null]);
+            }
+            $query->where('clinica_id', $clinicaId);
         }
-        
+
         if ($request->has('activa')) {
             $query->where('activa', $request->activa);
         }
-        
+
         $sucursales = $query->orderBy('es_principal', 'desc')
-                           ->orderBy('nombre')
-                           ->get();
-        
+                            ->orderBy('nombre')
+                            ->get();
+
+        // Cuota de sucursales para la clínica activa
+        $clinica  = $user->clinicaActiva ?? $user->clinica_efectiva;
+        $maxSlots = $clinica ? (int)($clinica->max_sucursales ?? 0) : null;
+        $usados   = $clinica ? $sucursales->count() : null;
+
         return response()->json([
             'success' => true,
-            'data' => $sucursales
+            'data'    => $sucursales,
+            'quota'   => $clinica ? [
+                'max'         => $maxSlots,
+                'usados'      => $usados,
+                'disponibles' => max(0, $maxSlots - $usados),
+            ] : null,
         ]);
     }
 
@@ -85,39 +98,46 @@ class SucursalController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        // Permitir a admins de clínica (isAdmin o isSuperAdmin)
+        if (!$user->isSuperAdmin() && !$user->isAdmin) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
         
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'nullable|string|unique:sucursales,codigo',
-            'direccion' => 'nullable|string',
-            'telefono' => 'nullable|string',
-            'email' => 'nullable|email',
-            'ciudad' => 'nullable|string',
-            'estado' => 'nullable|string',
-            'codigo_postal' => 'nullable|string',
-            'es_principal' => 'nullable|boolean',
-            'activa' => 'nullable|boolean',
-            'notas' => 'nullable|string'
+            'nombre'             => 'required|string|max:255',
+            'codigo'             => 'nullable|string|unique:sucursales,codigo',
+            'direccion'          => 'nullable|string',
+            'telefono'           => 'nullable|string',
+            'email'              => 'nullable|email',
+            'ciudad'             => 'nullable|string',
+            'estado'             => 'nullable|string',
+            'codigo_postal'      => 'nullable|string',
+            'es_principal'       => 'nullable|boolean',
+            'activa'             => 'nullable|boolean',
+            'notas'              => 'nullable|string',
+            'tipo_clinica'       => 'nullable|string|max:100',
+            'modulos_habilitados'=> 'nullable|array',
         ]);
         
-        // Usar la clínica efectiva del usuario (workspace activo)
         $validated['clinica_id'] = $user->clinica_efectiva_id;
         
-        // Verificar si la clínica puede crear más sucursales
         $clinica = Clinica::findOrFail($validated['clinica_id']);
         if (!$clinica->puedeCrearMasSucursales()) {
             return response()->json([
-                'message' => 'Esta clínica no puede crear más sucursales. El plan actual solo permite una sucursal única. Por favor, actualice su plan para agregar más sucursales.'
+                'success' => false,
+                'message' => 'Has alcanzado el límite de sucursales de tu plan. Compra más slots para continuar.',
+                'quota_exceeded' => true,
+                'max_sucursales' => (int)($clinica->max_sucursales ?? 1),
             ], 403);
         }
         
-        // Si es la primera sucursal de la clínica, marcarla como principal
+        // Primera sucursal → marcarla principal
         $existeSucursal = Sucursal::where('clinica_id', $validated['clinica_id'])->exists();
         if (!$existeSucursal) {
             $validated['es_principal'] = true;
         }
         
-        // Si se marca como principal, desmarcar otras
         if ($validated['es_principal'] ?? false) {
             Sucursal::where('clinica_id', $validated['clinica_id'])
                     ->update(['es_principal' => false]);
@@ -128,7 +148,7 @@ class SucursalController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Sucursal creada exitosamente',
-            'data' => $sucursal->load('clinica')
+            'data'    => $sucursal->load('clinica')
         ], 201);
     }
 
@@ -141,26 +161,30 @@ class SucursalController extends Controller
         
         $sucursal = Sucursal::findOrFail($id);
         
-        // Verificar acceso (workspace activo)
+        if (!$user->isSuperAdmin() && !$user->isAdmin) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
         if (!$user->isSuperAdmin() && $user->clinica_efectiva_id != $sucursal->clinica_id) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
         
         $validated = $request->validate([
-            'nombre' => 'nullable|string|max:255',
-            'codigo' => 'nullable|string|unique:sucursales,codigo,' . $id,
-            'direccion' => 'nullable|string',
-            'telefono' => 'nullable|string',
-            'email' => 'nullable|email',
-            'ciudad' => 'nullable|string',
-            'estado' => 'nullable|string',
-            'codigo_postal' => 'nullable|string',
-            'es_principal' => 'nullable|boolean',
-            'activa' => 'nullable|boolean',
-            'notas' => 'nullable|string'
+            'nombre'             => 'nullable|string|max:255',
+            'codigo'             => 'nullable|string|unique:sucursales,codigo,' . $id,
+            'direccion'          => 'nullable|string',
+            'telefono'           => 'nullable|string',
+            'email'              => 'nullable|email',
+            'ciudad'             => 'nullable|string',
+            'estado'             => 'nullable|string',
+            'codigo_postal'      => 'nullable|string',
+            'es_principal'       => 'nullable|boolean',
+            'activa'             => 'nullable|boolean',
+            'notas'              => 'nullable|string',
+            'tipo_clinica'       => 'nullable|string|max:100',
+            'modulos_habilitados'=> 'nullable|array',
         ]);
         
-        // Si se marca como principal, desmarcar otras
         if (($validated['es_principal'] ?? false) && !$sucursal->es_principal) {
             Sucursal::where('clinica_id', $sucursal->clinica_id)
                     ->where('id', '!=', $id)
@@ -172,7 +196,7 @@ class SucursalController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Sucursal actualizada exitosamente',
-            'data' => $sucursal->load('clinica')
+            'data'    => $sucursal->load('clinica')
         ]);
     }
 

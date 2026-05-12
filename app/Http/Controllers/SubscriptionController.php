@@ -142,7 +142,7 @@ class SubscriptionController extends Controller
             'user_data.nombre' => 'required|string|max:255',
             'user_data.apellidoPat' => 'required|string|max:255',
             'user_data.email' => 'required|email|unique:users,email',
-            'user_data.cedula' => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.cedula' => ['nullable', 'string', 'regex:/^[0-9]{7,8}$/'],
             'user_data.password' => 'required|string|min:6',
             'consultorio_data' => 'required|array',
             'consultorio_data.nombre' => 'required|string|max:255',
@@ -228,6 +228,9 @@ class SubscriptionController extends Controller
                         case 'consultorio_renewal':
                             $this->fulfillConsultorioRenewal($session);
                             break;
+                        case 'sucursal_slot':
+                            $this->fulfillSucursalSlot($session);
+                            break;
                         default:
                             $this->fulfillOrder($session);
                     }
@@ -288,8 +291,8 @@ class SubscriptionController extends Controller
 
             // 2. Crear consultorio
             $nextBilling = $metadata->billing_cycle === 'anual' 
-                ? now()->addYear() 
-                : now()->addMonth();
+                ? now()->addYear()->endOfDay() 
+                : now()->addMonth()->endOfDay();
 
             $consultorio = Clinica::create([
                 'nombre' => $consultorioData['nombre'],
@@ -467,7 +470,7 @@ class SubscriptionController extends Controller
                 'max_usuarios' => 5,
                 'max_sucursales' => 1,
                 'stripe_subscription_id' => $session->subscription,
-                'fecha_vencimiento' => now()->addMonth(),
+                'fecha_vencimiento' => now()->addMonth()->endOfDay(),
                 'modulos_habilitados' => [],
             ]);
 
@@ -522,6 +525,39 @@ class SubscriptionController extends Controller
     /**
      * Procesar RENOVACIÓN de suscripción de consultorio después de pago exitoso
      */
+    /**
+     * Incrementar max_sucursales de la clínica tras pago de slots exitoso.
+     */
+    private function fulfillSucursalSlot($session): void
+    {
+        try {
+            $metadata  = $session->metadata;
+            $clinicaId = $metadata->clinica_id ?? null;
+            $cantidad  = (int)($metadata->cantidad ?? 1);
+
+            if (!$clinicaId) {
+                Log::error('sucursal_slot: clinica_id no encontrado en metadata');
+                return;
+            }
+
+            $clinica = Clinica::find($clinicaId);
+            if (!$clinica) {
+                Log::error("sucursal_slot: clinica {$clinicaId} no encontrada");
+                return;
+            }
+
+            $clinica->max_sucursales          = ((int)($clinica->max_sucursales ?? 1)) + $cantidad;
+            $clinica->permite_multiples_sucursales = true;
+            $clinica->stripe_subscription_id  = $session->subscription ?? $clinica->stripe_subscription_id;
+            $clinica->save();
+
+            Log::info("sucursal_slot: clinica {$clinicaId} ahora tiene {$clinica->max_sucursales} slots");
+
+        } catch (\Exception $e) {
+            Log::error('Error fulfilling sucursal slot: ' . $e->getMessage());
+        }
+    }
+
     private function fulfillConsultorioRenewal($session): void
     {
         try {
@@ -600,6 +636,28 @@ class SubscriptionController extends Controller
                 'nueva_fecha_vencimiento' => $nuevaFechaVencimiento->format('Y-m-d'),
                 'billing_cycle' => $billingCycle,
             ]);
+
+            // Enviar correo de confirmación de renovación
+            try {
+                $propietario = $userId ? \App\Models\User::find($userId) : null;
+                if (!$propietario) {
+                    $propietario = $clinica->propietario ?? null;
+                }
+                if ($propietario) {
+                    \Illuminate\Support\Facades\Mail::to($propietario->email)->send(
+                        new \App\Mail\SuscripcionRenovadaMail(
+                            user:                   $propietario,
+                            clinica:                $clinica,
+                            billingCycle:           $billingCycle,
+                            monto:                  $session->amount_total / 100,
+                            nuevaFechaVencimiento:  $nuevaFechaVencimiento->format('Y-m-d'),
+                            stripeSessionId:        $session->id,
+                        )
+                    );
+                }
+            } catch (\Exception $mailEx) {
+                Log::warning('No se pudo enviar correo de renovación: ' . $mailEx->getMessage());
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -961,22 +1019,17 @@ class SubscriptionController extends Controller
                 'fecha_vencimiento' => $fechaVencimiento?->format('Y-m-d'),
                 'dias_restantes' => $vencida ? null : $diasRestantes,
                 'dias_vencida' => $vencida ? abs($diasRestantes) : null,
-                'puede_renovar_online' => $esConsultorio,
-                'tipo_renovacion' => $esConsultorio ? 'stripe' : 'contacto_comercial',
+                'puede_renovar_online' => true,
+                'tipo_renovacion' => 'stripe',
             ],
-            'planes_disponibles' => $esConsultorio ? [
-                'mensual' => [
-                    'precio' => 1499,
-                    'ciclo' => 'mensual',
-                    'etiqueta' => 'Precio de lanzamiento',
-                ],
-                'anual' => [
-                    'precio' => 14999,
-                    'ciclo' => 'anual',
-                    'ahorro' => 2989,
-                    'etiqueta' => 'Precio de lanzamiento',
-                ],
-            ] : null,
+            'planes_disponibles' => (function () use ($clinica) {
+                $mes  = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'mensual', $clinica->es_consultorio_privado ?? false);
+                $anio = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'anual',   $clinica->es_consultorio_privado ?? false);
+                return [
+                    'mensual' => ['precio' => $mes['total'],  'ciclo' => 'mensual', 'desglose' => $mes,  'etiqueta' => 'Precio de lanzamiento'],
+                    'anual'   => ['precio' => $anio['total'], 'ciclo' => 'anual',   'desglose' => $anio, 'ahorro' => $anio['ahorro'] ?? 0, 'etiqueta' => 'Precio de lanzamiento'],
+                ];
+            })(),
         ]);
     }
 
@@ -1002,20 +1055,15 @@ class SubscriptionController extends Controller
                 ], 404);
             }
 
-            if (!$clinica->es_consultorio_privado) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Solo los consultorios privados pueden renovar online. Las clínicas deben contactar al equipo comercial.',
-                ], 400);
-            }
+            // Precio aditivo: base + addons
+            $precioCalc = \App\Services\PricingService::calcular(
+                $clinica->tipo_clinica,
+                $clinica->modulos_habilitados ?? [],
+                $request->billing_cycle,
+                $clinica->es_consultorio_privado ?? false
+            );
 
-            // Precios de renovación (alineados con landing)
-            $precios = [
-                'mensual' => 1499,
-                'anual' => 14999,
-            ];
-            
-            $precio = $precios[$request->billing_cycle];
+            $precio = $precioCalc['total'];
             $duracion = $request->billing_cycle === 'anual' ? 365 : 30;
 
             Stripe::setApiKey(config('services.stripe.secret'));
@@ -1068,6 +1116,77 @@ class SubscriptionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear sesión de pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar sesión de pago de Stripe y activar suscripción directamente.
+     * Usado como fallback cuando el webhook no llega a tiempo (ej. desarrollo local).
+     */
+    public function verifyPaymentSession(Request $request): JsonResponse
+    {
+        $request->validate(['session_id' => 'required|string']);
+
+        try {
+            $user = $request->user();
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $session = Session::retrieve($request->session_id);
+
+            // Verificar que la sesión pertenece a este usuario
+            if ($session->customer_email !== $user->email && ($session->metadata->user_id ?? null) != $user->id) {
+                return response()->json(['success' => false, 'message' => 'Sesión no válida para este usuario.'], 403);
+            }
+
+            // Solo procesar si el pago fue completado
+            if ($session->payment_status !== 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El pago no ha sido completado.',
+                    'payment_status' => $session->payment_status,
+                ], 402);
+            }
+
+            $metadata = $session->metadata;
+
+            // Verificar que no sea una sesión ya procesada (idempotencia)
+            // Se verifica contra la tabla payments usando el session_id o payment_intent
+            $yaExiste = Payment::where(function ($q) use ($session) {
+                $q->where('stripe_payment_id', $session->payment_intent ?? $session->id)
+                  ->orWhere('stripe_payment_id', $session->id);
+            })->orWhere(function ($q) use ($session) {
+                $q->whereJsonContains('metadata->session_id', $session->id);
+            })->exists();
+
+            if ($yaExiste) {
+                return response()->json([
+                    'success'      => true,
+                    'message'      => 'Suscripción ya activada.',
+                    'ya_procesada' => true,
+                ]);
+            }
+
+            // Procesar según tipo
+            $type = $metadata->type ?? 'consultorio_renewal';
+            if ($type === 'consultorio_renewal') {
+                $this->fulfillConsultorioRenewal($session);
+            } elseif ($type === 'consultorio_adicional') {
+                $this->fulfillConsultorioAdicional($session);
+            } else {
+                $this->fulfillOrder($session);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => '¡Suscripción activada exitosamente!',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error verificando sesión de pago: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar el pago: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -1126,7 +1245,7 @@ class SubscriptionController extends Controller
             'user_data.apellidoPat'         => 'required|string|max:255',
             'user_data.apellidoMat'         => 'nullable|string|max:255',
             'user_data.email'               => 'required|email|unique:users,email',
-            'user_data.cedula'              => ['required', 'string', 'regex:/^[0-9]{7,8}$/'],
+            'user_data.cedula'              => ['nullable', 'string', 'regex:/^[0-9]{7,8}$/'],
             'user_data.password'            => 'required|string|min:6',
             'consultorio_data'              => 'required|array',
             'consultorio_data.nombre'       => 'required|string|max:255',
@@ -1140,7 +1259,7 @@ class SubscriptionController extends Controller
         ]);
 
         // Determinar días de trial
-        $trialDays = 15;
+        $trialDays = 30;
         $referralMsg = null;
         if ($request->referral_code) {
             $code  = strtoupper(trim($request->referral_code));
@@ -1163,21 +1282,21 @@ class SubscriptionController extends Controller
                 'apellidoPat'      => $ud['apellidoPat'],
                 'apellidoMat'      => $ud['apellidoMat'] ?? null,
                 'email'            => $ud['email'],
-                'cedula'           => $ud['cedula'],
+                'cedula'           => $ud['cedula'] ?? null,
+                'rol'              => $ud['rol'] ?? null,
                 'password'         => Hash::make($ud['password']),
                 'isAdmin'          => true,
                 'email_verified'   => true,
                 'email_verified_at'=> now(),
-                'imagen'           => 'perfiles/avatar-default.png',
                 // Suscripción
                 'tiene_suscripcion_consultorio' => true,
-                'plan_consultorio'              => 'consultorio',
+                'plan_consultorio'              => 'profesional',
                 'ciclo_facturacion'             => 'mensual',
-                'trial_ends_at'                 => now()->addDays($trialDays),
+                'trial_ends_at'                 => now()->addDays($trialDays)->endOfDay(),
             ]);
 
             // 2. Crear consultorio en modo trial
-            $trialEndsAt = now()->addDays($trialDays);
+            $trialEndsAt = now()->addDays($trialDays)->endOfDay();
 
             $consultorio = Clinica::create([
                 'nombre'                      => $cd['nombre'],
@@ -1191,7 +1310,7 @@ class SubscriptionController extends Controller
                 'duration'                    => 'mensual',
                 'pagado'                      => false,
                 'activa'                      => true,
-                'es_consultorio_privado'      => true,
+                'es_consultorio_privado'      => $request->es_consultorio ?? true,
                 'propietario_user_id'         => $user->id,
                 'permite_multiples_sucursales'=> false,
                 'max_pacientes'               => 999999,
@@ -1199,7 +1318,7 @@ class SubscriptionController extends Controller
                 'max_sucursales'              => 1,
                 'trial_ends_at'              => $trialEndsAt,
                 'fecha_vencimiento'          => $trialEndsAt,
-                'modulos_habilitados'        => [],
+                'modulos_habilitados'        => $cd['modulos_habilitados'] ?? [],
             ]);
 
             // 3. Crear sucursal principal
@@ -1253,5 +1372,134 @@ class SubscriptionController extends Controller
                 'message' => 'Error al crear tu cuenta: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // SUCURSAL SLOTS — comprar cupo para crear más sucursales
+    // Precio: $699 MXN/mes · $6,990 MXN/año por slot adicional
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Crear sesión de checkout de Stripe para comprar un slot de sucursal.
+     */
+    public function createSucursalSlotCheckout(Request $request): JsonResponse
+    {
+        $request->validate([
+            'billing_cycle' => 'required|in:mensual,anual',
+            'cantidad'      => 'required|integer|min:1|max:10',
+        ]);
+
+        try {
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $user         = $request->user();
+            $billingCycle = $request->billing_cycle;
+            $cantidad     = (int) $request->cantidad;
+
+            // Precio dinámico según tipo_clinica (~50 % del plan base con descuento)
+            $clinica     = $user->clinicaActiva ?? \App\Models\Clinica::find($user->clinica_efectiva_id);
+            $tipoClinica = $clinica?->tipo_clinica ?? 'general';
+
+            $preciosPorTipo = [
+                'rehabilitacion_cardiopulmonar' => ['mensual' => 119900, 'anual' => 1199000],
+                'dental'       => ['mensual' => 84900,  'anual' => 849000],
+                'cardiologia'  => ['mensual' => 84900,  'anual' => 849000],
+                'fisioterapia' => ['mensual' => 64900,  'anual' => 649000],
+                'ginecologia'  => ['mensual' => 64900,  'anual' => 649000],
+                'pediatria'    => ['mensual' => 64900,  'anual' => 649000],
+                'neurologia'   => ['mensual' => 64900,  'anual' => 649000],
+                'neumologia'   => ['mensual' => 64900,  'anual' => 649000],
+                'general'      => ['mensual' => 64900,  'anual' => 649000],
+                'nutricion'    => ['mensual' => 49900,  'anual' => 499000],
+                'psicologia'   => ['mensual' => 49900,  'anual' => 499000],
+                'psiquiatria'  => ['mensual' => 64900,  'anual' => 649000],
+            ];
+            $defaultPrecio = ['mensual' => 69900, 'anual' => 699000];
+            $precios = $preciosPorTipo[$tipoClinica] ?? $defaultPrecio;
+
+            $precioPorSlot = $precios[$billingCycle];
+
+            $session = Session::create([
+                'payment_method_types' => ['card'],
+                'line_items' => [[
+                    'price_data' => [
+                        'currency'     => 'mxn',
+                        'product_data' => [
+                            'name'        => 'Sucursal Adicional' . ($cantidad > 1 ? " (×{$cantidad})" : ''),
+                            'description' => 'Cupo para crear ' . ($cantidad === 1
+                                ? 'una nueva sucursal'
+                                : "{$cantidad} nuevas sucursales") . ' en tu clínica.',
+                        ],
+                        'unit_amount' => $precioPorSlot,
+                        'recurring'   => [
+                            'interval' => $billingCycle === 'anual' ? 'year' : 'month',
+                        ],
+                    ],
+                    'quantity' => $cantidad,
+                ]],
+                'mode'        => 'subscription',
+                'success_url' => config('app.frontend_url') . '/clinica?sucursal_slot_success=true&session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url'  => config('app.frontend_url') . '/clinica?sucursal_slot_cancelled=true',
+                'customer'    => $user->clinica?->stripe_customer_id ?? null,
+                'metadata'    => [
+                    'type'          => 'sucursal_slot',
+                    'user_id'       => $user->id,
+                    'clinica_id'    => $user->clinica_efectiva_id,
+                    'billing_cycle' => $billingCycle,
+                    'cantidad'      => $cantidad,
+                ],
+            ]);
+
+            return response()->json([
+                'success'      => true,
+                'checkout_url' => $session->url,
+                'session_id'   => $session->id,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error creating sucursal slot checkout: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear sesión de pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener la cuota actual de sucursales de la clínica del usuario.
+     */
+    public function getSucursalQuota(Request $request): JsonResponse
+    {
+        $user    = $request->user();
+        $clinica = $user->clinicaActiva ?? \App\Models\Clinica::find($user->clinica_efectiva_id);
+
+        $preciosPorTipo = [
+            'rehabilitacion_cardiopulmonar' => ['mes' => 1199, 'anio' => 11990],
+            'dental'       => ['mes' => 849,  'anio' => 8490],
+            'cardiologia'  => ['mes' => 849,  'anio' => 8490],
+            'fisioterapia' => ['mes' => 649,  'anio' => 6490],
+            'ginecologia'  => ['mes' => 649,  'anio' => 6490],
+            'pediatria'    => ['mes' => 649,  'anio' => 6490],
+            'neurologia'   => ['mes' => 649,  'anio' => 6490],
+            'neumologia'   => ['mes' => 649,  'anio' => 6490],
+            'general'      => ['mes' => 649,  'anio' => 6490],
+            'nutricion'    => ['mes' => 499,  'anio' => 4990],
+            'psicologia'   => ['mes' => 499,  'anio' => 4990],
+            'psiquiatria'  => ['mes' => 649,  'anio' => 6490],
+        ];
+        $tipoClinica = $clinica?->tipo_clinica ?? 'general';
+        $precioSlot  = $preciosPorTipo[$tipoClinica] ?? ['mes' => 699, 'anio' => 6990];
+
+        $max      = $clinica?->max_sucursales ?? 0;
+        $usados   = $clinica?->sucursales()->count() ?? 0;
+
+        return response()->json([
+            'success'     => true,
+            'max'         => $max,
+            'usados'      => $usados,
+            'disponibles' => max(0, $max - $usados),
+            'precio_mes'  => $precioSlot['mes'],
+            'precio_anual'=> $precioSlot['anio'],
+        ]);
     }
 }

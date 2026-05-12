@@ -82,6 +82,14 @@ class EnsureSubscriptionActive
                     'puede_renovar_online' => $subscriptionStatus['puede_renovar_online'],
                     'contacto_comercial_url' => $subscriptionStatus['contacto_url'],
                     'renovacion_url' => $subscriptionStatus['renovacion_url'],
+                    'planes_disponibles' => (function () use ($clinica) {
+                        $mes  = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'mensual', $clinica->es_consultorio_privado ?? false);
+                        $anio = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'anual',   $clinica->es_consultorio_privado ?? false);
+                        return [
+                            'mensual' => ['precio' => $mes['total'],  'ciclo' => 'mensual', 'etiqueta' => 'Precio de lanzamiento'],
+                            'anual'   => ['precio' => $anio['total'], 'ciclo' => 'anual',   'ahorro' => $anio['ahorro'] ?? 0, 'etiqueta' => 'Precio de lanzamiento'],
+                        ];
+                    })(),
                 ]
             ], 402); // 402 Payment Required
         }
@@ -111,6 +119,19 @@ class EnsureSubscriptionActive
 
         // Si no tiene fecha de vencimiento, revisar si está pagada
         if (!$fechaVencimiento && !$clinica->pagado) {
+            // Verificar si tiene trial activo
+            if ($clinica->trial_ends_at && $now->lessThanOrEqualTo($clinica->trial_ends_at)) {
+                return [
+                    'active' => true,
+                    'tipo' => 'trial_activo',
+                    'message' => null,
+                    'dias_vencido' => null,
+                    'dias_restantes' => $now->diffInDays($clinica->trial_ends_at, false),
+                    'puede_renovar_online' => false,
+                    'contacto_url' => null,
+                    'renovacion_url' => null,
+                ];
+            }
             return [
                 'active' => false,
                 'tipo' => $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',

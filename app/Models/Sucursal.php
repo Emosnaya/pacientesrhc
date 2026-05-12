@@ -23,12 +23,15 @@ class Sucursal extends Model
         'codigo_postal',
         'es_principal',
         'activa',
-        'notas'
+        'notas',
+        'tipo_clinica',
+        'modulos_habilitados',
     ];
 
     protected $casts = [
-        'es_principal' => 'boolean',
-        'activa' => 'boolean'
+        'es_principal'       => 'boolean',
+        'activa'             => 'boolean',
+        'modulos_habilitados' => 'array',
     ];
 
     /**
