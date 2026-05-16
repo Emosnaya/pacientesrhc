@@ -27,6 +27,9 @@ use App\Models\Electrocardiograma;
 use App\Models\HistoriaGinecologica;
 use App\Models\HistoriaObstetrica;
 use App\Models\ControlPrenatal;
+use App\Models\HistoriaClinicaNutricion;
+use App\Models\SeguimientoNutricional;
+use App\Models\NotaClinicaSoapNutricional;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -418,6 +421,51 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 36. Historia Clínica Nutriológica
+        $historiasNutricion = HistoriaClinicaNutricion::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 36,
+                    'fecha' => $item->fecha_elaboracion,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Historia Clínica Nutriológica'
+                ];
+            });
+
+        // 37. Seguimiento Nutricional
+        $seguimientosNutricion = SeguimientoNutricional::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 37,
+                    'fecha' => $item->fecha_elaboracion,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Seguimiento Nutricional'
+                ];
+            });
+
+        // 38. Nota Clínica SOAP Nutricional
+        $notasSoapNutricion = NotaClinicaSoapNutricional::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 38,
+                    'fecha' => $item->fecha_elaboracion,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Nota Clínica SOAP Nutricional'
+                ];
+            });
+
         // Combinar todos los expedientes
         $expedientes = $expedientes
             ->merge($esfuerzos)
@@ -443,7 +491,10 @@ class ExpedienteUnificadoController extends Controller
             ->merge($electrocardiogramas)
             ->merge($historiasGinecologia)
             ->merge($historiasObstetrica)
-            ->merge($controlesPrenatales);
+            ->merge($controlesPrenatales)
+            ->merge($historiasNutricion)
+            ->merge($seguimientosNutricion)
+            ->merge($notasSoapNutricion);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

@@ -49,6 +49,7 @@ class PacientePortalController extends Controller
                     'tipo_clinica' => $c->tipo_clinica,
                     'logo' => $c->logo,
                     'logo_url' => $c->logo_url ?? null,
+                    'color_principal' => $c->color_principal,
                     'vinculado_at' => $p->vinculado_at,
                     'portal_visible_citas' => (bool) ($p->portal_visible_citas ?? false),
                     'portal_visible_datos_basicos' => (bool) ($p->portal_visible_datos_basicos ?? false),
@@ -259,6 +260,7 @@ class PacientePortalController extends Controller
             ->all();
 
         $payload = [
+            'uuid_publico' => $paciente->uuid_publico,
             'nombre' => $paciente->nombre,
             'apellidoPat' => $paciente->apellidoPat,
             'apellidoMat' => $paciente->apellidoMat,
