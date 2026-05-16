@@ -53,6 +53,11 @@ use App\Http\Controllers\ElectrocardiogramaController;
 use App\Http\Controllers\HistoriaGinecologicaController;
 use App\Http\Controllers\HistoriaObstetricaController;
 use App\Http\Controllers\ControlPrenatalController;
+use App\Http\Controllers\HistoriaClinicaNutricionController;
+use App\Http\Controllers\SeguimientoNutricionalController;
+use App\Http\Controllers\NotaClinicaSoapNutricionalController;
+use App\Http\Controllers\PacienteNutricionPlanController;
+use App\Http\Controllers\PacientePortalNutricionController;
 use App\Models\ReporteFisio;
 use App\Models\ReportePsico;
 use Illuminate\Http\Request;
@@ -171,6 +176,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/links', [\App\Http\Controllers\PacientePortalCompartirController::class, 'indexLinks']);
     Route::post('/paciente-portal/links', [\App\Http\Controllers\PacientePortalCompartirController::class, 'crearLink']);
     Route::delete('/paciente-portal/links/{id}', [\App\Http\Controllers\PacientePortalCompartirController::class, 'revocarLink']);
+
+    // Nutrición en portal
+    Route::get('/paciente-portal/nutricion/planes', [PacientePortalNutricionController::class, 'planes']);
+    Route::get('/paciente-portal/nutricion/plan-activo', [PacientePortalNutricionController::class, 'planActivo']);
+    Route::get('/paciente-portal/nutricion/seguimiento', [PacientePortalNutricionController::class, 'seguimientoIndex']);
+    Route::post('/paciente-portal/nutricion/seguimiento', [PacientePortalNutricionController::class, 'seguimientoStore']);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -657,6 +668,47 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::delete('/{id}', [ControlPrenatalController::class, 'destroy']);
         Route::get('/{id}/pdf', [ControlPrenatalController::class, 'pdf']);
         Route::get('/resumen/{historiaObstetricaId}', [ControlPrenatalController::class, 'resumenEmbarazo']);
+    });
+
+    // Historia Clínica Nutriológica
+    Route::prefix('nutricion/historia')->group(function () {
+        Route::get('/paciente/{pacienteId}', [HistoriaClinicaNutricionController::class, 'index']);
+        Route::post('/', [HistoriaClinicaNutricionController::class, 'store']);
+        Route::get('/{id}', [HistoriaClinicaNutricionController::class, 'show']);
+        Route::put('/{id}', [HistoriaClinicaNutricionController::class, 'update']);
+        Route::delete('/{id}', [HistoriaClinicaNutricionController::class, 'destroy']);
+        Route::get('/{id}/pdf', [HistoriaClinicaNutricionController::class, 'pdf']);
+    });
+
+    // Seguimiento Nutricional
+    Route::prefix('nutricion/seguimiento')->group(function () {
+        Route::get('/paciente/{pacienteId}', [SeguimientoNutricionalController::class, 'index']);
+        Route::post('/', [SeguimientoNutricionalController::class, 'store']);
+        Route::get('/{id}', [SeguimientoNutricionalController::class, 'show']);
+        Route::put('/{id}', [SeguimientoNutricionalController::class, 'update']);
+        Route::delete('/{id}', [SeguimientoNutricionalController::class, 'destroy']);
+        Route::get('/{id}/pdf', [SeguimientoNutricionalController::class, 'pdf']);
+    });
+
+    // Nota Clínica SOAP Nutricional
+    Route::prefix('nutricion/soap')->group(function () {
+        Route::get('/paciente/{pacienteId}', [NotaClinicaSoapNutricionalController::class, 'index']);
+        Route::post('/', [NotaClinicaSoapNutricionalController::class, 'store']);
+        Route::get('/{id}', [NotaClinicaSoapNutricionalController::class, 'show']);
+        Route::put('/{id}', [NotaClinicaSoapNutricionalController::class, 'update']);
+        Route::delete('/{id}', [NotaClinicaSoapNutricionalController::class, 'destroy']);
+        Route::get('/{id}/pdf', [NotaClinicaSoapNutricionalController::class, 'pdf']);
+    });
+
+    // Planes y seguimiento nutricional longitudinal (staff)
+    Route::prefix('pacientes/{pacienteId}/nutricion')->group(function () {
+        Route::get('/planes', [PacienteNutricionPlanController::class, 'index']);
+        Route::post('/planes', [PacienteNutricionPlanController::class, 'store']);
+        Route::put('/planes/{planId}', [PacienteNutricionPlanController::class, 'update']);
+        Route::delete('/planes/{planId}', [PacienteNutricionPlanController::class, 'destroy']);
+
+        Route::get('/seguimiento', [PacienteNutricionPlanController::class, 'seguimientoIndex']);
+        Route::post('/seguimiento', [PacienteNutricionPlanController::class, 'seguimientoStore']);
     });
 
     // ==========================================
