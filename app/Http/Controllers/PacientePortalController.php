@@ -3,17 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cita;
+use App\Models\ChatConversacion;
+use App\Models\ChatMensaje;
+use App\Models\ChatParticipante;
 use App\Models\Clinica;
+use App\Models\Evento;
 use App\Models\Paciente;
 use App\Models\PortalExpedienteCompartido;
+use App\Models\Sucursal;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class PacientePortalController extends Controller
 {
+    private const AGENDA_SLOTS = ['09:00', '10:30', '11:00', '13:30', '14:00', '16:30'];
+    private const AGENDA_DOCTOR_ROLES = ['doctor', 'doctora', 'licenciado', 'enfermero', 'enfermera', 'fisioterapeuta'];
+
     private function pacienteAutorizado(): ?Paciente
     {
         $user = Auth::user();
@@ -336,6 +345,632 @@ class PacientePortalController extends Controller
             });
 
         return response()->json(['data' => $citas]);
+    }
+
+    /**
+     * Catálogo para nueva cita: clínicas vinculadas o búsqueda de nuevas clínicas/consultorios.
+     */
+    public function agendaClinicas(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $scope = $request->query('scope', 'linked'); // linked | nearby
+        $q = trim((string) $request->query('q', ''));
+
+        $linked = $paciente->clinicas()->withPivot([
+            'portal_visible_citas',
+            'portal_agenda_bloqueado',
+            'portal_agenda_bloqueado_hasta',
+            'portal_agenda_bloqueo_motivo',
+        ])->get();
+
+        $linkedIds = $linked->pluck('id')->all();
+
+        if ($scope === 'linked') {
+            $rows = $linked
+                ->filter(fn ($c) => (bool) ($c->pivot->portal_visible_citas ?? false))
+                ->map(fn ($c) => $this->agendaClinicaPayload($c, true, $c->pivot))
+                ->values();
+
+            return response()->json(['data' => $rows]);
+        }
+
+        $query = Clinica::query()->where('activa', true);
+        if (! empty($linkedIds)) {
+            $query->whereNotIn('id', $linkedIds);
+        }
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nombre', 'like', "%{$q}%")
+                    ->orWhere('direccion', 'like', "%{$q}%")
+                    ->orWhere('tipo_clinica', 'like', "%{$q}%");
+            });
+        }
+
+        $rows = $query->orderBy('nombre')->limit(30)->get()
+            ->map(fn ($c) => $this->agendaClinicaPayload($c, false, null))
+            ->values();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    /**
+     * Disponibilidad por fecha para una clínica/consultorio.
+     */
+    public function agendaDisponibilidad(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'clinica_id' => 'required|integer|exists:clinicas,id',
+            'fecha' => 'required|date_format:Y-m-d',
+            'doctor_id' => 'nullable|integer|exists:users,id',
+            'especialidad' => 'nullable|string|max:120',
+        ]);
+
+        $clinica = Clinica::findOrFail((int) $validated['clinica_id']);
+        if (! $clinica->activa) {
+            return response()->json(['message' => 'La clínica/consultorio no está disponible'], 422);
+        }
+
+        $fecha = (string) $validated['fecha'];
+        $doctorId = isset($validated['doctor_id']) ? (int) $validated['doctor_id'] : null;
+        $especialidad = isset($validated['especialidad']) ? trim((string) $validated['especialidad']) : null;
+        if (! empty($especialidad)) {
+            $especialidad = $this->agendaResolveEspecialidad($clinica, $especialidad);
+            if (! $especialidad) {
+                return response()->json([
+                    'message' => 'La especialidad seleccionada no está habilitada en esta clínica/consultorio',
+                    'especialidades_habilitadas' => $this->agendaEspecialidadesEtiquetas($clinica),
+                ], 422);
+            }
+        }
+
+        $slots = collect(self::AGENDA_SLOTS)->map(function (string $slot) use ($clinica, $paciente, $fecha, $doctorId, $especialidad) {
+            $check = $this->agendaCanBook($clinica, $paciente, $fecha, $slot, $doctorId, $especialidad);
+            return [
+                'hora' => $slot,
+                'disponible' => $check['ok'],
+                'motivo' => $check['ok'] ? null : $check['message'],
+            ];
+        })->values();
+
+        return response()->json(['data' => $slots]);
+    }
+
+    /**
+     * Crear cita desde el portal paciente.
+     */
+    public function agendaCrearCita(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'clinica_id' => 'required|integer|exists:clinicas,id',
+            'fecha' => 'required|date_format:Y-m-d',
+            'hora' => 'required|date_format:H:i',
+            'doctor_id' => 'nullable|integer|exists:users,id',
+            'especialidad' => 'nullable|string|max:120',
+            'notas' => 'nullable|string|max:1000',
+        ]);
+
+        $clinica = Clinica::findOrFail((int) $validated['clinica_id']);
+        if (! $clinica->activa) {
+            return response()->json(['message' => 'La clínica/consultorio no está disponible'], 422);
+        }
+
+        $doctorId = isset($validated['doctor_id']) ? (int) $validated['doctor_id'] : null;
+        $especialidad = isset($validated['especialidad']) ? trim((string) $validated['especialidad']) : null;
+        if (! empty($especialidad)) {
+            $especialidad = $this->agendaResolveEspecialidad($clinica, $especialidad);
+            if (! $especialidad) {
+                return response()->json([
+                    'message' => 'La especialidad seleccionada no está habilitada en esta clínica/consultorio',
+                    'especialidades_habilitadas' => $this->agendaEspecialidadesEtiquetas($clinica),
+                ], 422);
+            }
+        }
+        if ($doctorId && ! User::query()->where('id', $doctorId)->where('clinica_id', $clinica->id)->exists()) {
+            return response()->json(['message' => 'El doctor seleccionado no pertenece a esta clínica/consultorio'], 422);
+        }
+        if (! $doctorId && empty($especialidad)) {
+            return response()->json(['message' => 'Debes indicar la especialidad si no seleccionas doctor'], 422);
+        }
+
+        $check = $this->agendaCanBook(
+            $clinica,
+            $paciente,
+            (string) $validated['fecha'],
+            (string) $validated['hora'],
+            $doctorId,
+            $especialidad
+        );
+        if (! $check['ok']) {
+            return response()->json(['message' => $check['message']], 422);
+        }
+
+        $requiereConfirmacionClinica = ! $doctorId;
+
+        $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
+        if (! $pivot) {
+            $sucursalPrincipal = Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
+            $paciente->clinicas()->syncWithoutDetaching([
+                $clinica->id => [
+                    'sucursal_id' => $sucursalPrincipal,
+                    'user_id' => null,
+                    'vinculado_at' => now(),
+                    'portal_visible_citas' => true,
+                    'portal_visible_datos_basicos' => true,
+                    'portal_visible_expediente_resumen' => false,
+                    'portal_agenda_bloqueado' => false,
+                ],
+            ]);
+            $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
+        }
+
+        $adminId = User::query()
+            ->where('clinica_id', $clinica->id)
+            ->where(function ($q) {
+                $q->where('isAdmin', 1)->orWhere('isSuperAdmin', 1);
+            })
+            ->value('id')
+            ?? User::query()->where('clinica_id', $clinica->id)->value('id');
+
+        if (! $adminId) {
+            return response()->json(['message' => 'No hay personal disponible para agendar en esta clínica/consultorio'], 422);
+        }
+
+        $cita = Cita::create([
+            'paciente_id' => $paciente->id,
+            'admin_id' => (int) $adminId,
+            'user_id' => $doctorId,
+            'clinica_id' => $clinica->id,
+            'sucursal_id' => $pivot?->sucursal_id,
+            'fecha' => $validated['fecha'],
+            'hora' => $validated['hora'],
+            'estado' => 'pendiente',
+            'primera_vez' => false,
+            'notas' => $this->agendaBuildNotas(
+                $validated['notas'] ?? null,
+                $especialidad
+            ),
+            'reagenda_intentos' => 0,
+        ]);
+
+        $chatConversacion = $this->agendaEnsurePatientChatConversation(
+            $clinica,
+            $paciente,
+            (int) $adminId,
+            (string) $validated['fecha'],
+            (string) $validated['hora'],
+            $especialidad
+        );
+
+        return response()->json([
+            'message' => $requiereConfirmacionClinica
+                ? 'Solicitud de cita enviada. La clínica/consultorio debe confirmar el horario.'
+                : 'Cita agendada correctamente',
+            'data' => [
+                'id' => $cita->id,
+                'fecha' => $cita->fecha?->format('Y-m-d'),
+                'hora' => Carbon::parse($cita->hora)->format('H:i'),
+                'estado' => $cita->estado,
+                'clinica' => ['id' => $clinica->id, 'nombre' => $clinica->nombre],
+                'doctor_id' => $doctorId,
+                'especialidad' => $especialidad,
+                'chat_conversacion_id' => $chatConversacion?->id,
+                'requiere_confirmacion_clinica' => $requiereConfirmacionClinica,
+                'siguiente_paso' => $requiereConfirmacionClinica
+                    ? 'Si no hay disponibilidad con staff en ese horario, la clínica podrá proponerte otros horarios o contactarte por chat.'
+                    : null,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Reagendar cita con máximo de intentos configurable.
+     */
+    public function agendaReagendarCita(Request $request, int $id): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'fecha' => 'required|date_format:Y-m-d',
+            'hora' => 'required|date_format:H:i',
+            'doctor_id' => 'nullable|integer|exists:users,id',
+            'especialidad' => 'nullable|string|max:120',
+        ]);
+
+        $cita = Cita::query()->where('id', $id)->where('paciente_id', $paciente->id)->first();
+        if (! $cita) {
+            return response()->json(['message' => 'Cita no encontrada'], 404);
+        }
+        if (in_array($cita->estado, ['cancelada', 'completada'], true)) {
+            return response()->json(['message' => 'Esta cita ya no puede reagendarse'], 422);
+        }
+
+        $clinica = Clinica::findOrFail((int) $cita->clinica_id);
+        $maxReagendas = max(0, (int) ($clinica->portal_max_reagendas_paciente ?? 2));
+        $bloqueoDias = max(0, (int) ($clinica->portal_bloqueo_dias_post_cancelacion ?? 7));
+        $intentos = (int) ($cita->reagenda_intentos ?? 0);
+
+        if ($intentos >= $maxReagendas) {
+            $cita->estado = 'cancelada';
+            $cita->cancelada_por_regla = true;
+            $cita->motivo_cancelacion = 'Límite de reagendas alcanzado';
+            $cita->save();
+
+            $paciente->clinicas()->updateExistingPivot($clinica->id, [
+                'portal_agenda_bloqueado' => true,
+                'portal_agenda_bloqueado_hasta' => now()->addDays($bloqueoDias)->toDateString(),
+                'portal_agenda_bloqueo_motivo' => 'Límite de reagendas alcanzado',
+            ]);
+
+            return response()->json([
+                'message' => "La cita fue cancelada por exceder el máximo de reagendas. Podrás agendar nuevamente en {$bloqueoDias} día(s).",
+            ], 422);
+        }
+
+        $doctorId = array_key_exists('doctor_id', $validated)
+            ? ((int) $validated['doctor_id'] ?: null)
+            : $cita->user_id;
+        $especialidad = isset($validated['especialidad']) ? trim((string) $validated['especialidad']) : null;
+        if (! empty($especialidad)) {
+            $especialidad = $this->agendaResolveEspecialidad($clinica, $especialidad);
+            if (! $especialidad) {
+                return response()->json([
+                    'message' => 'La especialidad seleccionada no está habilitada en esta clínica/consultorio',
+                    'especialidades_habilitadas' => $this->agendaEspecialidadesEtiquetas($clinica),
+                ], 422);
+            }
+        }
+        if (! $doctorId && empty($especialidad)) {
+            return response()->json(['message' => 'Debes indicar la especialidad si no seleccionas doctor'], 422);
+        }
+
+        $check = $this->agendaCanBook(
+            $clinica,
+            $paciente,
+            (string) $validated['fecha'],
+            (string) $validated['hora'],
+            $doctorId,
+            $especialidad
+        );
+        if (! $check['ok']) {
+            return response()->json(['message' => $check['message']], 422);
+        }
+
+        $nueva = Cita::create([
+            'paciente_id' => $cita->paciente_id,
+            'admin_id' => $cita->admin_id,
+            'user_id' => $doctorId,
+            'clinica_id' => $cita->clinica_id,
+            'sucursal_id' => $cita->sucursal_id,
+            'fecha' => $validated['fecha'],
+            'hora' => $validated['hora'],
+            'estado' => 'pendiente',
+            'primera_vez' => false,
+            'notas' => $this->agendaBuildNotas($cita->notas, $especialidad),
+            'reagenda_intentos' => $intentos + 1,
+            'reagendada_de_cita_id' => $cita->id,
+        ]);
+
+        $cita->estado = 'cancelada';
+        $cita->motivo_cancelacion = 'Reagendada por paciente';
+        $cita->save();
+
+        return response()->json([
+            'message' => 'Cita reagendada correctamente',
+            'data' => [
+                'id' => $nueva->id,
+                'fecha' => $nueva->fecha?->format('Y-m-d'),
+                'hora' => Carbon::parse($nueva->hora)->format('H:i'),
+                'reagenda_intentos' => $nueva->reagenda_intentos,
+                'reagendas_restantes' => max(0, $maxReagendas - (int) $nueva->reagenda_intentos),
+            ],
+        ]);
+    }
+
+    /**
+     * @return array{ok:bool,message:?string}
+     */
+    private function agendaCanBook(
+        Clinica $clinica,
+        Paciente $paciente,
+        string $fecha,
+        string $hora,
+        ?int $doctorId = null,
+        ?string $especialidad = null
+    ): array
+    {
+        if (Carbon::parse($fecha)->startOfDay()->lt(now()->startOfDay())) {
+            return ['ok' => false, 'message' => 'No puedes agendar en fechas pasadas'];
+        }
+
+        if ($fecha === now()->toDateString() && $hora <= now()->format('H:i')) {
+            return ['ok' => false, 'message' => 'Ese horario ya pasó'];
+        }
+
+        $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
+        if ($pivot && (bool) ($pivot->portal_agenda_bloqueado ?? false)) {
+            $bloqueadoHasta = $pivot->portal_agenda_bloqueado_hasta ? Carbon::parse($pivot->portal_agenda_bloqueado_hasta) : null;
+            if (! $bloqueadoHasta || $bloqueadoHasta->isFuture() || $bloqueadoHasta->isToday()) {
+                $msg = 'No puedes agendar en este espacio por el momento';
+                if ($bloqueadoHasta) {
+                    $msg .= ' (bloqueo hasta '.$bloqueadoHasta->format('Y-m-d').')';
+                }
+                return ['ok' => false, 'message' => $msg];
+            }
+        }
+
+        $sucursalId = $pivot?->sucursal_id
+            ?? Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
+
+        if ($sucursalId) {
+            $bloqueos = Evento::query()
+                ->where('tipo', 'bloqueo')
+                ->where('clinica_id', $clinica->id)
+                ->where('sucursal_id', $sucursalId)
+                ->whereDate('fecha', $fecha)
+                ->get();
+
+            foreach ($bloqueos as $bloqueo) {
+                if ($bloqueo->todo_el_dia) {
+                    return ['ok' => false, 'message' => 'No hay disponibilidad ese día'];
+                }
+
+                $hInicio = $bloqueo->hora ? substr((string) $bloqueo->hora, 0, 5) : null;
+                $hFin = $bloqueo->hora_fin ? substr((string) $bloqueo->hora_fin, 0, 5) : null;
+                if ($hInicio && $hFin && $hora >= $hInicio && $hora < $hFin) {
+                    return ['ok' => false, 'message' => 'Este horario está bloqueado'];
+                }
+                if ($hInicio && ! $hFin && $hora === $hInicio) {
+                    return ['ok' => false, 'message' => 'Este horario está bloqueado'];
+                }
+            }
+        }
+
+        // Un paciente no puede tener dos citas activas en el mismo horario.
+        $duplicadaPaciente = Cita::query()
+            ->where('paciente_id', $paciente->id)
+            ->whereDate('fecha', $fecha)
+            ->where('hora', $hora)
+            ->whereIn('estado', ['pendiente', 'confirmada'])
+            ->exists();
+        if ($duplicadaPaciente) {
+            return ['ok' => false, 'message' => 'Ya tienes una cita en ese horario'];
+        }
+
+        // Si la clínica no permite múltiples citas en el mismo horario, solo un cupo global.
+        if (! (bool) ($clinica->portal_permite_multiples_citas_mismo_horario ?? true)) {
+            $ocupadas = Cita::query()
+                ->where('clinica_id', $clinica->id)
+                ->whereDate('fecha', $fecha)
+                ->where('hora', $hora)
+                ->whereIn('estado', ['pendiente', 'confirmada'])
+                ->count();
+            if ($ocupadas > 0) {
+                return ['ok' => false, 'message' => 'Ese horario ya no está disponible'];
+            }
+        }
+
+        // Si se eligió doctor, el doctor sí maneja un cupo por horario.
+        if ($doctorId) {
+            $doctorOcupado = Cita::query()
+                ->where('clinica_id', $clinica->id)
+                ->where('user_id', $doctorId)
+                ->whereDate('fecha', $fecha)
+                ->where('hora', $hora)
+                ->whereIn('estado', ['pendiente', 'confirmada'])
+                ->exists();
+
+            if ($doctorOcupado) {
+                return ['ok' => false, 'message' => 'El doctor seleccionado no está disponible en ese horario'];
+            }
+        }
+
+        return ['ok' => true, 'message' => null];
+    }
+
+    private function agendaBuildNotas(?string $notas, ?string $especialidad): ?string
+    {
+        $notas = $notas !== null ? trim($notas) : '';
+        $especialidad = $especialidad !== null ? trim($especialidad) : '';
+
+        if ($especialidad === '') {
+            return $notas !== '' ? $notas : null;
+        }
+
+        $prefix = '[Especialidad solicitada: '.$this->agendaEspecialidadEtiqueta($especialidad).']';
+        if ($notas === '') {
+            return $prefix;
+        }
+
+        if (str_starts_with($notas, '[Especialidad solicitada:')) {
+            $rest = preg_replace('/^\[Especialidad solicitada:\s*.*?\]\s*/u', '', $notas) ?? '';
+            return trim($prefix."\n".$rest);
+        }
+
+        return $prefix."\n".$notas;
+    }
+
+    private function agendaEnsurePatientChatConversation(
+        Clinica $clinica,
+        Paciente $paciente,
+        int $staffUserId,
+        string $fecha,
+        string $hora,
+        ?string $especialidad
+    ): ?ChatConversacion {
+        $patientUserId = (int) Auth::id();
+        if (! $patientUserId || $patientUserId === $staffUserId) {
+            return null;
+        }
+
+        $conv = ChatConversacion::query()
+            ->where('clinica_id', $clinica->id)
+            ->where('tipo', 'directo')
+            ->whereHas('participantes', fn ($q) => $q->where('user_id', $patientUserId))
+            ->whereHas('participantes', fn ($q) => $q->where('user_id', $staffUserId))
+            ->first();
+
+        if (! $conv) {
+            $conv = ChatConversacion::create([
+                'clinica_id' => $clinica->id,
+                'tipo' => 'directo',
+                'nombre' => null,
+                'created_by' => $patientUserId,
+            ]);
+
+            ChatParticipante::create([
+                'conversacion_id' => $conv->id,
+                'user_id' => $patientUserId,
+                'last_read_at' => now(),
+            ]);
+
+            ChatParticipante::create([
+                'conversacion_id' => $conv->id,
+                'user_id' => $staffUserId,
+                'last_read_at' => null,
+            ]);
+        }
+
+        $especialidadLabel = $especialidad ? $this->agendaEspecialidadEtiqueta($especialidad) : 'General';
+        $mensaje = "Hola, acabo de solicitar una cita para {$fecha} a las {$hora}. Especialidad: {$especialidadLabel}.";
+
+        ChatMensaje::create([
+            'conversacion_id' => $conv->id,
+            'user_id' => $patientUserId,
+            'mensaje' => $mensaje,
+        ]);
+
+        ChatParticipante::where('conversacion_id', $conv->id)
+            ->where('user_id', $patientUserId)
+            ->update(['last_read_at' => now()]);
+
+        return $conv;
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function agendaEspecialidadesPermitidas(Clinica $clinica): array
+    {
+        $modulos = collect($clinica->modulos_efectivos ?? [])
+            ->filter(fn ($m) => is_string($m) && trim($m) !== '')
+            ->map(fn ($m) => $this->agendaEspecialidadClave((string) $m))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($modulos)) {
+            return $modulos;
+        }
+
+        $fallback = $this->agendaEspecialidadClave((string) ($clinica->tipo_clinica ?? ''));
+        return $fallback ? [$fallback] : [];
+    }
+
+    /**
+     * @return array<int,string>
+     */
+    private function agendaEspecialidadesEtiquetas(Clinica $clinica): array
+    {
+        return collect($this->agendaEspecialidadesPermitidas($clinica))
+            ->map(fn ($k) => $this->agendaEspecialidadEtiqueta($k))
+            ->values()
+            ->all();
+    }
+
+    private function agendaResolveEspecialidad(Clinica $clinica, string $input): ?string
+    {
+        $needle = $this->agendaEspecialidadClave($input);
+        if ($needle === '') {
+            return null;
+        }
+
+        $permitidas = $this->agendaEspecialidadesPermitidas($clinica);
+        if (in_array($needle, $permitidas, true)) {
+            return $needle;
+        }
+
+        foreach ($permitidas as $key) {
+            $labelSlug = $this->agendaEspecialidadClave($this->agendaEspecialidadEtiqueta($key));
+            if ($needle === $labelSlug) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    private function agendaEspecialidadClave(string $value): string
+    {
+        $slug = (string) Str::of($value)
+            ->lower()
+            ->ascii()
+            ->replace('-', '_')
+            ->replace(' ', '_')
+            ->value();
+
+        $slug = preg_replace('/[^a-z0-9_]/', '', $slug) ?? '';
+        return trim($slug, '_');
+    }
+
+    private function agendaEspecialidadEtiqueta(string $key): string
+    {
+        return ucfirst(str_replace('_', ' ', $key));
+    }
+
+    private function agendaClinicaPayload(Clinica $clinica, bool $vinculada, $pivot = null): array
+    {
+        $doctores = User::query()
+            ->where('clinica_id', $clinica->id)
+            ->whereIn('rol', self::AGENDA_DOCTOR_ROLES)
+            ->select(['id', 'nombre', 'apellidoPat', 'apellidoMat', 'rol'])
+            ->limit(20)
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'nombre' => trim(($u->nombre ?? '').' '.($u->apellidoPat ?? '').' '.($u->apellidoMat ?? '')),
+                'rol' => $u->rol,
+            ])
+            ->values();
+
+        $especialidades = collect($this->agendaEspecialidadesEtiquetas($clinica));
+
+        return [
+            'id' => $clinica->id,
+            'nombre' => $clinica->nombre,
+            'tipo_clinica' => $clinica->tipo_clinica,
+            'direccion' => $clinica->direccion,
+            'logo' => $clinica->logo,
+            'logo_url' => $clinica->logo_url,
+            'color_principal' => $clinica->color_principal,
+            'vinculada' => $vinculada,
+            'portal_visible_citas' => $vinculada ? (bool) ($pivot?->portal_visible_citas ?? false) : true,
+            'agenda_bloqueado' => $vinculada ? (bool) ($pivot?->portal_agenda_bloqueado ?? false) : false,
+            'agenda_bloqueado_hasta' => $vinculada && ! empty($pivot?->portal_agenda_bloqueado_hasta)
+                ? Carbon::parse($pivot->portal_agenda_bloqueado_hasta)->format('Y-m-d')
+                : null,
+            'agenda_bloqueo_motivo' => $vinculada ? ($pivot?->portal_agenda_bloqueo_motivo ?? null) : null,
+            'permite_multiples_citas_mismo_horario' => (bool) ($clinica->portal_permite_multiples_citas_mismo_horario ?? true),
+            'especialidades' => $especialidades,
+            'doctores' => $doctores,
+        ];
     }
 
     /**

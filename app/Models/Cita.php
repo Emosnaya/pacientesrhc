@@ -30,7 +30,10 @@ class Cita extends Model
         'motivo_cancelacion',
         'recordatorio_enviado',
         'recordatorio_enviado_at',
-        'confirmacion_whatsapp'
+        'confirmacion_whatsapp',
+        'reagenda_intentos',
+        'reagendada_de_cita_id',
+        'cancelada_por_regla',
     ];
 
     /**
@@ -44,6 +47,8 @@ class Cita extends Model
         'primera_vez' => 'boolean',
         'recordatorio_enviado' => 'boolean',
         'recordatorio_enviado_at' => 'datetime',
+        'reagenda_intentos' => 'integer',
+        'cancelada_por_regla' => 'boolean',
     ];
 
     /**

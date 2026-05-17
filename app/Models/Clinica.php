@@ -34,6 +34,9 @@ class Clinica extends Model
         'propietario_user_id',
         'facturacion_addon_activo',
         'color_principal',
+        'portal_permite_multiples_citas_mismo_horario',
+        'portal_max_reagendas_paciente',
+        'portal_bloqueo_dias_post_cancelacion',
     ];
 
     protected $casts = [
@@ -42,6 +45,9 @@ class Clinica extends Model
         'permite_multiples_sucursales' => 'boolean',
         'es_consultorio_privado' => 'boolean',
         'facturacion_addon_activo' => 'boolean',
+        'portal_permite_multiples_citas_mismo_horario' => 'boolean',
+        'portal_max_reagendas_paciente' => 'integer',
+        'portal_bloqueo_dias_post_cancelacion' => 'integer',
         'fecha_vencimiento' => 'date',
         'trial_ends_at' => 'datetime',
         'modulos_habilitados' => 'array',

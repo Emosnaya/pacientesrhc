@@ -24,17 +24,25 @@ class ChatController extends Controller
         return !($user->paciente_id || $user->es_paciente_portal);
     }
 
+    private function esPacientePortal(): bool
+    {
+        $user = Auth::user();
+        return (bool) ($user->paciente_id || $user->es_paciente_portal);
+    }
+
     // ── GET /api/chat/conversaciones ─────────────────────────
     // Lista de conversaciones del usuario con último mensaje y no-leídos
     public function conversaciones()
     {
-        if (!$this->esOperativo()) return response()->json(['error' => 'No autorizado'], 403);
-
         $userId    = Auth::id();
-        $clinicaId = $this->clinicaId();
+        $isPaciente = $this->esPacientePortal();
 
-        $conversaciones = ChatConversacion::whereHas('participantes', fn($q) => $q->where('user_id', $userId))
-            ->where('clinica_id', $clinicaId)
+        $query = ChatConversacion::whereHas('participantes', fn($q) => $q->where('user_id', $userId));
+        if (! $isPaciente) {
+            $query->where('clinica_id', $this->clinicaId());
+        }
+
+        $conversaciones = $query
             ->with([
                 'ultimoMensaje.user:id,nombre,apellidoPat',
                 'participantes.user:id,nombre,apellidoPat',
@@ -151,8 +159,6 @@ class ChatController extends Controller
     // ── POST /api/chat/conversaciones/{id}/mensajes ──────────
     public function enviarMensaje(Request $request, $id)
     {
-        if (!$this->esOperativo()) return response()->json(['error' => 'No autorizado'], 403);
-
         $request->validate(['mensaje' => 'required|string|max:2000']);
         $userId = Auth::id();
 
@@ -189,6 +195,8 @@ class ChatController extends Controller
     // Usuarios operativos de la misma clínica para iniciar chats
     public function miembros()
     {
+        if (!$this->esOperativo()) return response()->json(['error' => 'No autorizado'], 403);
+
         $clinicaId = $this->clinicaId();
         $userId    = Auth::id();
 
@@ -213,11 +221,15 @@ class ChatController extends Controller
     public function noLeidos()
     {
         $userId    = Auth::id();
-        $clinicaId = $this->clinicaId();
+        $isPaciente = $this->esPacientePortal();
 
         $total = 0;
-        $conversaciones = ChatConversacion::whereHas('participantes', fn($q) => $q->where('user_id', $userId))
-            ->where('clinica_id', $clinicaId)
+        $query = ChatConversacion::whereHas('participantes', fn($q) => $q->where('user_id', $userId));
+        if (! $isPaciente) {
+            $query->where('clinica_id', $this->clinicaId());
+        }
+
+        $conversaciones = $query
             ->with(['participantes' => fn($q) => $q->where('user_id', $userId)])
             ->get();
 
@@ -269,12 +281,15 @@ class ChatController extends Controller
 
     private function formatMensaje(ChatMensaje $m): array
     {
+        $myId = (int) Auth::id();
+
         return [
             'id'              => $m->id,
             'conversacion_id' => $m->conversacion_id,
             'user_id'         => $m->user_id,
             'nombre'          => $m->user ? trim(($m->user->nombre ?? '') . ' ' . ($m->user->apellidoPat ?? '')) : 'Usuario',
             'mensaje'         => $m->mensaje,
+            'es_propio'       => (int) $m->user_id === $myId,
             'created_at'      => $m->created_at->toIso8601String(),
         ];
     }
