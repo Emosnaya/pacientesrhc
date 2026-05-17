@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cita;
+use App\Models\ChatConversacion;
+use App\Models\ChatMensaje;
+use App\Models\ChatParticipante;
 use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Evento;
@@ -603,6 +606,94 @@ class CitaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar el estado de la cita: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear/abrir chat directo entre staff y paciente para una cita.
+     */
+    public function abrirChatPaciente(Request $request, $id)
+    {
+        try {
+            $cita = Cita::findOrFail($id);
+            $user = Auth::user();
+
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes acceso a esta cita'
+                ], 403);
+            }
+
+            $pacienteUser = User::query()
+                ->where('paciente_id', $cita->paciente_id)
+                ->orderByDesc('es_paciente_portal')
+                ->orderBy('id')
+                ->first();
+
+            if (! $pacienteUser) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El paciente aún no tiene usuario de portal para chat'
+                ], 422);
+            }
+
+            $staffUserId = (int) $user->id;
+            $pacienteUserId = (int) $pacienteUser->id;
+
+            $conv = ChatConversacion::query()
+                ->where('clinica_id', $cita->clinica_id)
+                ->where('tipo', 'directo')
+                ->whereHas('participantes', fn ($q) => $q->where('user_id', $staffUserId))
+                ->whereHas('participantes', fn ($q) => $q->where('user_id', $pacienteUserId))
+                ->first();
+
+            if (! $conv) {
+                $conv = ChatConversacion::create([
+                    'clinica_id' => $cita->clinica_id,
+                    'tipo' => 'directo',
+                    'nombre' => null,
+                    'created_by' => $staffUserId,
+                ]);
+
+                ChatParticipante::create([
+                    'conversacion_id' => $conv->id,
+                    'user_id' => $staffUserId,
+                    'last_read_at' => now(),
+                ]);
+
+                ChatParticipante::create([
+                    'conversacion_id' => $conv->id,
+                    'user_id' => $pacienteUserId,
+                    'last_read_at' => null,
+                ]);
+            }
+
+            $mensajeInicial = trim((string) $request->input('mensaje_inicial', ''));
+            if ($mensajeInicial !== '') {
+                ChatMensaje::create([
+                    'conversacion_id' => $conv->id,
+                    'user_id' => $staffUserId,
+                    'mensaje' => $mensajeInicial,
+                ]);
+                ChatParticipante::where('conversacion_id', $conv->id)
+                    ->where('user_id', $staffUserId)
+                    ->update(['last_read_at' => now()]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat listo',
+                'data' => [
+                    'conversacion_id' => $conv->id,
+                    'paciente_user_id' => $pacienteUserId,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al abrir chat del paciente: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -13,6 +13,8 @@ class ClinicaPaciente extends Pivot
         'portal_visible_citas' => 'boolean',
         'portal_visible_datos_basicos' => 'boolean',
         'portal_visible_expediente_resumen' => 'boolean',
+        'portal_agenda_bloqueado' => 'boolean',
+        'portal_agenda_bloqueado_hasta' => 'date',
         'vinculado_at' => 'datetime',
     ];
 }

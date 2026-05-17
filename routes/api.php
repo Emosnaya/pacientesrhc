@@ -150,6 +150,10 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/clinicas', [PacientePortalController::class, 'clinicas']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/resumen', [PacientePortalController::class, 'clinicaResumen']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/citas', [PacientePortalController::class, 'citas']);
+    Route::get('/paciente-portal/agenda/clinicas', [PacientePortalController::class, 'agendaClinicas']);
+    Route::get('/paciente-portal/agenda/disponibilidad', [PacientePortalController::class, 'agendaDisponibilidad']);
+    Route::post('/paciente-portal/agenda/citas', [PacientePortalController::class, 'agendaCrearCita']);
+    Route::post('/paciente-portal/agenda/citas/{id}/reagendar', [PacientePortalController::class, 'agendaReagendarCita']);
     Route::get('/paciente-portal/perfil', [PacientePortalController::class, 'perfil']);
     Route::put('/paciente-portal/perfil', [PacientePortalController::class, 'updatePerfil']);
     Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
@@ -294,6 +298,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/citas', CitaController::class);
     Route::get('/citas/calendar/data', [CitaController::class, 'getCalendarData']);
     Route::put('/citas/{id}/status', [CitaController::class, 'changeStatus']);
+    Route::post('/citas/{id}/chat', [CitaController::class, 'abrirChatPaciente']);
     Route::post('/citas/multiple', [CitaController::class, 'storeMultiple']);
     Route::delete('/citas/{id}/force', [CitaController::class, 'forceDelete']);
 

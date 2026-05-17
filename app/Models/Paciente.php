@@ -178,6 +178,9 @@ class Paciente extends Model
                 'portal_visible_citas',
                 'portal_visible_datos_basicos',
                 'portal_visible_expediente_resumen',
+                'portal_agenda_bloqueado',
+                'portal_agenda_bloqueado_hasta',
+                'portal_agenda_bloqueo_motivo',
                 'motivo_consulta',
                 'tipo_paciente',
                 'numero_expediente'
