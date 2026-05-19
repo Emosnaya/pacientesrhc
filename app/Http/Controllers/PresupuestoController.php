@@ -400,7 +400,14 @@ class PresupuestoController extends Controller
             $tipo = $validated['aceptacion_tipo'] ?? 'visualizacion';
             if ($tipo === 'firma') {
                 $firma = $validated['firma_paciente'] ?? null;
-                if (! $firma || ! preg_match('/^data:image\/(png|jpg|jpeg);base64,/', $firma)) {
+                $esDataImage = is_string($firma) && preg_match('/^data:image\/[a-zA-Z0-9.+-]+;base64,/', $firma);
+                $base64Payload = null;
+                if ($esDataImage) {
+                    $parts = explode(',', $firma, 2);
+                    $base64Payload = $parts[1] ?? null;
+                }
+
+                if (! $esDataImage || ! $base64Payload || base64_decode($base64Payload, true) === false) {
                     return response()->json([
                         'message' => 'La firma digital es requerida y debe ser una imagen válida en base64.',
                     ], 422);
