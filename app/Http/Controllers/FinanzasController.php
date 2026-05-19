@@ -207,13 +207,6 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $pago = Pago::findOrFail($id);
 
-        // Verificar permisos: solo superadmin puede eliminar pagos
-        if (!$user->isSuperAdmin()) {
-            return response()->json([
-                'message' => 'Solo los administradores pueden eliminar pagos'
-            ], 403);
-        }
-
         // Verificar que el pago pertenece a la misma clínica
         if ($pago->clinica_id !== $user->clinica_efectiva_id) {
             return response()->json([
