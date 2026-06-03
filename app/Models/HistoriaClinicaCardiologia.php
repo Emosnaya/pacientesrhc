@@ -26,6 +26,7 @@ class HistoriaClinicaCardiologia extends Model
         'antecedentes_cardiovasculares',
         'factores_riesgo',
         'antecedentes_familiares',
+        'antecedentes_gineco_obstetricos',
         // Medicación
         'medicacion_cardiovascular',
         'medicacion_otros',
@@ -71,6 +72,7 @@ class HistoriaClinicaCardiologia extends Model
         'antecedentes_cardiovasculares' => 'array',
         'factores_riesgo' => 'array',
         'antecedentes_familiares' => 'array',
+        'antecedentes_gineco_obstetricos' => 'array',
         'sintomas' => 'array',
         'exploracion_cardiovascular' => 'array',
         'pulsos_perifericos' => 'array',
@@ -124,6 +126,12 @@ class HistoriaClinicaCardiologia extends Model
             'cardiopatia_congenita' => ['tiene' => false, 'detalle' => ''],
             'dispositivo' => ['tiene' => false, 'tipo' => '', 'fecha' => null],
             'cirugia_cardiaca' => ['tiene' => false, 'detalle' => ''],
+            'cirugias' => [],
+            'transfusiones' => ['tiene' => false, 'detalle' => ''],
+            'enfermedades_respiratorias' => ['tiene' => false, 'detalle' => ''],
+            'gastrointestinales' => ['tiene' => false, 'detalle' => ''],
+            'enfermedades_renales' => ['tiene' => false, 'detalle' => ''],
+            'traumatismos_accidentes' => ['tiene' => false, 'detalle' => ''],
             'cateterismo' => ['tiene' => false, 'detalle' => ''],
             'angioplastia' => ['tiene' => false, 'detalle' => ''],
             'otros' => '',
@@ -248,6 +256,10 @@ class HistoriaClinicaCardiologia extends Model
             'cateterismo' => '',
             'angiotac' => '',
             'rmn_cardiaca' => '',
+            'radiografia_torax' => '',
+            'perfusion_miocardica' => '',
+            'medicina_nuclear' => '',
+            'angiotac_coronarias' => '',
             'otros' => '',
         ];
     }
@@ -270,6 +282,39 @@ class HistoriaClinicaCardiologia extends Model
             'bnp' => '',
             'troponinas' => '',
             'dimero_d' => '',
+            'otros' => '',
+            'bun' => '',
+            'acido_urico' => '',
+            'perfil_tiroideo' => ['tsh' => '', 't3' => '', 't4' => ''],
+            'electrolitos' => ['cloro' => '', 'potasio' => '', 'magnesio' => ''],
+        ];
+    }
+
+    /**
+     * Obtener estructura vacía de antecedentes ginecoobstétricos (solo pacientes femeninas)
+     */
+    public static function getEmptyGinecoObstetricos(): array
+    {
+        return [
+            'menarquia'        => '',
+            'fum'              => '',
+            'ciclos'           => ['regulares' => true, 'duracion' => ''],
+            'menopausia'       => ['tiene' => false, 'edad' => '', 'tipo' => ''],
+            'terapia_hormonal' => ['tiene' => false, 'tipo' => ''],
+            'formula_obstetrica' => [
+                'gestas'      => '',
+                'partos'      => '',
+                'cesareas'    => '',
+                'abortos'     => '',
+                'hijos_vivos' => '',
+            ],
+            'complicaciones' => [
+                'preeclampsia'                => false,
+                'eclampsia'                   => false,
+                'diabetes_gestacional'        => false,
+                'parto_pretermino'            => false,
+                'perdida_gestacional_recurrente' => false,
+            ],
             'otros' => '',
         ];
     }

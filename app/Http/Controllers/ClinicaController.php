@@ -406,12 +406,14 @@ class ClinicaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'email' => 'required|email|unique:clinicas,email,' . $clinica->id,
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:500',
-            'plan' => 'nullable|in:mensual,trimestral,anual',
-            'color_principal' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'nombre'                    => 'required|string|max:255',
+            'email'                     => 'required|email|unique:clinicas,email,' . $clinica->id,
+            'telefono'                  => 'nullable|string|max:20',
+            'direccion'                 => 'nullable|string|max:500',
+            'plan'                      => 'nullable|in:mensual,trimestral,anual',
+            'color_principal'           => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'facturacion_iva_incluido'  => 'nullable|boolean',
+            'facturacion_tasa_iva'      => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -432,6 +434,14 @@ class ClinicaController extends Controller
             // Solo superAdmin puede cambiar el plan
             if ($user->isSuperAdmin() && $request->has('plan')) {
                 $data['plan'] = $request->plan;
+            }
+
+            // Configuración de facturación (solo admin/superadmin)
+            if ($request->has('facturacion_iva_incluido')) {
+                $data['facturacion_iva_incluido'] = (bool) $request->facturacion_iva_incluido;
+            }
+            if ($request->has('facturacion_tasa_iva')) {
+                $data['facturacion_tasa_iva'] = (float) $request->facturacion_tasa_iva;
             }
 
             $clinica->update($data);

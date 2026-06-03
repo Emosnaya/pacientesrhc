@@ -152,7 +152,7 @@
             </div>
             <div class="block">
                 <h3 class="block-title">Detalles del pago</h3>
-                <div class="row"><dt>Método</dt><dd>{{ ucfirst($pago->metodo_pago ?? '') }}</dd></div>
+                <div class="row"><dt>Método</dt><dd>{{ \App\Models\Pago::etiquetaMetodo($pago->metodo_pago ?? null) }}</dd></div>
                 @if($pago->referencia)<div class="row"><dt>Referencia</dt><dd>{{ $pago->referencia }}</dd></div>@endif
                 @if($pago->concepto)<div class="row"><dt>Concepto</dt><dd>{{ $pago->concepto }}</dd></div>@endif
             </div>

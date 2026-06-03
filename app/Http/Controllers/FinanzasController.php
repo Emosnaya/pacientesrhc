@@ -6,6 +6,8 @@ use App\Models\Pago;
 use App\Models\Egreso;
 use App\Models\Paciente;
 use App\Models\Clinica;
+use App\Models\SuscripcionFacturas;
+use App\Support\ConsultorioScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +38,7 @@ class FinanzasController extends Controller
         $request->validate([
             'paciente_id' => 'nullable|exists:pacientes,id',
             'monto' => 'required|numeric|min:0.01',
-            'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
+            'metodo_pago' => Pago::reglaValidacionMetodoPago(),
             'referencia' => 'nullable|string|max:255',
             'concepto' => 'nullable|string|max:500',
             'notas' => 'nullable|string',
@@ -133,7 +135,7 @@ class FinanzasController extends Controller
         $request->validate([
             'paciente_id' => 'nullable|exists:pacientes,id',
             'monto' => 'required|numeric|min:0.01',
-            'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
+            'metodo_pago' => Pago::reglaValidacionMetodoPago(),
             'referencia' => 'nullable|string|max:255',
             'concepto' => 'nullable|string|max:500',
             'notas' => 'nullable|string',
@@ -295,6 +297,8 @@ class FinanzasController extends Controller
                 $query->where('tipo_egreso', $request->tipo_egreso);
             }
 
+            ConsultorioScope::scopeEgresos($query, $user);
+
             $egresos = $query->orderBy('created_at', 'desc')
                 ->paginate($request->per_page ?? 50);
 
@@ -320,6 +324,10 @@ class FinanzasController extends Controller
                 ->where('sucursal_id', $user->sucursal_id)
                 ->with(['usuario', 'clinica', 'sucursal'])
                 ->firstOrFail();
+
+            if (! ConsultorioScope::puedeAccederRecursoMedico($user, $egreso->user_id)) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
 
             return response()->json($egreso);
         } catch (\Exception $e) {
@@ -397,6 +405,8 @@ class FinanzasController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
+        ConsultorioScope::scopePagos($query, $user);
+
         // Ordenar por fecha descendente
         $query->orderBy('created_at', 'desc');
 
@@ -418,6 +428,10 @@ class FinanzasController extends Controller
         $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal'])
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
+
+        if (! ConsultorioScope::puedeAccederRecursoMedico($user, $pago->user_id)) {
+            return response()->json(['message' => 'No tienes permiso para ver este pago'], 403);
+        }
 
         return response()->json($pago);
     }
@@ -457,20 +471,25 @@ class FinanzasController extends Controller
             $etiquetaPeriodo = Carbon::parse($fecha)->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
         }
 
+        $filtrarMedico = ConsultorioScope::esConsultorioPrivado($user);
+        $medicoId = $user->id;
+
         // Total por método de pago (ingresos)
         $totalesPorMetodo = Pago::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
+            ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
             ->select('metodo_pago', DB::raw('COUNT(*) as cantidad'))
             ->groupBy('metodo_pago')
             ->get()
-            ->map(function($item) use ($clinicaId, $request, $fechaInicio, $fechaFin) {
+            ->map(function($item) use ($clinicaId, $request, $fechaInicio, $fechaFin, $filtrarMedico, $medicoId) {
                 // Obtener el monto total desencriptado para este método
                 $pagos = Pago::where('metodo_pago', $item->metodo_pago)
                     ->betweenDates($fechaInicio, $fechaFin)
                     ->where('clinica_id', $clinicaId)
+                    ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
                     ->when($request->filled('sucursal_id'), function($q) use ($request) {
                         $q->where('sucursal_id', $request->sucursal_id);
                     })
@@ -490,6 +509,7 @@ class FinanzasController extends Controller
         // Total general de ingresos (pagos)
         $todosPagos = Pago::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
+            ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
@@ -504,6 +524,7 @@ class FinanzasController extends Controller
         // Total de egresos del período
         $todosEgresos = Egreso::where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
+            ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
@@ -522,6 +543,7 @@ class FinanzasController extends Controller
         $ultimosPagos = Pago::with(['paciente', 'usuario', 'clinica', 'sucursal'])
             ->where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
+            ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
@@ -529,16 +551,41 @@ class FinanzasController extends Controller
             ->limit(50)
             ->get();
 
+        $pagoIds = $ultimosPagos->pluck('id')->filter()->values();
+        $solicitudesPorPago = collect();
+        if ($pagoIds->isNotEmpty()) {
+            $solicitudesPorPago = \App\Models\SolicitudFactura::whereIn('pago_id', $pagoIds)
+                ->whereIn('estado', \App\Models\SolicitudFactura::ESTADOS_OCUPAN_PAGO)
+                ->get()
+                ->keyBy('pago_id');
+        }
+
+        $ultimosPagos = $ultimosPagos->map(function ($pago) use ($solicitudesPorPago) {
+            $sol = $solicitudesPorPago->get($pago->id);
+            $pago->tiene_factura = $sol !== null;
+            $pago->factura_estado = $sol?->estado;
+            $pago->solicitud_factura_id = $sol?->id;
+            $pago->factura_folio = $sol?->folio_fiscal;
+            return $pago;
+        });
+
         // Últimos egresos del período
         $ultimosEgresos = Egreso::with(['usuario', 'clinica', 'sucursal'])
             ->where('clinica_id', $clinicaId)
             ->betweenDates($fechaInicio, $fechaFin)
+            ->when($filtrarMedico, fn ($q) => $q->where('user_id', $medicoId))
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
             })
             ->latest()
             ->limit(50)
             ->get();
+
+        $facturacion = SuscripcionFacturas::estadoFacturacionParaClinica(
+            $clinicaId,
+            Clinica::find($clinicaId),
+            $user
+        );
 
         return response()->json([
             'fecha' => $fecha,
@@ -553,7 +600,8 @@ class FinanzasController extends Controller
             'cantidad_pagos' => $cantidadPagos,
             'cantidad_egresos' => $cantidadEgresos,
             'ultimos_pagos' => $ultimosPagos,
-            'ultimos_egresos' => $ultimosEgresos
+            'ultimos_egresos' => $ultimosEgresos,
+            'facturacion' => $facturacion,
         ]);
     }
 
@@ -569,27 +617,31 @@ class FinanzasController extends Controller
         $fechaInicio = $request->input('fecha_inicio', Carbon::now()->startOfMonth()->toDateString());
         $fechaFin = $request->input('fecha_fin', Carbon::now()->endOfMonth()->toDateString());
 
-        $pagos = Pago::with('paciente')
+        $pagosQuery = Pago::with('paciente')
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
-            })
-            ->get();
+            });
+
+        ConsultorioScope::scopePagos($pagosQuery, $user);
+        $pagos = $pagosQuery->get();
 
         $totalIngresos = $pagos->sum(function($pago) {
             return (float) $pago->monto;
         });
 
         // Obtener egresos del mismo período
-        $egresos = Egreso::where('clinica_id', $user->clinica_efectiva_id)
+        $egresosQuery = Egreso::where('clinica_id', $user->clinica_efectiva_id)
             ->whereDate('created_at', '>=', $fechaInicio)
             ->whereDate('created_at', '<=', $fechaFin)
             ->when($request->filled('sucursal_id'), function($query) use ($request) {
                 $query->where('sucursal_id', $request->sucursal_id);
-            })
-            ->get();
+            });
+
+        ConsultorioScope::scopeEgresos($egresosQuery, $user);
+        $egresos = $egresosQuery->get();
 
         $totalEgresos = $egresos->sum(function($egreso) {
             return (float) $egreso->monto;
@@ -691,11 +743,13 @@ class FinanzasController extends Controller
         $paciente = Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)
             ->findOrFail($pacienteId);
 
-        $pagos = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
+        $pagosQuery = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
             ->where('paciente_id', $pacienteId)
             ->where('clinica_id', $user->clinica_efectiva_id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        ConsultorioScope::scopePagos($pagosQuery, $user);
+        $pagos = $pagosQuery->get();
 
         $totalPagado = $pagos->sum(function($pago) {
             return (float) $pago->monto;
@@ -950,6 +1004,8 @@ class FinanzasController extends Controller
         $query = Pago::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['paciente', 'usuario', 'sucursal']);
 
+        ConsultorioScope::scopePagos($query, $user);
+
         if ($sucursalId) {
             $query->where('sucursal_id', $sucursalId);
         }
@@ -989,6 +1045,8 @@ class FinanzasController extends Controller
         $queryEgresos = Egreso::where('clinica_id', $user->clinica_efectiva_id)
             ->with(['usuario', 'sucursal']);
 
+        ConsultorioScope::scopeEgresos($queryEgresos, $user);
+
         if ($sucursalId) {
             $queryEgresos->where('sucursal_id', $sucursalId);
         }
@@ -1024,7 +1082,7 @@ class FinanzasController extends Controller
         
         $totales = [
             'efectivo' => $pagos->where('metodo_pago', 'efectivo')->sum('monto'),
-            'tarjeta' => $pagos->where('metodo_pago', 'tarjeta')->sum('monto'),
+            'tarjeta' => $pagos->whereIn('metodo_pago', Pago::METODOS_TARJETA)->sum('monto'),
             'transferencia' => $pagos->where('metodo_pago', 'transferencia')->sum('monto'),
             'total_ingresos' => $totalIngresos,
             'total_egresos' => $totalEgresos,
@@ -1270,14 +1328,17 @@ class FinanzasController extends Controller
         $row++;
 
         $metodosResumen = [
-            ['metodo' => 'Efectivo', 'tipo' => 'efectivo'],
-            ['metodo' => 'Tarjeta', 'tipo' => 'tarjeta'],
-            ['metodo' => 'Transferencia', 'tipo' => 'transferencia']
+            ['metodo' => 'Efectivo', 'tipos' => ['efectivo']],
+            ['metodo' => 'Tarjeta débito', 'tipos' => ['tarjeta_debito', 'tarjeta']],
+            ['metodo' => 'Tarjeta crédito', 'tipos' => ['tarjeta_credito']],
+            ['metodo' => 'Transferencia', 'tipos' => ['transferencia']],
         ];
 
         foreach ($metodosResumen as $metodo) {
-            $cantidad = $pagos->where('metodo_pago', $metodo['tipo'])->count();
-            $total = $pagos->where('metodo_pago', $metodo['tipo'])->sum(function($p) { return (float) $p->monto; });
+            $cantidad = $pagos->whereIn('metodo_pago', $metodo['tipos'])->count();
+            $total = $pagos->whereIn('metodo_pago', $metodo['tipos'])->sum(function ($p) {
+                return (float) $p->monto;
+            });
             
             $sheet->setCellValue("A{$row}", $metodo['metodo']);
             $sheet->setCellValue("B{$row}", $cantidad);

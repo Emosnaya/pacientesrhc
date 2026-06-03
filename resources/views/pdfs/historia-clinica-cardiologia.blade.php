@@ -297,9 +297,109 @@
                         <span class="lbl">Otros:</span> {{ $acv['otros'] ?? '—' }}
                     </td>
                 </tr>
+                <tr>
+                    <td colspan="2">
+                        <span class="lbl">Cirugías:</span>
+                        @if(!empty($acv['cirugias'] ?? []))
+                            <div class="text-block">{!! nl2br(e(implode("\n", $acv['cirugias']))) !!}</div>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td>
+                        <span class="lbl">Transfusiones:</span>
+                        @if($acv['transfusiones']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $acv['transfusiones']['detalle'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                    <td>
+                        <span class="lbl">Enf. Respiratorias:</span>
+                        @if($acv['enfermedades_respiratorias']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $acv['enfermedades_respiratorias']['detalle'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="lbl">Gastrointestinales:</span>
+                        @if($acv['gastrointestinales']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $acv['gastrointestinales']['detalle'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                    <td>
+                        <span class="lbl">Enf. Renales:</span>
+                        @if($acv['enfermedades_renales']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $acv['enfermedades_renales']['detalle'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                    <td colspan="2">
+                        <span class="lbl">Traumatismos / Accidentes:</span>
+                        @if($acv['traumatismos_accidentes']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $acv['traumatismos_accidentes']['detalle'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                </tr>
             </table>
         </div>
     </div>
+
+    <!-- ANTECEDENTES GINECOOBSTÉTRICOS (solo pacientes femeninas: genero == 0) -->
+    @php $gineco = $historia->antecedentes_gineco_obstetricos ?? []; @endphp
+    @if(isset($paciente->genero) && (int)$paciente->genero === 0 && !empty($gineco))
+    <div class="section">
+        <div class="section-title">Antecedentes Ginecoobstétricos</div>
+        <div class="section-body">
+            <table class="row-table">
+                <tr>
+                    <td width="20%"><span class="lbl">Menarquia:</span> {{ $gineco['menarquia'] ?? '—' }} años</td>
+                    <td width="20%"><span class="lbl">FUM:</span> {{ $gineco['fum'] ?? '—' }}</td>
+                    <td width="20%">
+                        <span class="lbl">Ciclos:</span>
+                        {{ ($gineco['ciclos']['regulares'] ?? true) ? 'Regulares' : 'Irregulares' }}
+                        @if($gineco['ciclos']['duracion'] ?? '') {{ $gineco['ciclos']['duracion'] }} días @endif
+                    </td>
+                    <td width="20%">
+                        <span class="lbl">Menopausia:</span>
+                        @if($gineco['menopausia']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $gineco['menopausia']['edad'] ?? '' }} años
+                            ({{ $gineco['menopausia']['tipo'] ?? '' }})
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                    <td width="20%">
+                        <span class="lbl">T. Hormonal:</span>
+                        @if($gineco['terapia_hormonal']['tiene'] ?? false)
+                            <span class="check-yes">Sí</span> — {{ $gineco['terapia_hormonal']['tipo'] ?? '' }}
+                        @else <span class="check-no">No</span> @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="5">
+                        @php $fo = $gineco['formula_obstetrica'] ?? []; @endphp
+                        <span class="lbl">Fórmula obstétrica:</span>
+                        G<strong>{{ $fo['gestas'] ?? '0' }}</strong>
+                        P<strong>{{ $fo['partos'] ?? '0' }}</strong>
+                        C<strong>{{ $fo['cesareas'] ?? '0' }}</strong>
+                        A<strong>{{ $fo['abortos'] ?? '0' }}</strong>
+                        HV<strong>{{ $fo['hijos_vivos'] ?? '0' }}</strong>
+                        &nbsp;&nbsp;
+                        @php $comp = $gineco['complicaciones'] ?? []; @endphp
+                        @if(in_array(true, $comp, true))
+                            <span class="lbl">Compl. obstétricas:</span>
+                            @if($comp['preeclampsia'] ?? false) <span class="check-yes">Preeclampsia</span> @endif
+                            @if($comp['eclampsia'] ?? false) <span class="check-yes">Eclampsia</span> @endif
+                            @if($comp['diabetes_gestacional'] ?? false) <span class="check-yes">DG</span> @endif
+                            @if($comp['parto_pretermino'] ?? false) <span class="check-yes">Parto pretérmino</span> @endif
+                            @if($comp['perdida_gestacional_recurrente'] ?? false) <span class="check-yes">Pérd. gestacional</span> @endif
+                        @endif
+                    </td>
+                </tr>
+                @if($gineco['otros'] ?? '')
+                <tr><td colspan="5"><span class="lbl">Otros:</span> {{ $gineco['otros'] }}</td></tr>
+                @endif
+            </table>
+        </div>
+    </div>
+    @endif
 
     <!-- FACTORES DE RIESGO + ANTECEDENTES FAMILIARES -->
     @php $fr = $historia->factores_riesgo ?? []; $af = $historia->antecedentes_familiares ?? []; @endphp
@@ -608,6 +708,10 @@
                                 'cateterismo' => 'Cateterismo',
                                 'angiotac' => 'AngioTAC',
                                 'rmn_cardiaca' => 'RMN Cardiaca',
+                                'radiografia_torax' => 'Radiografía Tórax',
+                                'perfusion_miocardica' => 'Perfusión Miocárdica',
+                                'medicina_nuclear' => 'Medicina Nuclear',
+                                'angiotac_coronarias' => 'Angio-TAC Coronarias',
                             ] as $key => $label)
                             @if($est[$key] ?? '')
                             <tr>
@@ -641,6 +745,8 @@
                                 'bnp' => 'BNP',
                                 'troponinas' => 'Troponinas',
                                 'dimero_d' => 'Dímero D',
+                                'bun' => 'BUN',
+                                'acido_urico' => 'Ácido Úrico',
                             ] as $key => $label)
                             @if($lab[$key] ?? '')
                             <tr>
@@ -651,6 +757,22 @@
                             @endforeach
                             @if($lab['otros'] ?? '')
                             <tr><td><span class="lbl">Otros:</span></td><td>{{ $lab['otros'] }}</td></tr>
+                            @endif
+                            @if(!empty($lab['perfil_tiroideo'] ?? []))
+                            <tr>
+                                <td><span class="lbl">Perfil Tiroideo (TSH/T3/T4):</span></td>
+                                <td>
+                                    TSH: {{ $lab['perfil_tiroideo']['tsh'] ?? '—' }}
+                                    &nbsp;|&nbsp; T3: {{ $lab['perfil_tiroideo']['t3'] ?? '—' }}
+                                    &nbsp;|&nbsp; T4: {{ $lab['perfil_tiroideo']['t4'] ?? '—' }}
+                                </td>
+                            </tr>
+                            @endif
+                            @if(!empty($lab['electrolitos'] ?? []))
+                            <tr>
+                                <td><span class="lbl">Electrolitos:</span></td>
+                                <td>Cloro: {{ $lab['electrolitos']['cloro'] ?? '—' }} | K+: {{ $lab['electrolitos']['potasio'] ?? '—' }} | Mg: {{ $lab['electrolitos']['magnesio'] ?? '—' }}</td>
+                            </tr>
                             @endif
                         </table>
                     </div>

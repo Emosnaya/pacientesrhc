@@ -2,48 +2,38 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Clinica;
+use App\Services\SubscriptionStatusService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Clinica;
 
-/**
- * Middleware que valida suscripción activa para clínicas/consultorios.
- * 
- * Si la suscripción está vencida:
- * - Clínicas empresariales: Deben contactar a ventas
- * - Consultorios privados: Pueden renovar directamente vía Stripe
- */
 class EnsureSubscriptionActive
 {
-    /**
-     * Rutas exentas de validación de suscripción
-     */
     protected array $exemptRoutes = [
         'api/user',
         'api/logout',
-        'api/clinica-contacto-comercial', // Para solicitar contacto
-        'api/suscripcion-consultorio',    // Para renovar
-        'api/subscription',               // Para verificar/renovar
-        'api/stripe/webhook',             // Webhooks de Stripe
-        'api/paciente-portal',            // Portal del paciente
+        'api/clinica-contacto-comercial',
+        'api/suscripcion-consultorio',
+        'api/subscription',
+        'api/stripe/webhook',
+        'api/paciente-portal',
+        'api/consultorio/mis-clinicas',
+        'api/consultorio/cambiar-workspace',
     ];
 
     public function handle(Request $request, Closure $next)
     {
-        // Solo aplicar si el usuario está autenticado
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return $next($request);
         }
 
         $user = Auth::user();
 
-        // Cuentas de portal del paciente no requieren validación de suscripción
-        if ($user->paciente_id && !$user->clinica_id && !$user->clinica_activa_id) {
+        if ($user->paciente_id && ! $user->clinica_id && ! $user->clinica_activa_id) {
             return $next($request);
         }
 
-        // Verificar si la ruta está exenta
         $path = $request->path();
         foreach ($this->exemptRoutes as $exemptRoute) {
             if (str_starts_with($path, $exemptRoute)) {
@@ -51,165 +41,41 @@ class EnsureSubscriptionActive
             }
         }
 
-        // Obtener la clínica/consultorio actual
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
-        
-        if (!$clinicaId) {
+        if (! $clinicaId) {
             return $next($request);
         }
 
         $clinica = Clinica::find($clinicaId);
-        
-        if (!$clinica) {
+        if (! $clinica) {
             return $next($request);
         }
 
-        // Verificar si la suscripción está activa
-        $subscriptionStatus = $this->getSubscriptionStatus($clinica, $user);
+        app(\App\Services\StripeSubscriptionRenewalService::class)
+            ->repairClinicaStripePeriodIfNeeded($clinica);
+        $clinica->refresh();
 
-        if (!$subscriptionStatus['active']) {
+        $status = SubscriptionStatusService::getStatus($clinica, $user);
+
+        if (! $status['active']) {
             return response()->json([
                 'success' => false,
-                'message' => $subscriptionStatus['message'],
+                'message' => $status['message'],
                 'subscription_expired' => true,
-                'subscription_info' => [
-                    'tipo' => $subscriptionStatus['tipo'],
-                    'clinica_id' => $clinica->id,
-                    'clinica_nombre' => $clinica->nombre,
-                    'es_consultorio' => $clinica->es_consultorio_privado,
-                    'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
-                    'dias_vencido' => $subscriptionStatus['dias_vencido'],
-                    'puede_renovar_online' => $subscriptionStatus['puede_renovar_online'],
-                    'contacto_comercial_url' => $subscriptionStatus['contacto_url'],
-                    'renovacion_url' => $subscriptionStatus['renovacion_url'],
-                    'planes_disponibles' => (function () use ($clinica) {
-                        $mes  = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'mensual', $clinica->es_consultorio_privado ?? false);
-                        $anio = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'anual',   $clinica->es_consultorio_privado ?? false);
-                        return [
-                            'mensual' => ['precio' => $mes['total'],  'ciclo' => 'mensual', 'etiqueta' => 'Precio de lanzamiento'],
-                            'anual'   => ['precio' => $anio['total'], 'ciclo' => 'anual',   'ahorro' => $anio['ahorro'] ?? 0, 'etiqueta' => 'Precio de lanzamiento'],
-                        ];
-                    })(),
-                ]
-            ], 402); // 402 Payment Required
+                'subscription_info' => SubscriptionStatusService::subscriptionInfoForResponse($clinica, $status),
+            ], 402);
         }
 
-        // Advertencia si está por vencer (menos de 7 días)
-        if ($subscriptionStatus['dias_restantes'] !== null && $subscriptionStatus['dias_restantes'] <= 7 && $subscriptionStatus['dias_restantes'] > 0) {
+        if ($status['dias_restantes'] !== null && $status['dias_restantes'] <= 7 && $status['dias_restantes'] > 0) {
             $request->merge([
                 'subscription_warning' => [
-                    'dias_restantes' => $subscriptionStatus['dias_restantes'],
+                    'dias_restantes' => $status['dias_restantes'],
                     'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
                     'es_consultorio' => $clinica->es_consultorio_privado,
-                ]
+                ],
             ]);
         }
 
         return $next($request);
-    }
-
-    /**
-     * Obtener estado detallado de la suscripción
-     */
-    protected function getSubscriptionStatus(Clinica $clinica, $user): array
-    {
-        $now = now();
-        $fechaVencimiento = $clinica->fecha_vencimiento;
-        $esConsultorio = $clinica->es_consultorio_privado;
-
-        // Si no tiene fecha de vencimiento, revisar si está pagada
-        if (!$fechaVencimiento && !$clinica->pagado) {
-            // Verificar si tiene trial activo
-            if ($clinica->trial_ends_at && $now->lessThanOrEqualTo($clinica->trial_ends_at)) {
-                return [
-                    'active' => true,
-                    'tipo' => 'trial_activo',
-                    'message' => null,
-                    'dias_vencido' => null,
-                    'dias_restantes' => $now->diffInDays($clinica->trial_ends_at, false),
-                    'puede_renovar_online' => false,
-                    'contacto_url' => null,
-                    'renovacion_url' => null,
-                ];
-            }
-            return [
-                'active' => false,
-                'tipo' => $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'message' => 'No se ha registrado ningún pago para esta cuenta.',
-                'dias_vencido' => null,
-                'dias_restantes' => null,
-                'puede_renovar_online' => $esConsultorio,
-                'contacto_url' => '/api/clinica-contacto-comercial',
-                'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
-            ];
-        }
-
-        // Si no tiene fecha de vencimiento pero está pagada (plan perpetuo/legacy)
-        if (!$fechaVencimiento && $clinica->pagado && $clinica->activa) {
-            return [
-                'active' => true,
-                'tipo' => 'perpetuo',
-                'message' => null,
-                'dias_vencido' => null,
-                'dias_restantes' => null,
-                'puede_renovar_online' => false,
-                'contacto_url' => null,
-                'renovacion_url' => null,
-            ];
-        }
-
-        // Calcular días
-        $diasRestantes = $fechaVencimiento ? $now->diffInDays($fechaVencimiento, false) : null;
-        
-        // Suscripción vencida
-        if ($fechaVencimiento && $now->greaterThan($fechaVencimiento)) {
-            $diasVencido = abs($diasRestantes);
-            
-            return [
-                'active' => false,
-                'tipo' => $esConsultorio ? 'consultorio_vencido' : 'clinica_vencida',
-                'message' => $esConsultorio 
-                    ? "Tu suscripción venció hace {$diasVencido} días. Renueva para continuar usando el sistema."
-                    : "La suscripción de tu clínica ha vencido. Contacta con nuestro equipo comercial para renovar.",
-                'dias_vencido' => $diasVencido,
-                'dias_restantes' => null,
-                'puede_renovar_online' => $esConsultorio,
-                'contacto_url' => '/api/clinica-contacto-comercial',
-                'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
-            ];
-        }
-
-        // Para consultorios: verificar también la suscripción del usuario propietario
-        // Solo si la clínica no tiene fecha_vencimiento válida en el futuro
-        if ($esConsultorio && $clinica->propietario_user_id) {
-            $propietario = $clinica->propietario ?? $user;
-            if ($propietario && !$propietario->tieneSuscripcionConsultorioActiva()) {
-                // Respetar fecha_vencimiento si está en el futuro
-                if (!$fechaVencimiento || !$now->lessThan($fechaVencimiento)) {
-                    return [
-                        'active' => false,
-                        'tipo' => 'consultorio_vencido',
-                        'message' => 'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
-                        'dias_vencido' => 0,
-                        'dias_restantes' => null,
-                        'puede_renovar_online' => true,
-                        'contacto_url' => null,
-                        'renovacion_url' => '/suscripcion',
-                    ];
-                }
-            }
-        }
-
-        // Suscripción activa
-        return [
-            'active' => true,
-            'tipo' => $esConsultorio ? 'consultorio_activo' : 'clinica_activa',
-            'message' => null,
-            'dias_vencido' => null,
-            'dias_restantes' => $diasRestantes,
-            'puede_renovar_online' => $esConsultorio,
-            'contacto_url' => null,
-            'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
-        ];
     }
 }

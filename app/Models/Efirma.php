@@ -34,6 +34,11 @@ class Efirma extends Model
         // Usos unificados
         'usar_para_recetas',
         'usar_para_facturacion',
+        'facturapi_organization_id',
+        'facturapi_api_key_test',
+        'facturapi_api_key_live',
+        'facturapi_configured',
+        'facturacion_serie',
     ];
 
     protected $casts = [
@@ -44,6 +49,7 @@ class Efirma extends Model
         'verificada' => 'boolean',
         'usar_para_recetas' => 'boolean',
         'usar_para_facturacion' => 'boolean',
+        'facturapi_configured' => 'boolean',
     ];
 
     protected $hidden = [
@@ -100,6 +106,30 @@ class Efirma extends Model
     public function scopeDeClinica($query, $clinicaId)
     {
         return $query->where('clinica_id', $clinicaId);
+    }
+
+    /**
+     * E.firma del médico para emitir CFDI (unificada personal o fiscal legacy).
+     */
+    public static function paraFacturacionUsuario(int $userId): ?self
+    {
+        $fiscal = static::where('user_id', $userId)->where('tipo', 'fiscal')->first();
+        if ($fiscal) {
+            return $fiscal;
+        }
+
+        // Compatibilidad: flujo unificado anterior (e.firma personal con toggle de facturación)
+        $personal = static::where('user_id', $userId)->where('tipo', 'personal')->first();
+        if ($personal && ($personal->usar_para_facturacion ?? false)) {
+            return $personal;
+        }
+
+        return null;
+    }
+
+    public function listaParaFacturapi(): bool
+    {
+        return (bool) $this->facturapi_organization_id && ($this->facturapi_configured ?? false);
     }
 
     // ─────────────────────────────── Accessors ────────────────────────────────
@@ -218,48 +248,63 @@ class Efirma extends Model
         // 3. OU (Organizational Unit)
         // 4. En el nombre (CN) separado por /
         $rfc = null;
-        $rfcPattern = '/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i';
-        
-        // Intentar x500UniqueIdentifier primero
+        // Flag 'u' es crítico para que Ñ y & funcionen correctamente en UTF-8
+        $rfcPattern     = '/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/iu';
+        $rfcPatternFind = '/([A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3})/iu';
+
+        // Helper: normaliza encoding a UTF-8 antes de aplicar regex
+        $toUtf8 = function (string $s): string {
+            if (mb_detect_encoding($s, 'UTF-8', true)) {
+                return $s;
+            }
+            return mb_convert_encoding($s, 'UTF-8', mb_detect_encoding($s) ?: 'ISO-8859-1');
+        };
+
+        // 1. x500UniqueIdentifier (más común en CSD del SAT)
         if (!empty($subject['x500UniqueIdentifier'])) {
-            $candidate = $subject['x500UniqueIdentifier'];
+            $candidate = $toUtf8(trim($subject['x500UniqueIdentifier']));
             if (preg_match($rfcPattern, $candidate)) {
-                $rfc = strtoupper($candidate);
+                $rfc = mb_strtoupper($candidate, 'UTF-8');
             }
         }
-        
-        // Intentar serialNumber del subject
+
+        // 2. serialNumber del subject
         if (!$rfc && !empty($subject['serialNumber'])) {
-            $candidate = $subject['serialNumber'];
+            $candidate = $toUtf8(trim($subject['serialNumber']));
             if (preg_match($rfcPattern, $candidate)) {
-                $rfc = strtoupper($candidate);
+                $rfc = mb_strtoupper($candidate, 'UTF-8');
             }
         }
-        
-        // Intentar OU (puede ser array)
+
+        // 3. OU (puede ser array)
         if (!$rfc && !empty($subject['OU'])) {
             $ous = is_array($subject['OU']) ? $subject['OU'] : [$subject['OU']];
             foreach ($ous as $ou) {
-                if (preg_match($rfcPattern, $ou)) {
-                    $rfc = strtoupper($ou);
+                $candidate = $toUtf8(trim($ou));
+                if (preg_match($rfcPattern, $candidate)) {
+                    $rfc = mb_strtoupper($candidate, 'UTF-8');
                     break;
                 }
             }
         }
-        
-        // Intentar extraer del CN (a veces viene como "NOMBRE / RFC")
+
+        // 4. CN: "NOMBRE / RFC" o "RFC / NOMBRE"
         if (!$rfc && !empty($subject['CN'])) {
-            if (preg_match('/([A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3})/i', $subject['CN'], $matches)) {
-                $rfc = strtoupper($matches[1]);
+            $cn = $toUtf8($subject['CN']);
+            if (preg_match($rfcPatternFind, $cn, $matches)) {
+                $rfc = mb_strtoupper($matches[1], 'UTF-8');
             }
         }
-        
-        // Buscar en extensions si existe
+
+        // 5. Buscar en extensions (último recurso)
         if (!$rfc && isset($certInfo['extensions'])) {
             foreach ($certInfo['extensions'] as $ext) {
-                if (is_string($ext) && preg_match('/([A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3})/i', $ext, $matches)) {
-                    $rfc = strtoupper($matches[1]);
-                    break;
+                if (is_string($ext)) {
+                    $ext = $toUtf8($ext);
+                    if (preg_match($rfcPatternFind, $ext, $matches)) {
+                        $rfc = mb_strtoupper($matches[1], 'UTF-8');
+                        break;
+                    }
                 }
             }
         }

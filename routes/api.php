@@ -39,6 +39,7 @@ use App\Http\Controllers\OrdenLaboratorioController;
 use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\EfirmaController;
 use App\Http\Controllers\FacturacionController;
+use App\Http\Controllers\SuscripcionesController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuscripcionConsultorioController;
 use App\Http\Controllers\InternalAccessController;
@@ -138,6 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Consultorios - Verificar y renovar suscripción
     Route::get('/subscription/check', [\App\Http\Controllers\SubscriptionController::class, 'checkUserSubscription']);
     Route::post('/subscription/renew-checkout', [\App\Http\Controllers\SubscriptionController::class, 'createRenewCheckoutSession']);
+    Route::post('/subscription/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancelSubscription']);
     Route::post('/subscription/verify-payment', [\App\Http\Controllers\SubscriptionController::class, 'verifyPaymentSession']);
 
     // Sucursales — comprar cupos adicionales
@@ -215,10 +217,15 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         $efectiva = $user->clinica_efectiva_id;
         if ($efectiva) {
             $c = \App\Models\Clinica::query()->find($efectiva);
-            $user->tiene_modulo_facturacion = $c && $c->facturacion_addon_activo;
+            $user->tiene_modulo_facturacion = $c
+                ? \App\Models\SuscripcionFacturas::usuarioTieneModuloActivo($user, $c)
+                : false;
+            $user->facturacion_por_usuario = $c && $c->es_consultorio_privado;
+            $user->es_consultorio_privado = $c && $c->es_consultorio_privado;
             $user->sucursales_permitidas_ids = $user->getSucursalesPermitidasIdsForClinica($efectiva);
         } else {
             $user->tiene_modulo_facturacion = false;
+            $user->es_consultorio_privado = false;
             $user->sucursales_permitidas_ids = [];
         }
 
@@ -343,6 +350,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/efirma', [EfirmaController::class, 'show']);
     Route::post('/efirma', [EfirmaController::class, 'store']);
     Route::patch('/efirma/usos', [EfirmaController::class, 'updateUsos']);
+    Route::post('/efirma/sincronizar-facturapi', [EfirmaController::class, 'sincronizarFacturapiPersonal']);
+    Route::post('/efirma/fiscal/refrescar-keys', [EfirmaController::class, 'refrescarKeysFacturapiPersonal']);
     Route::delete('/efirma', [EfirmaController::class, 'destroy']);
     
     // E.firma fiscal personal del usuario (para facturar individualmente en consultorio compartido)
@@ -354,6 +363,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/efirma/clinica', [EfirmaController::class, 'showClinica']);
     Route::post('/efirma/clinica', [EfirmaController::class, 'storeClinica']);
     Route::delete('/efirma/clinica', [EfirmaController::class, 'destroyClinica']);
+    Route::post('/efirma/clinica/refrescar-keys', [EfirmaController::class, 'refrescarKeysFacturapi']);
 
     // ==========================================
     // MÓDULO DE FACTURACIÓN
@@ -368,6 +378,10 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
             Route::post('/pacientes/{pacienteId}/datos-fiscales', [FacturacionController::class, 'storeDatosFiscales']);
             Route::delete('/datos-fiscales/{id}', [FacturacionController::class, 'deleteDatosFiscales']);
 
+            Route::get('/resumen-mes', [FacturacionController::class, 'resumenMes']);
+            Route::get('/pagos-sin-facturar', [FacturacionController::class, 'pagosSinFacturar']);
+            Route::get('/exportar-zip', [FacturacionController::class, 'exportarZip']);
+
             Route::get('/solicitudes', [FacturacionController::class, 'listSolicitudes']);
             Route::post('/solicitudes', [FacturacionController::class, 'createSolicitud']);
             Route::get('/solicitudes/{id}', [FacturacionController::class, 'showSolicitud']);
@@ -376,12 +390,23 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 
             Route::post('/solicitudes/{id}/timbrar', [FacturacionController::class, 'timbrarFactura']);
             Route::post('/solicitudes/{id}/cancelar-cfdi', [FacturacionController::class, 'cancelarCfdi']);
-
             Route::get('/solicitudes/{id}/xml', [FacturacionController::class, 'downloadXml']);
             Route::get('/solicitudes/{id}/pdf', [FacturacionController::class, 'downloadPdf']);
             Route::post('/solicitudes/{id}/reenviar', [FacturacionController::class, 'reenviarFactura']);
         });
     });
+
+    // ==========================================
+    // SUSCRIPCIONES DE FACTURACIÓN (Facturapi)
+    // ==========================================
+    Route::get('/suscripciones/planes', [\App\Http\Controllers\SuscripcionesController::class, 'obtenerPlanes']);
+    Route::get('/suscripciones/mi-suscripcion', [\App\Http\Controllers\SuscripcionesController::class, 'obtenerSuscripcion']);
+    Route::post('/suscripciones/checkout', [\App\Http\Controllers\SuscripcionesController::class, 'crearCheckout']);
+    Route::get('/suscripciones/verify-session/{sessionId}', [\App\Http\Controllers\SuscripcionesController::class, 'verifySession']);
+    Route::post('/suscripciones/crear', [\App\Http\Controllers\SuscripcionesController::class, 'crearSuscripcion']);
+    Route::post('/suscripciones/cambiar-plan', [\App\Http\Controllers\SuscripcionesController::class, 'cambiarPlan']);
+    Route::post('/suscripciones/cancelar', [\App\Http\Controllers\SuscripcionesController::class, 'cancelarSuscripcion']);
+    Route::get('/suscripciones/historial', [\App\Http\Controllers\SuscripcionesController::class, 'historial']);
 
     // ==========================================
     // MÓDULO DE FINANZAS - Motor Financiero
@@ -748,6 +773,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
 // Rutas para gestión de usuarios y permisos (solo administradores)
 Route::prefix('admin')->middleware(['auth:sanctum', 'multi.tenant'])->group(function () {
     Route::post('/users', [UserManagementController::class, 'createUser']);
+    Route::get('/users/lookup-email', [UserManagementController::class, 'lookupEmail']);
     Route::get('/users', [UserManagementController::class, 'listAllUsers']);
     Route::get('/users/doctors', [UserManagementController::class, 'listDoctors']);
     Route::put('/users/{id}', [UserManagementController::class, 'updateUser']);
@@ -1008,6 +1034,8 @@ Route::prefix('internal')->middleware(['auth:sanctum', 'admin.auth'])->group(fun
     Route::get('/clinicas-detalle',                    [AdminAuthController::class, 'clinicasDetalle']);
     Route::patch('/clinicas-detalle/{id}/toggle',      [AdminAuthController::class, 'clinicaToggle']);
     Route::patch('/clinicas-detalle/{id}/dias-extra',  [AdminAuthController::class, 'clinicaDiasExtra']);
+    Route::patch('/clinicas-detalle/{id}/suscripcion', [AdminAuthController::class, 'clinicaActualizarSuscripcion']);
+    Route::get('/clinicas-detalle/{id}/pagos',         [AdminAuthController::class, 'clinicaPagos']);
 
     // Actividad detallada (logins de usuarios + accesos portal pacientes)
     Route::get('/actividad', [AdminAuthController::class, 'actividadDetallada']);

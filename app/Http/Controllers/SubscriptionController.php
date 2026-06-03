@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Services\StripeSubscriptionRenewalService;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 use Stripe\Webhook;
@@ -231,6 +232,9 @@ class SubscriptionController extends Controller
                         case 'sucursal_slot':
                             $this->fulfillSucursalSlot($session);
                             break;
+                        case 'facturacion_plan':
+                            $this->fulfillFacturacionPlan($session);
+                            break;
                         default:
                             $this->fulfillOrder($session);
                     }
@@ -239,10 +243,18 @@ class SubscriptionController extends Controller
                 }
             }
 
-            // Procesar cancelación de suscripción
+            // Renovación automática mensual/anual (cobro recurrente Stripe)
+            if ($event->type === 'invoice.payment_succeeded') {
+                $invoice = $event->data->object;
+                app(StripeSubscriptionRenewalService::class)->processInvoicePaymentSucceeded($invoice);
+            }
+
+            // Suscripción eliminada en Stripe (periodo pagado ya terminó)
             if ($event->type === 'customer.subscription.deleted') {
                 $subscription = $event->data->object;
-                $this->handleSubscriptionCancellation($subscription);
+                $renewal = app(StripeSubscriptionRenewalService::class);
+                $renewal->finalizeClinicaSubscriptionEnded($subscription);
+                $renewal->finalizeFacturacionSubscriptionEnded($subscription);
             }
 
             return response()->json(['status' => 'success']);
@@ -354,6 +366,16 @@ class SubscriptionController extends Controller
                     'session_id' => $session->id,
                 ],
             ]);
+
+            if ($session->subscription) {
+                try {
+                    Stripe::setApiKey(config('services.stripe.secret'));
+                    $stripeSub = \Stripe\Subscription::retrieve($session->subscription);
+                    app(StripeSubscriptionRenewalService::class)->syncClinicaPeriodFromStripe($consultorio->fresh(), $stripeSub);
+                } catch (\Exception $syncEx) {
+                    Log::warning('Sync periodo Stripe registro: '.$syncEx->getMessage());
+                }
+            }
 
             DB::commit();
 
@@ -582,20 +604,32 @@ class SubscriptionController extends Controller
             DB::beginTransaction();
 
             // Calcular nueva fecha de vencimiento
-            $fechaBase = $clinica->fecha_vencimiento && $clinica->fecha_vencimiento->greaterThan(now())
-                ? $clinica->fecha_vencimiento
+            $fechaBase = ($clinica->fecha_vencimiento && $clinica->fecha_vencimiento->greaterThan(now()))
+                ? $clinica->fecha_vencimiento->copy()
                 : now();
-            
-            $nuevaFechaVencimiento = $fechaBase->addDays($duracionDias);
+
+            $nuevaFechaVencimiento = $fechaBase->addDays($duracionDias)->endOfDay();
 
             // Actualizar clínica
             $clinica->update([
                 'activa' => true,
                 'pagado' => true,
                 'fecha_vencimiento' => $nuevaFechaVencimiento,
+                'next_billing_date' => $nuevaFechaVencimiento,
                 'stripe_subscription_id' => $session->subscription ?? $session->id,
+                'stripe_customer_id' => $session->customer ?? $clinica->stripe_customer_id,
                 'billing_cycle' => $billingCycle,
             ]);
+
+            if ($session->subscription) {
+                try {
+                    Stripe::setApiKey(config('services.stripe.secret'));
+                    $stripeSub = \Stripe\Subscription::retrieve($session->subscription);
+                    app(StripeSubscriptionRenewalService::class)->syncClinicaPeriodFromStripe($clinica->fresh(), $stripeSub);
+                } catch (\Exception $syncEx) {
+                    Log::warning('No se sincronizó periodo Stripe tras renovación: '.$syncEx->getMessage());
+                }
+            }
 
             // Si hay usuario propietario, actualizar también su suscripción
             if ($userId) {
@@ -669,23 +703,49 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Manejar cancelación de suscripción
+     * Cancelar renovación automática; el acceso sigue hasta fecha_vencimiento.
      */
-    private function handleSubscriptionCancellation($subscription): void
+    public function cancelSubscription(Request $request): JsonResponse
     {
-        try {
-            $clinica = Clinica::where('stripe_subscription_id', $subscription->id)->first();
-            
-            if ($clinica) {
-                $clinica->update([
-                    'activa' => false,
-                    'pagado' => false,
-                ]);
+        $user = $request->user();
+        $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
+        $clinica = Clinica::find($clinicaId);
 
-                Log::info("Suscripción cancelada para clínica: {$clinica->nombre}");
+        if (! $clinica || ! $clinica->stripe_subscription_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay suscripción activa en Stripe para cancelar.',
+            ], 404);
+        }
+
+        try {
+            $renewal = app(StripeSubscriptionRenewalService::class);
+            $periodEnd = $renewal->scheduleCancelAtPeriodEnd($clinica->stripe_subscription_id);
+
+            if ($periodEnd && (! $clinica->fecha_vencimiento || $periodEnd->greaterThan($clinica->fecha_vencimiento))) {
+                $clinica->update(['fecha_vencimiento' => $periodEnd]);
             }
+
+            if ($clinica->propietario_user_id) {
+                User::where('id', $clinica->propietario_user_id)->update([
+                    'suscripcion_fin' => $clinica->fecha_vencimiento,
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Renovación automática cancelada. Tendrás acceso hasta '
+                    .$clinica->fecha_vencimiento->format('d/m/Y').'.',
+                'fecha_vencimiento' => $clinica->fecha_vencimiento->format('Y-m-d'),
+                'cancel_at_period_end' => true,
+            ]);
         } catch (\Exception $e) {
-            Log::error('Error handling subscription cancellation: ' . $e->getMessage());
+            Log::error('Error cancelando suscripción Stripe: '.$e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo cancelar la suscripción: '.$e->getMessage(),
+            ], 500);
         }
     }
 
@@ -982,54 +1042,32 @@ class SubscriptionController extends Controller
             ], 404);
         }
 
-        $esConsultorio = $clinica->es_consultorio_privado;
+        app(\App\Services\StripeSubscriptionRenewalService::class)
+            ->repairClinicaStripePeriodIfNeeded($clinica);
+        $clinica->refresh();
+
+        $status = \App\Services\SubscriptionStatusService::getStatus($clinica, $user);
+        $vencida = ! $status['active'];
         $fechaVencimiento = $clinica->fecha_vencimiento;
-        $now = now();
-        
-        // Calcular estado
-        $activa = $clinica->activa && $clinica->pagado;
-        $diasRestantes = $fechaVencimiento ? $now->diffInDays($fechaVencimiento, false) : null;
-        $vencida = $fechaVencimiento && $now->greaterThan($fechaVencimiento);
-        
-        // Para consultorios, verificar suscripción del propietario
-        // SOLO si la fecha de vencimiento de la clínica no está en el futuro
-        // (evitar falsos positivos cuando fecha_vencimiento > now pero tiene_suscripcion_consultorio = false)
-        if ($esConsultorio && $clinica->propietario_user_id && !$vencida) {
-            $propietario = $clinica->propietario ?? $user;
-            // Solo marcar vencida si el propietario no tiene ni trial ni suscripción activa
-            // y además la clínica no tiene fecha_vencimiento en el futuro
-            if ($propietario && !$propietario->tieneSuscripcionConsultorioActiva()) {
-                // Si la clínica tiene fecha_vencimiento válida en el futuro, respetarla
-                if (!$fechaVencimiento || !$now->lessThan($fechaVencimiento)) {
-                    $vencida = true;
-                    $activa = false;
-                }
-            }
-        }
 
         return response()->json([
             'success' => true,
             'subscription' => [
                 'clinica_id' => $clinica->id,
                 'clinica_nombre' => $clinica->nombre,
-                'es_consultorio' => $esConsultorio,
+                'es_consultorio' => (bool) $clinica->es_consultorio_privado,
                 'plan' => $clinica->plan,
-                'activa' => $activa && !$vencida,
+                'activa' => ! $vencida,
                 'vencida' => $vencida,
                 'fecha_vencimiento' => $fechaVencimiento?->format('Y-m-d'),
-                'dias_restantes' => $vencida ? null : $diasRestantes,
-                'dias_vencida' => $vencida ? abs($diasRestantes) : null,
-                'puede_renovar_online' => true,
+                'dias_restantes' => $vencida ? null : $status['dias_restantes'],
+                'dias_vencida' => $vencida ? ($status['dias_vencido'] ?? 0) : null,
+                'puede_renovar_online' => $status['puede_renovar_online'],
                 'tipo_renovacion' => 'stripe',
+                'renovacion_automatica' => (bool) $clinica->stripe_subscription_id,
+                'mensaje' => $status['message'],
             ],
-            'planes_disponibles' => (function () use ($clinica) {
-                $mes  = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'mensual', $clinica->es_consultorio_privado ?? false);
-                $anio = \App\Services\PricingService::calcular($clinica->tipo_clinica, $clinica->modulos_habilitados ?? [], 'anual',   $clinica->es_consultorio_privado ?? false);
-                return [
-                    'mensual' => ['precio' => $mes['total'],  'ciclo' => 'mensual', 'desglose' => $mes,  'etiqueta' => 'Precio de lanzamiento'],
-                    'anual'   => ['precio' => $anio['total'], 'ciclo' => 'anual',   'desglose' => $anio, 'ahorro' => $anio['ahorro'] ?? 0, 'etiqueta' => 'Precio de lanzamiento'],
-                ];
-            })(),
+            'planes_disponibles' => \App\Services\SubscriptionStatusService::planesDisponibles($clinica),
         ]);
     }
 
@@ -1068,8 +1106,7 @@ class SubscriptionController extends Controller
 
             Stripe::setApiKey(config('services.stripe.secret'));
 
-            // Crear sesión de Stripe Checkout
-            $session = Session::create([
+            $checkoutParams = [
                 'payment_method_types' => ['card'],
                 'line_items' => [[
                     'price_data' => [
@@ -1095,8 +1132,15 @@ class SubscriptionController extends Controller
                     'billing_cycle' => $request->billing_cycle,
                     'duracion_dias' => $duracion,
                 ],
-                'customer_email' => $user->email,
-            ]);
+            ];
+
+            if ($clinica->stripe_customer_id) {
+                $checkoutParams['customer'] = $clinica->stripe_customer_id;
+            } else {
+                $checkoutParams['customer_email'] = $user->email;
+            }
+
+            $session = Session::create($checkoutParams);
 
             Log::info('Sesión de renovación de consultorio creada', [
                 'session_id' => $session->id,
@@ -1132,14 +1176,22 @@ class SubscriptionController extends Controller
             $user = $request->user();
             Stripe::setApiKey(config('services.stripe.secret'));
 
-            $session = Session::retrieve($request->session_id);
+            $session = Session::retrieve([
+                'id' => $request->session_id,
+                'expand' => ['subscription'],
+            ]);
 
-            // Verificar que la sesión pertenece a este usuario
-            if ($session->customer_email !== $user->email && ($session->metadata->user_id ?? null) != $user->id) {
+            if (! $this->stripeCheckoutSessionBelongsToUser($session, $user)) {
+                Log::warning('verify-payment: sesión no pertenece al usuario', [
+                    'session_id' => $session->id,
+                    'user_id' => $user->id,
+                    'customer' => $session->customer,
+                    'customer_email' => $session->customer_email,
+                ]);
+
                 return response()->json(['success' => false, 'message' => 'Sesión no válida para este usuario.'], 403);
             }
 
-            // Solo procesar si el pago fue completado
             if ($session->payment_status !== 'paid') {
                 return response()->json([
                     'success' => false,
@@ -1148,10 +1200,6 @@ class SubscriptionController extends Controller
                 ], 402);
             }
 
-            $metadata = $session->metadata;
-
-            // Verificar que no sea una sesión ya procesada (idempotencia)
-            // Se verifica contra la tabla payments usando el session_id o payment_intent
             $yaExiste = Payment::where(function ($q) use ($session) {
                 $q->where('stripe_payment_id', $session->payment_intent ?? $session->id)
                   ->orWhere('stripe_payment_id', $session->id);
@@ -1159,36 +1207,129 @@ class SubscriptionController extends Controller
                 $q->whereJsonContains('metadata->session_id', $session->id);
             })->exists();
 
-            if ($yaExiste) {
-                return response()->json([
-                    'success'      => true,
-                    'message'      => 'Suscripción ya activada.',
-                    'ya_procesada' => true,
-                ]);
+            if (! $yaExiste) {
+                $this->fulfillCheckoutSession($session);
+            } else {
+                $this->resyncClinicaFromCheckoutSession($session);
             }
 
-            // Procesar según tipo
-            $type = $metadata->type ?? 'consultorio_renewal';
-            if ($type === 'consultorio_renewal') {
-                $this->fulfillConsultorioRenewal($session);
-            } elseif ($type === 'consultorio_adicional') {
-                $this->fulfillConsultorioAdicional($session);
-            } else {
-                $this->fulfillOrder($session);
+            $clinica = $this->clinicaFromCheckoutSession($session, $user);
+            if ($clinica) {
+                app(\App\Services\StripeSubscriptionRenewalService::class)
+                    ->repairClinicaStripePeriodIfNeeded($clinica);
+                $clinica->refresh();
             }
 
             return response()->json([
                 'success' => true,
-                'message' => '¡Suscripción activada exitosamente!',
+                'message' => $yaExiste ? 'Suscripción ya activada.' : '¡Suscripción activada exitosamente!',
+                'ya_procesada' => $yaExiste,
+                'fecha_vencimiento' => $clinica?->fecha_vencimiento?->format('Y-m-d'),
+                'activa' => $clinica ? $clinica->isActive() : null,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error verificando sesión de pago: ' . $e->getMessage());
+            Log::error('Error verificando sesión de pago: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al verificar el pago: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * ¿La sesión de Checkout Stripe corresponde al usuario autenticado?
+     * En test mode con customer guardado, customer_email suele venir vacío.
+     */
+    private function stripeCheckoutSessionBelongsToUser(object $session, User $user): bool
+    {
+        $metadata = $session->metadata ?? (object) [];
+
+        if (isset($metadata->user_id) && (string) $metadata->user_id === (string) $user->id) {
+            return true;
+        }
+
+        if (! empty($session->customer_email)
+            && strcasecmp((string) $session->customer_email, (string) $user->email) === 0) {
+            return true;
+        }
+
+        if (! empty($session->customer)) {
+            $clinicaId = $metadata->clinica_id ?? $user->clinica_activa_id ?? $user->clinica_id;
+            if ($clinicaId) {
+                $clinica = Clinica::find($clinicaId);
+                if ($clinica && $clinica->stripe_customer_id === $session->customer) {
+                    return true;
+                }
+            }
+            if ($user->stripe_customer_id && $user->stripe_customer_id === $session->customer) {
+                return true;
+            }
+        }
+
+        if (isset($metadata->clinica_id)) {
+            $clinica = Clinica::find($metadata->clinica_id);
+            if ($clinica && (int) $clinica->propietario_user_id === (int) $user->id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function fulfillCheckoutSession(object $session): void
+    {
+        $type = $session->metadata->type ?? 'consultorio_renewal';
+
+        match ($type) {
+            'consultorio_renewal' => $this->fulfillConsultorioRenewal($session),
+            'consultorio_adicional' => $this->fulfillConsultorioAdicional($session),
+            'facturacion_plan' => $this->fulfillFacturacionPlan($session),
+            'sucursal_slot' => $this->fulfillSucursalSlot($session),
+            default => $this->fulfillOrder($session),
+        };
+    }
+
+    /**
+     * Re-sincronizar vigencia desde Stripe (útil si el webhook no llegó en local).
+     */
+    private function resyncClinicaFromCheckoutSession(object $session): void
+    {
+        if (empty($session->subscription)) {
+            return;
+        }
+
+        try {
+            Stripe::setApiKey(config('services.stripe.secret'));
+            $stripeSub = \Stripe\Subscription::retrieve($session->subscription);
+
+            $clinica = Clinica::where('stripe_subscription_id', $stripeSub->id)->first();
+            if ($clinica) {
+                app(StripeSubscriptionRenewalService::class)->syncClinicaPeriodFromStripe($clinica, $stripeSub);
+
+                return;
+            }
+
+            $clinicaId = $session->metadata->clinica_id ?? null;
+            if ($clinicaId) {
+                $clinica = Clinica::find($clinicaId);
+                if ($clinica) {
+                    app(StripeSubscriptionRenewalService::class)->syncClinicaPeriodFromStripe($clinica, $stripeSub);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('resyncClinicaFromCheckoutSession: '.$e->getMessage());
+        }
+    }
+
+    private function clinicaFromCheckoutSession(object $session, User $user): ?Clinica
+    {
+        $clinicaId = $session->metadata->clinica_id ?? $user->clinica_activa_id ?? $user->clinica_id;
+
+        return $clinicaId ? Clinica::find($clinicaId) : null;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -1502,4 +1643,52 @@ class SubscriptionController extends Controller
             'precio_anual'=> $precioSlot['anio'],
         ]);
     }
+
+    // =====================================================
+    // FACTURACIÓN — PLAN DE FACTURACIÓN
+    // =====================================================
+
+    /**
+     * Activar plan de facturación tras checkout exitoso en Stripe
+     */
+    private function fulfillFacturacionPlan($session): void
+    {
+        try {
+            $metadata = $session->metadata;
+            $clinicaId = (int) $metadata->clinica_id;
+
+            // Evitar doble procesamiento
+            $existe = \App\Models\SuscripcionFacturas::where('stripe_checkout_session_id', $session->id)->first();
+            if ($existe) {
+                Log::info("Facturación: sesión {$session->id} ya procesada, ignorando webhook.");
+                return;
+            }
+
+            $clinica = \App\Models\Clinica::find($clinicaId);
+            $porUsuario = ($metadata->billing_scope ?? null) === \App\Models\SuscripcionFacturas::SCOPE_USUARIO
+                || ($clinica && $clinica->es_consultorio_privado);
+
+            if ($porUsuario && ! empty($metadata->user_id)) {
+                \App\Models\SuscripcionFacturas::where('user_id', (int) $metadata->user_id)
+                    ->where('estado', \App\Models\SuscripcionFacturas::ESTADO_ACTIVA)
+                    ->update(['estado' => \App\Models\SuscripcionFacturas::ESTADO_CANCELADA]);
+            } else {
+                \App\Models\SuscripcionFacturas::where('clinica_id', $clinicaId)
+                    ->where('billing_scope', \App\Models\SuscripcionFacturas::SCOPE_CLINICA)
+                    ->where('estado', \App\Models\SuscripcionFacturas::ESTADO_ACTIVA)
+                    ->update(['estado' => \App\Models\SuscripcionFacturas::ESTADO_CANCELADA]);
+            }
+
+            $suscripcionesController = new SuscripcionesController(new \App\Services\FacturapiService());
+            $suscripcionesController->activarSuscripcionDesdeStripe($metadata, $session);
+
+            Log::info("Webhook: plan de facturación activado para clínica {$clinicaId}");
+        } catch (\Exception $e) {
+            Log::error('Error en fulfillFacturacionPlan: ' . $e->getMessage(), [
+                'session_id' => $session->id ?? null,
+            ]);
+            throw $e;
+        }
+    }
+
 }

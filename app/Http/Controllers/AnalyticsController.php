@@ -495,7 +495,8 @@ class AnalyticsController extends Controller
             [19, 30],
             [31, 50],
             [51, 70],
-            [71, 120]
+            [71, 79],
+            [80, 200]
         ];
 
         $data = [];

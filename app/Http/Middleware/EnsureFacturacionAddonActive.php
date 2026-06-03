@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Clinica;
+use App\Models\SuscripcionFacturas;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,15 +22,26 @@ class EnsureFacturacionAddonActive
         if (! $clinicaId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Facturación no disponible: sin clínica efectiva.',
+                'message' => 'Facturación no disponible: sin espacio de trabajo.',
             ], 403);
         }
 
         $clinica = Clinica::query()->find($clinicaId);
-        if (! $clinica || ! $clinica->facturacion_addon_activo) {
+        if (! $clinica) {
             return response()->json([
                 'success' => false,
-                'message' => 'El módulo de facturación electrónica requiere un plan complementario activo para este espacio de trabajo.',
+                'message' => 'Facturación no disponible: espacio no encontrado.',
+            ], 403);
+        }
+
+        if (! SuscripcionFacturas::usuarioTieneModuloActivo($user, $clinica)) {
+            $message = SuscripcionFacturas::facturacionEsPorUsuario($clinica)
+                ? 'Contrata tu plan de facturación personal en Perfil → Facturación CFDI.'
+                : 'El módulo de facturación requiere un plan activo para esta clínica.';
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
                 'requires_facturacion_addon' => true,
             ], 403);
         }
