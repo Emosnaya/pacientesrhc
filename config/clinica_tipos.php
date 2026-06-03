@@ -7,7 +7,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'base_precios' => [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 2399, 'anual' => 26990, 'mensual_normal' => 2899, 'anual_normal' => 32999],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000, 'mensual_normal' => 3000, 'anual_normal' => 36000],
         'dental'       => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
         'cardiologia'  => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
         'fisioterapia' => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
