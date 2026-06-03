@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class SolicitudFactura extends Model
 {
@@ -25,8 +26,12 @@ class SolicitudFactura extends Model
         'subtotal',
         'iva',
         'total',
+        'forma_pago',
+        'metodo_pago_cfdi',
         'estado',
         'uuid',
+        'facturapi_invoice_id',
+        'facturapi_response',
         'folio_fiscal',
         'cadena_original_sat',
         'sello_sat',
@@ -51,9 +56,15 @@ class SolicitudFactura extends Model
         'subtotal' => 'decimal:2',
         'iva' => 'decimal:2',
         'total' => 'decimal:2',
+        'folio' => 'integer',
         'fecha_timbrado' => 'datetime',
         'enviada_at' => 'datetime',
         'cancelada_at' => 'datetime',
+        'facturapi_response' => 'array',
+    ];
+
+    protected $appends = [
+        'etiqueta_folio',
     ];
 
     // =====================================================
@@ -111,6 +122,75 @@ class SolicitudFactura extends Model
     // =====================================================
     // ACCESSORS
     // =====================================================
+
+    /**
+     * Estados que impiden crear otra solicitud para el mismo pago.
+     */
+    public const ESTADOS_OCUPAN_PAGO = [
+        self::ESTADO_PENDIENTE,
+        self::ESTADO_EN_PROCESO,
+        self::ESTADO_FACTURADA,
+    ];
+
+    public static function pagoTieneSolicitudActiva(int $pagoId): bool
+    {
+        return self::where('pago_id', $pagoId)
+            ->whereIn('estado', self::ESTADOS_OCUPAN_PAGO)
+            ->exists();
+    }
+
+    /**
+     * Serie + folio consecutivo por clínica (consultorio).
+     *
+     * @return array{0: string, 1: int}
+     */
+    public static function reservarFolio(int $clinicaId, ?string $serie = null, ?int $doctorId = null): array
+    {
+        return DB::transaction(function () use ($clinicaId, $serie, $doctorId) {
+            $clinica = Clinica::where('id', $clinicaId)->lockForUpdate()->first();
+            $serie = $serie ?? $clinica?->facturacion_serie ?? 'FAC';
+
+            $query = self::where('clinica_id', $clinicaId)
+                ->where('serie', $serie)
+                ->whereIn('estado', [self::ESTADO_FACTURADA, self::ESTADO_CANCELADA]);
+
+            if ($doctorId !== null) {
+                $query->where('doctor_id', $doctorId);
+            } else {
+                $query->whereNull('doctor_id');
+            }
+
+            $max = (int) $query->max('folio');
+
+            return [$serie, $max + 1];
+        });
+    }
+
+    /**
+     * Etiqueta visible: FAC2, A1, etc. (por clínica, no ID global).
+     */
+    public function etiquetaFolio(): string
+    {
+        if ($this->serie && $this->folio) {
+            return $this->serie . $this->folio;
+        }
+
+        $resp = $this->facturapi_response;
+        if (is_array($resp)) {
+            $serie = $resp['series'] ?? $resp['serie'] ?? 'FAC';
+            $num = $resp['folio_number'] ?? $resp['folio'] ?? null;
+            if ($num !== null) {
+                return $serie . $num;
+            }
+        }
+
+        return 'SF-' . $this->id;
+    }
+
+    public function getEtiquetaFolioAttribute(): string
+    {
+        return $this->etiquetaFolio();
+    }
 
     public function getEstaFacturadaAttribute(): bool
     {

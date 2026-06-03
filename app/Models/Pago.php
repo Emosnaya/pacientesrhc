@@ -10,6 +10,30 @@ class Pago extends Model
 {
     use HasFactory, Auditable;
 
+    public const METODO_EFECTIVO = 'efectivo';
+
+    public const METODO_TRANSFERENCIA = 'transferencia';
+
+    public const METODO_TARJETA_CREDITO = 'tarjeta_credito';
+
+    public const METODO_TARJETA_DEBITO = 'tarjeta_debito';
+
+    /** @deprecated Usar tarjeta_credito o tarjeta_debito */
+    public const METODO_TARJETA = 'tarjeta';
+
+    public const METODOS_PARA_REGISTRO = [
+        self::METODO_EFECTIVO,
+        self::METODO_TRANSFERENCIA,
+        self::METODO_TARJETA_CREDITO,
+        self::METODO_TARJETA_DEBITO,
+    ];
+
+    public const METODOS_TARJETA = [
+        self::METODO_TARJETA,
+        self::METODO_TARJETA_CREDITO,
+        self::METODO_TARJETA_DEBITO,
+    ];
+
     protected $fillable = [
         'paciente_id',
         'clinica_id',
@@ -78,6 +102,11 @@ class Pago extends Model
         return $this->belongsTo(Cita::class);
     }
 
+    public function solicitudesFactura()
+    {
+        return $this->hasMany(SolicitudFactura::class, 'pago_id');
+    }
+
     /**
      * Scope para filtrar pagos por fecha
      */
@@ -112,6 +141,33 @@ class Pago extends Model
     public function scopeByMetodoPago($query, $metodo)
     {
         return $query->where('metodo_pago', $metodo);
+    }
+
+    public static function esMetodoTarjeta(?string $metodo): bool
+    {
+        return in_array($metodo, self::METODOS_TARJETA, true);
+    }
+
+    public static function reglaValidacionMetodoPago(bool $incluirLegacy = true): string
+    {
+        $metodos = self::METODOS_PARA_REGISTRO;
+        if ($incluirLegacy) {
+            $metodos[] = self::METODO_TARJETA;
+        }
+
+        return 'required|in:' . implode(',', $metodos);
+    }
+
+    public static function etiquetaMetodo(?string $metodo): string
+    {
+        return match ($metodo) {
+            self::METODO_EFECTIVO => 'Efectivo',
+            self::METODO_TRANSFERENCIA => 'Transferencia',
+            self::METODO_TARJETA_CREDITO => 'Tarjeta de crédito',
+            self::METODO_TARJETA_DEBITO => 'Tarjeta de débito',
+            self::METODO_TARJETA => 'Tarjeta',
+            default => $metodo ? ucfirst(str_replace('_', ' ', $metodo)) : '—',
+        };
     }
 
     /**

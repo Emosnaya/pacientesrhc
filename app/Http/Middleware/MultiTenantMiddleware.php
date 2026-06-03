@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Clinica;
+use App\Services\SubscriptionStatusService;
 
 class MultiTenantMiddleware
 {
@@ -48,13 +49,31 @@ class MultiTenantMiddleware
                 ], 403);
             }
 
-            // Verificar suscripción si no es el registro de clínicas
-            if (!$request->is('clinicas*') && !$clinica->isActive()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Suscripción vencida. Contacte al administrador.',
-                    'subscription_expired' => true
-                ], 403);
+            $path = $request->path();
+            // Rutas que deben responder aunque la suscripción esté vencida (bootstrap UI + pago)
+            $exemptSubscription = str_starts_with($path, 'api/subscription')
+                || str_starts_with($path, 'api/clinica-contacto-comercial')
+                || str_starts_with($path, 'api/suscripcion-consultorio')
+                || $path === 'api/user'
+                || $path === 'api/logout'
+                || str_starts_with($path, 'api/consultorio/mis-clinicas')
+                || str_starts_with($path, 'api/consultorio/cambiar-workspace');
+
+            if (! $request->is('clinicas*') && ! $exemptSubscription) {
+                app(\App\Services\StripeSubscriptionRenewalService::class)
+                    ->repairClinicaStripePeriodIfNeeded($clinica);
+                $clinica->refresh();
+
+                $status = SubscriptionStatusService::getStatus($clinica, $user);
+
+                if (! $status['active']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $status['message'] ?? 'Suscripción vencida. Renueva para continuar.',
+                        'subscription_expired' => true,
+                        'subscription_info' => SubscriptionStatusService::subscriptionInfoForResponse($clinica, $status),
+                    ], 402);
+                }
             }
 
             // Inyectar la clínica efectiva al request para que los controllers la usen

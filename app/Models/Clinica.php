@@ -24,6 +24,10 @@ class Clinica extends Model
         'duration',
         'pagado',
         'fecha_vencimiento',
+        'next_billing_date',
+        'stripe_subscription_id',
+        'stripe_customer_id',
+        'billing_cycle',
         'activa',
         'permite_multiples_sucursales',
         'max_sucursales',
@@ -33,6 +37,14 @@ class Clinica extends Model
         'es_consultorio_privado',
         'propietario_user_id',
         'facturacion_addon_activo',
+        'facturapi_organization_id',
+        'facturapi_configured',
+        'facturapi_api_key_test',
+        'facturapi_api_key_live',
+        'facturapi_mode',
+        'facturacion_iva_incluido',
+        'facturacion_tasa_iva',
+        'facturacion_serie',
         'color_principal',
         'portal_permite_multiples_citas_mismo_horario',
         'portal_max_reagendas_paciente',
@@ -45,6 +57,9 @@ class Clinica extends Model
         'permite_multiples_sucursales' => 'boolean',
         'es_consultorio_privado' => 'boolean',
         'facturacion_addon_activo' => 'boolean',
+        'facturapi_configured'     => 'boolean',
+        'facturacion_iva_incluido' => 'boolean',
+        'facturacion_tasa_iva'     => 'float',
         'portal_permite_multiples_citas_mismo_horario' => 'boolean',
         'portal_max_reagendas_paciente' => 'integer',
         'portal_bloqueo_dias_post_cancelacion' => 'integer',
@@ -97,6 +112,31 @@ class Clinica extends Model
     }
 
     /**
+     * En consultorio privado: el equipo usa la suscripción del espacio (propietario / vencimiento del consultorio).
+     */
+    public function suscripcionConsultorioCompartidaActiva(): bool
+    {
+        if (! $this->es_consultorio_privado) {
+            return false;
+        }
+
+        if ($this->fecha_vencimiento && \App\Services\SubscriptionStatusService::fechaVencimientoVigente($this->fecha_vencimiento)) {
+            return true;
+        }
+
+        if ($this->trial_ends_at && now()->lessThanOrEqualTo($this->trial_ends_at)) {
+            return true;
+        }
+
+        $propietario = $this->propietario;
+        if ($propietario && $propietario->tieneSuscripcionConsultorioActiva()) {
+            return true;
+        }
+
+        return (bool) ($this->pagado && $this->activa);
+    }
+
+    /**
      * Todos los usuarios que tienen acceso a esta clínica/consultorio (pivot enriquecido)
      */
     public function miembros()
@@ -110,20 +150,23 @@ class Clinica extends Model
     // Métodos auxiliares
     public function isActive(): bool
     {
-        if (!$this->activa) return false;
-
-        // Pagada y no vencida
-        if ($this->pagado) {
-            return !$this->fecha_vencimiento || $this->fecha_vencimiento >= now();
+        if (! $this->activa) {
+            return false;
         }
 
-        // Trial activo (sin pago pero con trial_ends_at vigente)
-        if ($this->trial_ends_at && $this->trial_ends_at >= now()) {
+        $fechaVigente = \App\Services\SubscriptionStatusService::fechaVencimientoVigente(
+            $this->fecha_vencimiento ? $this->fecha_vencimiento->copy() : null
+        );
+
+        if ($this->pagado) {
+            return $fechaVigente;
+        }
+
+        if ($this->trial_ends_at && now()->lessThanOrEqualTo($this->trial_ends_at)) {
             return true;
         }
 
-        // fecha_vencimiento vigente aunque no esté marcada como pagada
-        if ($this->fecha_vencimiento && $this->fecha_vencimiento >= now()) {
+        if ($this->fecha_vencimiento && $fechaVigente) {
             return true;
         }
 
@@ -132,7 +175,11 @@ class Clinica extends Model
 
     public function isExpired(): bool
     {
-        return $this->fecha_vencimiento && $this->fecha_vencimiento < now();
+        if (! $this->fecha_vencimiento) {
+            return false;
+        }
+
+        return ! \App\Services\SubscriptionStatusService::fechaVencimientoVigente($this->fecha_vencimiento->copy());
     }
     
     /**

@@ -110,7 +110,7 @@ class PricingService
         bool   $useLaunchPrices = true
     ): array {
         $baseTable  = $useLaunchPrices ? self::$BASE_LAUNCH  : self::$BASE_NORMAL;
-        $tipoKey    = $esConsultorio ? 'consultorio' : ($tipoPrimario ?: 'general');
+        $tipoKey    = $tipoPrimario ?: 'general';
         $basePrices = $baseTable[$tipoKey] ?? $baseTable['general'];
         $base       = $basePrices[$billingCycle];
 
@@ -163,5 +163,83 @@ class PricingService
     public static function anualLanzamiento(string $tipo, array $modulos = [], bool $esConsultorio = false): int
     {
         return self::calcular($tipo, $modulos, 'anual', $esConsultorio)['total'];
+    }
+
+    /**
+     * Precio de un consultorio adicional (~50 % del plan base de la especialidad).
+     */
+    public static function precioConsultorioAdicional(string $tipoPrimario, string $billingCycle = 'mensual'): int
+    {
+        $base = self::$BASE_LAUNCH[$tipoPrimario] ?? self::$BASE_LAUNCH['general'];
+        $mes = (int) round($base['mensual'] * 0.5);
+        $anio = (int) round($base['anual'] * 0.5);
+
+        return $billingCycle === 'anual' ? $anio : $mes;
+    }
+
+    /**
+     * Etiqueta legible de la especialidad.
+     */
+    public static function labelEspecialidad(?string $tipo): string
+    {
+        $tipos = config('clinica_tipos.tipos', []);
+
+        return $tipos[$tipo]['nombre'] ?? ucfirst(str_replace('_', ' ', (string) $tipo));
+    }
+
+    /**
+     * Catálogo de precios por especialidad para nuevos consultorios privados.
+     * No depende del workspace activo del usuario.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function catalogoConsultorioEspecialidades(): array
+    {
+        $catalogo = [];
+        $tiposOrden = array_keys(self::$BASE_LAUNCH);
+
+        foreach ($tiposOrden as $tipo) {
+            if ($tipo === 'consultorio') {
+                continue;
+            }
+
+            $mes = self::calcular($tipo, [], 'mensual');
+            $anio = self::calcular($tipo, [], 'anual');
+            $normalMes = self::$BASE_NORMAL[$tipo]['mensual'] ?? self::$BASE_NORMAL['general']['mensual'];
+            $normalAnual = self::$BASE_NORMAL[$tipo]['anual'] ?? self::$BASE_NORMAL['general']['anual'];
+            $adicionalMes = self::precioConsultorioAdicional($tipo, 'mensual');
+            $adicionalAnual = self::precioConsultorioAdicional($tipo, 'anual');
+
+            $catalogo[] = [
+                'tipo_clinica' => $tipo,
+                'especialidad_label' => self::labelEspecialidad($tipo),
+                'precio_mensual' => $mes['total'],
+                'precio_anual' => $anio['total'],
+                'precio_normal_mensual' => $normalMes,
+                'precio_normal_anual' => $normalAnual,
+                'ahorro_anual' => max(0, ($mes['total'] * 12) - $anio['total']),
+                'precio_adicional_mensual' => $adicionalMes,
+                'precio_adicional_anual' => $adicionalAnual,
+                'ahorro_adicional_anual' => max(0, ($adicionalMes * 12) - $adicionalAnual),
+            ];
+        }
+
+        return $catalogo;
+    }
+
+    /**
+     * Entrada del catálogo por tipo, o null.
+     */
+    public static function catalogoItem(?string $tipo): ?array
+    {
+        $tipo = $tipo && isset(self::$BASE_LAUNCH[$tipo]) ? $tipo : 'general';
+
+        foreach (self::catalogoConsultorioEspecialidades() as $item) {
+            if ($item['tipo_clinica'] === $tipo) {
+                return $item;
+            }
+        }
+
+        return null;
     }
 }

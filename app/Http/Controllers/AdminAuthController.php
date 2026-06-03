@@ -308,13 +308,13 @@ class AdminAuthController extends Controller
         $tipo   = $request->query('tipo', 'todas');
         $search = $request->query('q', '');
 
-        $query = \App\Models\Clinica::with(['propietario:id,nombre,apellidoPat,email'])
+        $query = \App\Models\Clinica::with(['propietario:id,nombre,apellidoPat,email,tiene_suscripcion_consultorio,suscripcion_fin'])
             ->select([
                 'id','nombre','email','telefono','direccion','tipo_clinica',
                 'plan_type','billing_cycle','pagado','activa',
                 'fecha_vencimiento','trial_ends_at','created_at','updated_at',
-                'stripe_customer_id','stripe_subscription_id',
-                'propietario_user_id',
+                'stripe_customer_id','stripe_subscription_id','next_billing_date',
+                'propietario_user_id','es_consultorio_privado',
             ]);
 
         // Filtro estado
@@ -337,11 +337,36 @@ class AdminAuthController extends Controller
         }
 
         $clinicas = $query->orderByDesc('updated_at')->get()->map(function ($c) use ($now) {
-            // Último pago
-            $ultimoPago = \App\Models\Payment::where('clinica_id', $c->id)
-                ->where('status', 'completed')
+            $pagosQuery = \App\Models\Payment::where('clinica_id', $c->id)->where('status', 'completed');
+            $totalPagos = (clone $pagosQuery)->count();
+
+            $ultimoPago = (clone $pagosQuery)
                 ->orderByDesc('created_at')
-                ->first(['amount','currency','created_at','metadata']);
+                ->first(['amount','currency','created_at','metadata','payment_method','stripe_invoice_id']);
+
+            $pagosRecientes = (clone $pagosQuery)
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get(['amount','currency','created_at','metadata','payment_method'])
+                ->map(function ($p) {
+                    $meta = is_array($p->metadata) ? $p->metadata : [];
+                    $tipo = $meta['type'] ?? $meta['billing_cycle'] ?? null;
+
+                    return [
+                        'monto'  => $p->amount,
+                        'moneda' => $p->currency,
+                        'fecha'  => $p->created_at->format('Y-m-d H:i'),
+                        'metodo' => $p->payment_method,
+                        'tipo'   => is_scalar($tipo) ? (string) $tipo : null,
+                    ];
+                });
+
+            $tipoCobro = match (true) {
+                (bool) $c->stripe_subscription_id => 'stripe_recurrente',
+                $totalPagos > 0                     => 'pago_registrado',
+                (bool) $c->pagado                   => 'manual_prepagado',
+                default                             => 'sin_pago',
+            };
 
             $diasRestantes = $c->fecha_vencimiento
                 ? (int) $now->diffInDays($c->fecha_vencimiento, false)
@@ -369,24 +394,38 @@ class AdminAuthController extends Controller
                 'pagado'                => (bool) $c->pagado,
                 'activa'                => (bool) $c->activa,
                 'estado'                => $estadoLabel,
-                'fecha_registro'        => $c->created_at?->format('Y-m-d H:i'),
+                'fecha_registro'        => $c->created_at?->format('Y-m-d'),
                 'fecha_vencimiento'     => $c->fecha_vencimiento?->format('Y-m-d'),
                 'dias_restantes'        => $diasRestantes,
                 'trial_ends_at'         => $c->trial_ends_at?->format('Y-m-d H:i'),
                 'dias_trial_restantes'  => $diasTrial,
                 'stripe_customer_id'    => $c->stripe_customer_id,
                 'stripe_subscription_id'=> $c->stripe_subscription_id,
+                'next_billing_date'     => $c->next_billing_date?->format('Y-m-d'),
+                'es_consultorio'        => (bool) $c->es_consultorio_privado,
+                'tipo_cobro'            => $tipoCobro,
+                'total_pagos'           => $totalPagos,
                 'propietario'           => $c->propietario ? [
                     'id'         => $c->propietario->id,
                     'nombre'     => trim($c->propietario->nombre . ' ' . $c->propietario->apellidoPat),
                     'email'      => $c->propietario->email,
+                    'suscripcion_fin' => $c->propietario->suscripcion_fin?->format('Y-m-d'),
                 ] : null,
-                'ultimo_pago' => $ultimoPago ? [
-                    'monto'    => $ultimoPago->amount,
-                    'moneda'   => $ultimoPago->currency,
-                    'fecha'    => $ultimoPago->created_at->format('Y-m-d H:i'),
-                    'ciclo'    => $ultimoPago->metadata['billing_cycle'] ?? null,
-                ] : null,
+                'ultimo_pago' => $ultimoPago ? (function () use ($ultimoPago) {
+                    $meta = is_array($ultimoPago->metadata) ? $ultimoPago->metadata : [];
+
+                    return [
+                        'monto'    => $ultimoPago->amount,
+                        'moneda'   => $ultimoPago->currency,
+                        'fecha'    => $ultimoPago->created_at->format('Y-m-d H:i'),
+                        'ciclo'    => isset($meta['billing_cycle']) && is_scalar($meta['billing_cycle'])
+                            ? (string) $meta['billing_cycle'] : null,
+                        'tipo'     => isset($meta['type']) && is_scalar($meta['type'])
+                            ? (string) $meta['type'] : null,
+                        'metodo'   => $ultimoPago->payment_method,
+                    ];
+                })() : null,
+                'pagos_recientes' => $pagosRecientes,
             ];
         });
 
@@ -405,6 +444,8 @@ class AdminAuthController extends Controller
             $clinica->update(['pagado' => false, 'activa' => false]);
             $msg = "Suscripción de '{$clinica->nombre}' desactivada manualmente.";
         }
+
+        $this->syncPropietarioSuscripcion($clinica->fresh());
 
         Log::info("[Admin] Clinica toggle", [
             'clinica_id' => $id, 'accion' => $accion,
@@ -427,16 +468,18 @@ class AdminAuthController extends Controller
 
         // Si está vencida, tomar desde hoy; si sigue activa, extender desde su fecha actual
         $base = ($clinica->fecha_vencimiento && $clinica->fecha_vencimiento > now())
-            ? $clinica->fecha_vencimiento
+            ? $clinica->fecha_vencimiento->copy()
             : now();
 
-        $nuevaFecha = $base->addDays($dias);
+        $nuevaFecha = $base->addDays($dias)->endOfDay();
 
         $clinica->update([
             'fecha_vencimiento' => $nuevaFecha,
             'pagado' => true,
             'activa' => true,
         ]);
+
+        $this->syncPropietarioSuscripcion($clinica);
 
         Log::info("[Admin] Días extra otorgados", [
             'clinica_id' => $id, 'dias' => $dias, 'motivo' => $motivo,
@@ -448,6 +491,124 @@ class AdminAuthController extends Controller
             'success'           => true,
             'message'           => "{$dias} días extra otorgados a '{$clinica->nombre}'.",
             'fecha_vencimiento' => $nuevaFecha->format('Y-m-d'),
+        ]);
+    }
+
+    /**
+     * Actualizar suscripción manualmente (fecha de vencimiento, pagado, activa).
+     * Para clientes prepagados o legacy sin Stripe.
+     */
+    public function clinicaActualizarSuscripcion(Request $request, int $id)
+    {
+        $request->validate([
+            'fecha_vencimiento' => 'nullable|date',
+            'pagado'            => 'nullable|boolean',
+            'activa'            => 'nullable|boolean',
+            'motivo'            => 'nullable|string|max:500',
+        ]);
+
+        $clinica = \App\Models\Clinica::findOrFail($id);
+        $motivo  = $request->input('motivo', 'Ajuste manual por administrador');
+
+        $updates = [];
+
+        if ($request->has('fecha_vencimiento')) {
+            $updates['fecha_vencimiento'] = $request->filled('fecha_vencimiento')
+                ? \Carbon\Carbon::parse($request->fecha_vencimiento)->endOfDay()
+                : null;
+        }
+
+        if ($request->has('pagado')) {
+            $updates['pagado'] = $request->boolean('pagado');
+        }
+
+        if ($request->has('activa')) {
+            $updates['activa'] = $request->boolean('activa');
+        } elseif (($updates['pagado'] ?? $clinica->pagado) && isset($updates['fecha_vencimiento'])) {
+            $updates['activa'] = true;
+        }
+
+        if (empty($updates)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se enviaron cambios.',
+            ], 422);
+        }
+
+        $antes = [
+            'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
+            'pagado' => $clinica->pagado,
+            'activa' => $clinica->activa,
+        ];
+
+        $clinica->update($updates);
+        $clinica->refresh();
+        $this->syncPropietarioSuscripcion($clinica);
+
+        Log::info('[Admin] Suscripción actualizada manualmente', [
+            'clinica_id' => $id,
+            'antes'      => $antes,
+            'despues'    => [
+                'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
+                'pagado' => $clinica->pagado,
+                'activa' => $clinica->activa,
+            ],
+            'motivo' => $motivo,
+            'admin'  => $request->user()?->email,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Suscripción de '{$clinica->nombre}' actualizada.",
+            'clinica' => [
+                'id'                => $clinica->id,
+                'pagado'            => (bool) $clinica->pagado,
+                'activa'            => (bool) $clinica->activa,
+                'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
+            ],
+        ]);
+    }
+
+    /**
+     * Historial de pagos de una clínica (admin).
+     */
+    public function clinicaPagos(int $id)
+    {
+        $clinica = \App\Models\Clinica::findOrFail($id);
+
+        $pagos = \App\Models\Payment::where('clinica_id', $clinica->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get()
+            ->map(fn ($p) => [
+                'id'       => $p->id,
+                'monto'    => $p->amount,
+                'moneda'   => $p->currency,
+                'estado'   => $p->status,
+                'metodo'   => $p->payment_method,
+                'fecha'    => $p->created_at->format('Y-m-d H:i'),
+                'tipo'     => $p->metadata['type'] ?? null,
+                'ciclo'    => $p->metadata['billing_cycle'] ?? null,
+                'stripe_invoice_id' => $p->stripe_invoice_id,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'clinica' => ['id' => $clinica->id, 'nombre' => $clinica->nombre],
+            'pagos'   => $pagos,
+        ]);
+    }
+
+    private function syncPropietarioSuscripcion(\App\Models\Clinica $clinica): void
+    {
+        if (! $clinica->propietario_user_id) {
+            return;
+        }
+
+        \App\Models\User::where('id', $clinica->propietario_user_id)->update([
+            'tiene_suscripcion_consultorio' => (bool) $clinica->pagado,
+            'suscripcion_fin'               => $clinica->fecha_vencimiento,
+            'ciclo_facturacion'             => $clinica->billing_cycle ?? 'mensual',
         ]);
     }
 

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Clinica;
 use App\Models\Efirma;
 use App\Models\Receta;
+use App\Services\FacturapiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -117,6 +119,8 @@ class EfirmaController extends Controller
             'activa' => $efirma->activa,
             'usar_para_recetas' => $efirma->usar_para_recetas ?? true,
             'usar_para_facturacion' => $efirma->usar_para_facturacion ?? false,
+            'facturapi_configured' => (bool) ($efirma->facturapi_configured ?? false),
+            'facturacion_lista' => $efirma->listaParaFacturapi(),
             'updated_at' => $efirma->updated_at?->format('Y-m-d H:i'),
         ];
     }
@@ -153,12 +157,84 @@ class EfirmaController extends Controller
             'usar_para_facturacion' => filter_var($request->input('usar_para_facturacion', false), FILTER_VALIDATE_BOOLEAN),
         ];
 
-        return $this->procesarEfirma(
+        $result = $this->procesarEfirma(
             $request,
             ['user_id' => $user->id, 'tipo' => 'personal'],
             $user->id,
             $usos
         );
+
+        $responseData = json_decode($result->getContent(), true);
+        if (($responseData['success'] ?? false) && $usos['usar_para_facturacion']) {
+            $responseData['facturapi'] = $this->sincronizarCsdConFacturapiPersonal($request, $user->id);
+            if (! ($responseData['facturapi']['sincronizado'] ?? false)) {
+                $responseData['message'] = ($responseData['message'] ?? 'E.firma guardada.')
+                    . ' No se pudo activar la facturación: '
+                    . ($responseData['facturapi']['error'] ?? 'vuelve a subir el CSD.');
+            }
+
+            return response()->json($responseData, $result->getStatusCode());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Activar CSD personal ya guardado para facturación (sin volver a subir archivos).
+     */
+    public function sincronizarFacturapiPersonal(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:1',
+            'codigo_postal' => 'nullable|string|size:5',
+            'regimen_fiscal' => 'nullable|string|size:3',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $user = Auth::user();
+        $efirma = Efirma::paraFacturacionUsuario($user->id);
+
+        if (! $efirma) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sube tu e.firma y activa "Emitir facturas (CFDI)" primero.',
+            ], 400);
+        }
+
+        if (! $efirma->verificarPareja($request->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La contraseña no coincide con tu llave privada.',
+            ], 400);
+        }
+
+        if (empty(config('facturapi.user_key'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El servicio de timbrado no está configurado en el servidor.',
+            ], 503);
+        }
+
+        $syncRequest = $this->requestConCsdDesdeEfirma($request, $efirma, $request->password);
+        $facturapi = $this->sincronizarCsdConFacturapiPersonal($syncRequest, $user->id);
+
+        if ($facturapi['sincronizado'] ?? false) {
+            return response()->json([
+                'success' => true,
+                'message' => 'CSD registrado correctamente. Ya puedes timbrar con tu RFC.',
+                'facturapi' => $facturapi,
+                'efirma' => $this->formatEfirma($efirma->fresh()),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $facturapi['error'] ?? 'No se pudo activar la facturación con el CSD',
+            'facturapi' => $facturapi,
+        ], 500);
     }
 
     /**
@@ -203,9 +279,91 @@ class EfirmaController extends Controller
             'usar_para_facturacion' => $request->usar_para_facturacion,
         ]);
 
+        $mensaje = 'Usos de e.firma actualizados correctamente';
+        if ($request->usar_para_facturacion && ! $efirma->fresh()->listaParaFacturapi()) {
+            $mensaje .= '. Para timbrar CFDI, vuelve a subir tu CSD en Facturación CFDI.';
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Usos de e.firma actualizados correctamente'
+            'message' => $mensaje,
+            'efirma' => $this->formatEfirma($efirma->fresh()),
+        ]);
+    }
+
+    /**
+     * Refrescar las API keys de Facturapi (test + live) para la clínica.
+     * Útil cuando el admin completa el pago en Facturapi y quiere activar el modo live.
+     */
+    public function refrescarKeysFacturapi(Request $request)
+    {
+        $user      = Auth::user();
+        $clinicaId = $user->clinica_efectiva_id;
+
+        if (!$user->isSuperAdmin && !$user->isAdmin) {
+            return response()->json(['success' => false, 'message' => 'Sin permisos'], 403);
+        }
+
+        $clinica = Clinica::find($clinicaId);
+        if (!$clinica || !$clinica->facturapi_organization_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La clínica no tiene CSD configurado. Sube primero el certificado.',
+            ], 400);
+        }
+
+        $facturapi = new FacturapiService();
+        $keys      = $facturapi->sincronizarApiKeys($clinicaId, $clinica->facturapi_organization_id);
+
+        $clinica->refresh();
+
+        return response()->json([
+            'success'    => true,
+            'modo'       => $keys['modo'],
+            'tiene_live' => (bool) $clinica->facturapi_api_key_live,
+            'tiene_test' => (bool) $clinica->facturapi_api_key_test,
+            'message'    => (bool) $clinica->facturapi_api_key_live
+                ? (config('facturapi.environment', 'test') === 'live'
+                    ? 'Facturación en modo producción (live) lista.'
+                    : 'Key live sincronizada. Pon FACTURAPI_ENVIRONMENT=live en el servidor para timbrar CFDI reales.')
+                : 'Keys de prueba listas. La key live estará disponible tras activar tu cuenta de timbrado.',
+        ]);
+    }
+
+    /**
+     * Sincronizar keys test + live del CSD personal del médico.
+     * Llamar después de activar la cuenta de timbrado en producción.
+     */
+    public function refrescarKeysFacturapiPersonal(Request $request)
+    {
+        $user = Auth::user();
+        $efirma = Efirma::paraFacturacionUsuario($user->id);
+
+        if (! $efirma?->facturapi_organization_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sube tu CSD en Facturación CFDI antes de sincronizar.',
+            ], 400);
+        }
+
+        $facturapi = new FacturapiService();
+        $keys = $facturapi->sincronizarApiKeysEfirma($efirma->fresh());
+
+        $efirma->refresh();
+        $modoLive = config('facturapi.environment', 'test') === 'live';
+
+        return response()->json([
+            'success' => true,
+            'modo' => $keys['modo'],
+            'tiene_live' => (bool) $efirma->facturapi_api_key_live,
+            'tiene_test' => (bool) $efirma->facturapi_api_key_test,
+            'timbrado_modo' => $modoLive && $efirma->facturapi_api_key_live ? 'live' : 'test',
+            'message' => $efirma->facturapi_api_key_live
+                ? ($modoLive
+                    ? 'Keys sincronizadas. Timbrado en modo producción (live).'
+                    : 'Key live disponible. Cambia FACTURAPI_ENVIRONMENT=live en el servidor para timbrar CFDI reales.')
+                : 'Keys de prueba listas. La key live aparecerá cuando active tu cuenta de timbrado.',
+            'efirma' => $this->formatEfirma($efirma),
         ]);
     }
 
@@ -218,10 +376,14 @@ class EfirmaController extends Controller
             'certificado' => 'required|file|max:10240',
             'llave' => 'required|file|max:10240',
             'password' => 'required|string|min:1',
+            'codigo_postal' => 'required|string|size:5',
+            'regimen_fiscal' => 'nullable|string|size:3',
         ], [
-            'certificado.required' => 'El archivo del certificado (.cer) es requerido',
+            'certificado.required' => 'El archivo del certificado CSD (.cer) es requerido',
             'llave.required' => 'El archivo de la llave privada (.key) es requerido',
             'password.required' => 'La contraseña de la llave es requerida',
+            'codigo_postal.required' => 'El código postal del SAT es requerido para facturar',
+            'codigo_postal.size' => 'El código postal debe tener 5 dígitos',
         ]);
 
         if ($validator->fails()) {
@@ -233,26 +395,38 @@ class EfirmaController extends Controller
 
         $user = Auth::user();
 
-        return $this->procesarEfirma(
+        $result = $this->procesarEfirma(
             $request,
             ['user_id' => $user->id, 'tipo' => 'fiscal'],
-            $user->id
+            $user->id,
+            ['usar_para_facturacion' => true]
         );
+
+        $responseData = json_decode($result->getContent(), true);
+        if (($responseData['success'] ?? false)) {
+            $facturapi = $this->sincronizarCsdConFacturapiPersonal($request, $user->id);
+            $responseData['facturapi'] = $facturapi;
+            return response()->json($responseData, $result->getStatusCode());
+        }
+
+        return $result;
     }
 
     /**
-     * Subir o actualizar la e.firma fiscal de la clínica.
+     * Subir o actualizar la e.firma fiscal (CSD) de la clínica.
      */
     public function storeClinica(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'certificado' => 'required|file|max:10240',
-            'llave' => 'required|file|max:10240',
-            'password' => 'required|string|min:1',
+            'certificado'    => 'required|file|max:10240',
+            'llave'          => 'required|file|max:10240',
+            'password'       => 'required|string|min:1',
+            'codigo_postal'  => 'nullable|string|size:5',
+            'regimen_fiscal' => 'nullable|string|size:3',
         ], [
             'certificado.required' => 'El archivo del certificado (.cer) es requerido',
-            'llave.required' => 'El archivo de la llave privada (.key) es requerido',
-            'password.required' => 'La contraseña de la llave es requerida',
+            'llave.required'       => 'El archivo de la llave privada (.key) es requerido',
+            'password.required'    => 'La contraseña de la llave es requerida',
         ]);
 
         if ($validator->fails()) {
@@ -280,11 +454,173 @@ class EfirmaController extends Controller
             ], 400);
         }
 
-        return $this->procesarEfirma(
+        $result = $this->procesarEfirma(
             $request,
             ['clinica_id' => $clinicaId, 'tipo' => 'fiscal'],
             $user->id
         );
+
+        // Si se guardó correctamente, sincronizar con Facturapi y enriquecer respuesta
+        $responseData = json_decode($result->getContent(), true);
+        if (($responseData['success'] ?? false)) {
+            $facturapi = $this->sincronizarCsdConFacturapi($request, $clinicaId);
+            // Agregar estado del sync a la respuesta para feedback en el frontend
+            $responseData['facturapi'] = $facturapi;
+            return response()->json($responseData, $result->getStatusCode());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Crear o actualizar la organización en Facturapi con el CSD recién subido.
+     */
+    private function sincronizarCsdConFacturapi(Request $request, int $clinicaId): array
+    {
+        try {
+            $clinica = Clinica::findOrFail($clinicaId);
+            $efirma  = Efirma::where('clinica_id', $clinicaId)->where('tipo', 'fiscal')->first();
+
+            if (!$efirma) {
+                return ['sincronizado' => false, 'error' => 'No se encontró la e.firma guardada'];
+            }
+
+            $csdData = [
+                'razon_social'   => $efirma->nombre_titular,
+                'rfc'            => $efirma->rfc,
+                'codigo_postal'  => $request->input('codigo_postal', '00000'),
+                'regimen_fiscal' => $request->input('regimen_fiscal', '601'),
+                'cer_path'       => $request->file('certificado')?->getRealPath(),
+                'key_path'       => $request->file('llave')?->getRealPath(),
+                'password'       => $request->input('password'),
+            ];
+
+            $facturapi = new FacturapiService();
+
+            if ($clinica->facturapi_organization_id) {
+                // Actualizar CSD + datos legales en organización existente
+                $updateResult = $facturapi->actualizarOrganizacion(
+                    $clinica->facturapi_organization_id,
+                    $csdData
+                );
+                if ($updateResult['success']) {
+                    // Sincronizar test + live keys (live disponible si ya pagaron suscripción)
+                    $keys = $facturapi->sincronizarApiKeys($clinicaId, $clinica->facturapi_organization_id);
+                    Log::info("CSD actualizado en Facturapi para clínica {$clinicaId}", $keys);
+                    return ['sincronizado' => true, 'organization_id' => $clinica->facturapi_organization_id, 'keys' => $keys];
+                }
+                Log::warning("Error actualizando org en Facturapi: " . ($updateResult['error'] ?? ''));
+                return ['sincronizado' => false, 'error' => $updateResult['error'] ?? 'Error actualizando organización'];
+            }
+
+            // Crear organización nueva
+            $resultado = $facturapi->crearOrganizacion($clinica, $csdData);
+            if ($resultado['success']) {
+                $orgId = $resultado['organization_id'];
+                // Obtener test + live keys
+                $keys = $facturapi->sincronizarApiKeys($clinicaId, $orgId);
+                Clinica::where('id', $clinicaId)->update([
+                    'facturapi_organization_id' => $orgId,
+                    'facturapi_configured'      => true,
+                ]);
+                Log::info("Organización Facturapi creada para clínica {$clinicaId}: {$orgId}", $keys);
+                return ['sincronizado' => true, 'organization_id' => $orgId, 'keys' => $keys];
+            }
+
+            Log::warning("No se pudo crear organización en Facturapi: " . ($resultado['error'] ?? ''));
+            return ['sincronizado' => false, 'error' => $resultado['error'] ?? 'Error creando organización'];
+
+        } catch (\Exception $e) {
+            Log::error("Error sincronizando CSD con Facturapi para clínica {$clinicaId}: " . $e->getMessage());
+            return ['sincronizado' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Crear un Request con archivos temporales desde la e.firma almacenada.
+     */
+    private function requestConCsdDesdeEfirma(Request $baseRequest, Efirma $efirma, string $password): Request
+    {
+        $cerContent = $efirma->getCertificadoDecoded();
+        $keyContent = $efirma->getLlaveKeyDecrypted();
+
+        $cerTmp = tempnam(sys_get_temp_dir(), 'cer_');
+        $keyTmp = tempnam(sys_get_temp_dir(), 'key_');
+        file_put_contents($cerTmp, $cerContent);
+        file_put_contents($keyTmp, $keyContent);
+
+        $uploadedCer = new \Illuminate\Http\UploadedFile($cerTmp, 'certificado.cer', null, null, true);
+        $uploadedKey = new \Illuminate\Http\UploadedFile($keyTmp, 'llave.key', null, null, true);
+
+        $request = $baseRequest->duplicate(
+            array_merge($baseRequest->all(), ['password' => $password]),
+            $baseRequest->files->all()
+        );
+        $request->files->set('certificado', $uploadedCer);
+        $request->files->set('llave', $uploadedKey);
+
+        return $request;
+    }
+
+    /**
+     * Crear o actualizar organización Facturapi para e.firma fiscal personal del médico.
+     */
+    private function sincronizarCsdConFacturapiPersonal(Request $request, int $userId): array
+    {
+        try {
+            $efirma = Efirma::paraFacturacionUsuario($userId);
+
+            if (! $efirma) {
+                return ['sincronizado' => false, 'error' => 'No se encontró la e.firma guardada para facturación'];
+            }
+
+            if (empty(config('facturapi.user_key'))) {
+                return ['sincronizado' => false, 'error' => 'FACTURAPI_USER_KEY no configurada en el servidor'];
+            }
+
+            $csdData = [
+                'razon_social'   => $efirma->nombre_titular,
+                'rfc'            => $efirma->rfc,
+                'codigo_postal'  => $request->input('codigo_postal', '00000'),
+                'regimen_fiscal' => $request->input('regimen_fiscal', '612'),
+                'cer_path'       => $request->file('certificado')?->getRealPath(),
+                'key_path'       => $request->file('llave')?->getRealPath(),
+                'password'       => $request->input('password'),
+            ];
+
+            $facturapi = new FacturapiService();
+
+            if ($efirma->facturapi_organization_id) {
+                $updateResult = $facturapi->actualizarOrganizacion(
+                    $efirma->facturapi_organization_id,
+                    $csdData
+                );
+
+                if ($updateResult['success'] ?? false) {
+                    $keys = $facturapi->sincronizarApiKeysEfirma($efirma->fresh());
+
+                    return ['sincronizado' => true, 'organization_id' => $efirma->facturapi_organization_id, 'keys' => $keys];
+                }
+
+                return ['sincronizado' => false, 'error' => $updateResult['error'] ?? 'Error actualizando organización'];
+            }
+
+            $resultado = $facturapi->crearOrganizacionParaEfirma($efirma, $csdData);
+
+            if ($resultado['success'] ?? false) {
+                return [
+                    'sincronizado'    => true,
+                    'organization_id' => $resultado['organization_id'],
+                    'keys'            => $facturapi->sincronizarApiKeysEfirma($efirma->fresh()),
+                ];
+            }
+
+            return ['sincronizado' => false, 'error' => $resultado['error'] ?? 'Error creando organización'];
+        } catch (\Exception $e) {
+            Log::error("Error sincronizando CSD con Facturapi para médico {$userId}: " . $e->getMessage());
+
+            return ['sincronizado' => false, 'error' => $e->getMessage()];
+        }
     }
 
     /**
@@ -342,7 +678,9 @@ class EfirmaController extends Controller
             $efirma->ultima_verificacion = now();
             $efirma->save();
 
-            $tipo = $efirma->tipo === 'fiscal' ? 'fiscal de la clínica' : 'personal';
+            $tipo = $efirma->tipo === 'fiscal'
+                ? ($efirma->user_id ? 'fiscal personal' : 'fiscal de la clínica')
+                : 'personal';
             Log::info("E.firma {$tipo} configurada por usuario {$subidaPorId}, RFC: {$efirma->rfc}");
 
             return response()->json([

@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Clinica;
 use App\Models\User;
+use App\Services\PricingService;
+use App\Services\StripeSubscriptionRenewalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,8 +48,30 @@ class SuscripcionConsultorioController extends Controller
                 'usados' => $user->cantidad_consultorios_privados,
                 'adicionales_comprados' => $user->consultorios_adicionales_comprados ?? 0,
                 'puede_crear_mas' => $user->puedeCrearConsultorioAdicional(),
-            ]
+            ],
+            'mis_consultorios_privados' => $this->consultoriosPrivadosDelUsuario($user),
         ]);
+    }
+
+    /**
+     * Consultorios privados del usuario (propietario), sin depender del workspace activo.
+     */
+    private function consultoriosPrivadosDelUsuario(User $user): array
+    {
+        return $user->clinicas()
+            ->where('es_consultorio_privado', true)
+            ->wherePivot('rol_en_clinica', 'propietario')
+            ->orderBy('nombre')
+            ->get()
+            ->map(fn (Clinica $c) => [
+                'id' => $c->id,
+                'nombre' => $c->nombre,
+                'tipo_clinica' => $c->tipo_clinica,
+                'especialidad_label' => PricingService::labelEspecialidad($c->tipo_clinica),
+                'fecha_vencimiento' => $c->fecha_vencimiento?->format('Y-m-d'),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -54,15 +79,34 @@ class SuscripcionConsultorioController extends Controller
      * 
      * Obtener planes disponibles para consultorios privados
      */
-    public function planes(): JsonResponse
+    public function planes(Request $request): JsonResponse
     {
+        $catalogo = PricingService::catalogoConsultorioEspecialidades();
+
+        $tipoSolicitado = $request->query('tipo_clinica');
+        if ($tipoSolicitado && ! isset(PricingService::$BASE_LAUNCH[$tipoSolicitado])) {
+            $tipoSolicitado = 'general';
+        }
+
+        $item = PricingService::catalogoItem($tipoSolicitado ?? 'general')
+            ?? $catalogo[0]
+            ?? null;
+
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Catálogo de precios no disponible'], 500);
+        }
+
         $planes = [
             'consultorio' => [
                 'nombre' => 'Consultorio Privado',
                 'descripcion' => 'Todo lo que necesitas para tu consulta privada',
-                'precio_mensual' => 1800,
-                'precio_anual' => 18000,
-                'ahorro_anual' => 3600, // 2 meses gratis
+                'tipo_clinica' => $item['tipo_clinica'],
+                'especialidad_label' => $item['especialidad_label'],
+                'precio_mensual' => $item['precio_mensual'],
+                'precio_anual' => $item['precio_anual'],
+                'precio_normal_mensual' => $item['precio_normal_mensual'],
+                'precio_normal_anual' => $item['precio_normal_anual'],
+                'ahorro_anual' => $item['ahorro_anual'],
                 'caracteristicas' => [
                     'Expediente clínico NOM-024',
                     'Agenda en línea con recordatorios',
@@ -84,9 +128,13 @@ class SuscripcionConsultorioController extends Controller
         return response()->json([
             'success' => true,
             'planes' => $planes,
-            'precio_consultorio_adicional_mensual' => 1250,
-            'precio_consultorio_adicional_anual' => 15000,
-            'ahorro_consultorio_adicional' => 3000, // vs $18,000
+            'catalogo_especialidades' => $catalogo,
+            'tipo_clinica' => $item['tipo_clinica'],
+            'especialidad_label' => $item['especialidad_label'],
+            'precio_consultorio_adicional_mensual' => $item['precio_adicional_mensual'],
+            'precio_consultorio_adicional_anual' => $item['precio_adicional_anual'],
+            'ahorro_consultorio_adicional' => $item['ahorro_adicional_anual'],
+            'nota' => 'El precio depende de la especialidad del consultorio que vayas a crear, no del espacio de trabajo activo.',
         ]);
     }
 
@@ -183,6 +231,11 @@ class SuscripcionConsultorioController extends Controller
      */
     public function comprarConsultorioAdicional(Request $request): JsonResponse
     {
+        $request->validate([
+            'tipo_clinica' => 'nullable|string|max:64',
+            'ciclo' => 'nullable|in:mensual,anual',
+        ]);
+
         /** @var User $user */
         $user = Auth::user();
 
@@ -227,22 +280,43 @@ class SuscripcionConsultorioController extends Controller
             ], 400);
         }
 
-        // TODO: Cancelar en Stripe
+        $clinica = Clinica::find($user->clinica_activa_id ?? $user->clinica_id);
+        $stripeSubId = $clinica?->stripe_subscription_id ?? $user->stripe_subscription_id;
+        $fechaFin = $clinica?->fecha_vencimiento ?? $user->suscripcion_fin;
 
-        // Marcar que no se renovará, pero mantener activa hasta fecha_fin
-        $user->update([
-            'stripe_subscription_id' => null, // Desvincula de Stripe
-        ]);
+        if ($stripeSubId) {
+            try {
+                $periodEnd = app(StripeSubscriptionRenewalService::class)
+                    ->scheduleCancelAtPeriodEnd($stripeSubId);
 
-        Log::info('Suscripción de consultorio cancelada', [
+                if ($periodEnd) {
+                    $fechaFin = $periodEnd;
+                    if ($clinica) {
+                        $clinica->update(['fecha_vencimiento' => $periodEnd]);
+                    }
+                    $user->update(['suscripcion_fin' => $periodEnd]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Error cancelando suscripción consultorio en Stripe: '.$e->getMessage());
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo cancelar la renovación automática: '.$e->getMessage(),
+                ], 500);
+            }
+        }
+
+        Log::info('Suscripción de consultorio: renovación automática cancelada', [
             'user_id' => $user->id,
-            'fecha_vencimiento' => $user->suscripcion_fin,
+            'fecha_vencimiento' => $fechaFin?->format('Y-m-d'),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Suscripción cancelada. Tendrás acceso hasta ' . $user->suscripcion_fin->format('d/m/Y'),
-            'fecha_vencimiento' => $user->suscripcion_fin->format('Y-m-d'),
+            'message' => 'Renovación automática cancelada. Tendrás acceso hasta '
+                .($fechaFin ? $fechaFin->format('d/m/Y') : 'el fin de tu periodo actual').'.',
+            'fecha_vencimiento' => $fechaFin?->format('Y-m-d'),
+            'cancel_at_period_end' => (bool) $stripeSubId,
         ]);
     }
 }

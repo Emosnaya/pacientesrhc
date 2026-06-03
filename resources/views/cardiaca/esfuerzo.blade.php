@@ -385,7 +385,6 @@
       </div>
     </td>
     <td class="w50">
-      <div class="section-title">Cardiopatía Isquémica</div>
       <div class="section-content">
         <b>Confusor:</b> {{$data->confusor}}<br>
         <b>Prob. pre-prueba:</b> {{$data->prevalencia*100}}%<br>

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Models\Clinica;
 use App\Models\User;
+use App\Models\UserClinica;
 use App\Models\UserPermission;
 use App\Models\Paciente;
 use App\Models\ReporteFinal;
@@ -12,12 +14,58 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
     /**
      * Crear un nuevo usuario (solo administradores)
      */
+    /**
+     * Buscar si un email ya tiene cuenta (para vincular a consultorio sin crear duplicado).
+     */
+    public function lookupEmail(Request $request): JsonResponse
+    {
+        $actor = $request->user();
+        if (! $actor->isAdmin() && ! $actor->isSuperAdmin()) {
+            return response()->json(['error' => 'Sin permisos'], 403);
+        }
+
+        $request->validate(['email' => 'required|email']);
+        $clinicaId = (int) $actor->clinica_efectiva_id;
+        $clinica = Clinica::find($clinicaId);
+
+        $existing = User::where('email', $request->email)->first();
+        if (! $existing) {
+            return response()->json(['exists' => false]);
+        }
+
+        if ($existing->paciente_id) {
+            return response()->json([
+                'exists' => true,
+                'can_attach' => false,
+                'message' => 'Este correo pertenece a una cuenta de portal del paciente.',
+            ]);
+        }
+
+        $yaMiembro = $this->userBelongsToWorkspace($existing, $clinicaId);
+
+        return response()->json([
+            'exists' => true,
+            'can_attach' => ! $yaMiembro,
+            'already_member' => $yaMiembro,
+            'es_consultorio' => (bool) $clinica?->es_consultorio_privado,
+            'user' => [
+                'id' => $existing->id,
+                'nombre' => $existing->nombre,
+                'apellidoPat' => $existing->apellidoPat,
+                'apellidoMat' => $existing->apellidoMat,
+                'email' => $existing->email,
+                'rol' => $existing->rol,
+            ],
+        ]);
+    }
+
     public function createUser(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -25,6 +73,22 @@ class UserManagementController extends Controller
         // Solo admin o superadmin pueden crear usuarios
         if (!$user->isAdmin() && !$user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para crear usuarios'], 403);
+        }
+
+        $clinicaId = (int) $user->clinica_efectiva_id;
+        $clinica = Clinica::find($clinicaId);
+        $esConsultorio = $clinica && $clinica->es_consultorio_privado;
+        $vincularExistente = $request->boolean('vincular_existente');
+
+        $existingByEmail = User::where('email', $request->email)->first();
+        if ($existingByEmail && ($vincularExistente || $esConsultorio)) {
+            if (! $esConsultorio) {
+                return response()->json([
+                    'errors' => ['email' => ['Este correo ya está registrado. En clínicas tradicionales debes usar otro email o gestionar el acceso desde administración central.']],
+                ], 422);
+            }
+
+            return $this->attachExistingUserToWorkspace($request, $user, $clinica, $existingByEmail);
         }
 
         $validator = Validator::make($request->all(), [
@@ -306,56 +370,207 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Eliminar un usuario (solo administradores)
+     * Quitar usuario del workspace o eliminar cuenta si solo pertenece aquí.
      */
     public function deleteUser(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        
-        // Solo admin o superadmin pueden eliminar usuarios
-        if (!$user->isAdmin() && !$user->isSuperAdmin()) {
+
+        if (! $user->isAdmin() && ! $user->isSuperAdmin()) {
             return response()->json(['error' => 'No tienes permisos para eliminar usuarios'], 403);
         }
 
         $targetUser = User::find($id);
-        if (!$targetUser) {
+        if (! $targetUser) {
             return response()->json(['error' => 'Usuario no encontrado'], 404);
         }
 
-        // Verificar que el usuario pertenece a la misma clínica efectiva
-        if ($targetUser->clinica_id !== $user->clinica_efectiva_id) {
-            $esMiembro = \App\Models\UserClinica::where('user_id', $targetUser->id)
-                ->where('clinica_id', $user->clinica_efectiva_id)
-                ->where('activa', true)
-                ->exists();
-            if (!$esMiembro) {
-                return response()->json(['error' => 'No tienes permisos para eliminar usuarios de otras clínicas'], 403);
-            }
+        $workspaceClinicaId = (int) $user->clinica_efectiva_id;
+
+        if (! $this->userBelongsToWorkspace($targetUser, $workspaceClinicaId)) {
+            return response()->json(['error' => 'No tienes permisos para eliminar usuarios de otras clínicas'], 403);
         }
 
-        // No permitir que un admin se elimine a sí mismo
         if ($targetUser->id === $user->id) {
             return response()->json(['error' => 'No puedes eliminar tu propia cuenta'], 403);
         }
 
-        // Solo super admin puede eliminar a otros administradores
-        if ($targetUser->isAdmin() && !$user->isSuperAdmin()) {
-            return response()->json(['error' => 'Solo el super administrador puede eliminar otros administradores'], 403);
+        if ($targetUser->isAdmin() && ! $user->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo el super administrador puede quitar a otros administradores'], 403);
         }
 
-        // No se puede eliminar a un super administrador
+        if ($this->userHasAccessOutsideWorkspace($targetUser, $workspaceClinicaId)) {
+            if ($targetUser->isSuperAdmin() && ! $user->isSuperAdmin()) {
+                return response()->json(['error' => 'Solo un super administrador puede quitar a otro super administrador de este espacio'], 403);
+            }
+
+            return $this->removeUserFromWorkspace($targetUser, $workspaceClinicaId);
+        }
+
         if ($targetUser->isSuperAdmin()) {
-            return response()->json(['error' => 'No se puede eliminar a un super administrador'], 403);
+            return response()->json(['error' => 'No se puede eliminar la cuenta de un super administrador. Si tiene acceso en otro espacio, quítalo desde ahí.'], 403);
         }
 
-        // Eliminar permisos asociados
         $targetUser->permissions()->delete();
         $targetUser->grantedPermissions()->delete();
-
-        // Eliminar el usuario
+        $targetUser->clinicas()->detach();
         $targetUser->delete();
 
-        return response()->json(['message' => 'Usuario eliminado exitosamente']);
+        return response()->json([
+            'message' => 'Cuenta eliminada. El usuario ya no tiene acceso al sistema.',
+            'action' => 'deleted',
+        ]);
+    }
+
+    /**
+     * Vincula un usuario LynkaMed existente al consultorio (sin nueva contraseña ni duplicar cuenta).
+     */
+    private function attachExistingUserToWorkspace(
+        Request $request,
+        User $actor,
+        Clinica $clinica,
+        User $targetUser
+    ): JsonResponse {
+        if ($targetUser->paciente_id) {
+            return response()->json([
+                'errors' => ['email' => ['Este correo es de portal del paciente, no se puede agregar al equipo.']],
+            ], 422);
+        }
+
+        if ($request->has('isSuperAdmin') && $request->isSuperAdmin && ! $actor->isSuperAdmin()) {
+            return response()->json(['error' => 'Solo un super administrador puede asignar copropietario'], 403);
+        }
+
+        $clinicaId = $clinica->id;
+
+        if ($this->userBelongsToWorkspace($targetUser, $clinicaId)) {
+            return response()->json([
+                'error' => 'Este usuario ya es miembro de este consultorio.',
+            ], 409);
+        }
+
+        $rolPivot = ($request->isAdmin || $request->isSuperAdmin) ? 'propietario' : 'colaborador';
+        $pivotData = [
+            'rol_en_clinica' => $request->isSuperAdmin ? 'propietario' : $rolPivot,
+            'activa' => true,
+            'isAdmin' => (bool) ($request->isAdmin ?? false),
+            'isSuperAdmin' => (bool) ($request->isSuperAdmin ?? false),
+            'invitado_por' => $actor->id,
+        ];
+
+        if ($request->isSuperAdmin) {
+            $pivotData = array_merge(User::pivotPropietarioConsultorio(), [
+                'invitado_por' => $actor->id,
+            ]);
+        }
+
+        $pivotInactivo = UserClinica::where('user_id', $targetUser->id)
+            ->where('clinica_id', $clinicaId)
+            ->first();
+
+        if ($pivotInactivo) {
+            $pivotInactivo->update($pivotData);
+        } else {
+            $targetUser->clinicas()->attach($clinicaId, $pivotData);
+        }
+
+        if ($request->filled('rol')) {
+            $targetUser->update(['rol' => $request->rol]);
+        }
+
+        if ($request->filled('nombre')) {
+            $targetUser->update([
+                'nombre' => $request->nombre,
+                'apellidoPat' => $request->apellidoPat,
+                'apellidoMat' => $request->apellidoMat,
+                'cedula' => $request->cedula ?? $targetUser->cedula,
+            ]);
+        }
+
+        try {
+            Mail::send('emails.consultorio-invitacion', [
+                'invitante' => $actor,
+                'clinica' => $clinica,
+                'acceptUrl' => rtrim((string) config('app.frontend_url'), '/') . '/',
+                'rol' => 'colaborador',
+            ], function ($message) use ($targetUser, $clinica, $actor) {
+                $message->to($targetUser->email)
+                    ->subject("Acceso al consultorio {$clinica->nombre} — LynkaMed");
+            });
+        } catch (\Exception $e) {
+            \Log::warning('Email vinculación consultorio: '.$e->getMessage());
+        }
+
+        return response()->json([
+            'message' => "{$targetUser->email} fue agregado al consultorio. Comparte agenda y suscripción del espacio; caja y facturación siguen siendo personales.",
+            'action' => 'attached',
+            'user' => $targetUser->fresh(),
+        ], 201);
+    }
+
+    private function userBelongsToWorkspace(User $targetUser, int $workspaceClinicaId): bool
+    {
+        if ((int) $targetUser->clinica_id === $workspaceClinicaId) {
+            return true;
+        }
+
+        return DB::table('user_clinicas')
+            ->where('user_id', $targetUser->id)
+            ->where('clinica_id', $workspaceClinicaId)
+            ->where('activa', true)
+            ->exists();
+    }
+
+    /**
+     * Tiene otro consultorio, otra clínica u otro workspace además del actual.
+     */
+    private function userHasAccessOutsideWorkspace(User $targetUser, int $workspaceClinicaId): bool
+    {
+        $otherPivots = DB::table('user_clinicas')
+            ->where('user_id', $targetUser->id)
+            ->where('activa', true)
+            ->where('clinica_id', '!=', $workspaceClinicaId)
+            ->exists();
+
+        if ($otherPivots) {
+            return true;
+        }
+
+        if ($targetUser->clinica_id && (int) $targetUser->clinica_id !== $workspaceClinicaId) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function removeUserFromWorkspace(User $targetUser, int $workspaceClinicaId): JsonResponse
+    {
+        $targetUser->clinicas()->detach($workspaceClinicaId);
+
+        $updates = [];
+
+        if ((int) $targetUser->clinica_activa_id === $workspaceClinicaId) {
+            $updates['clinica_activa_id'] = null;
+        }
+
+        if ((int) $targetUser->clinica_id === $workspaceClinicaId) {
+            $fallbackClinicaId = DB::table('user_clinicas')
+                ->where('user_id', $targetUser->id)
+                ->where('activa', true)
+                ->orderByDesc('updated_at')
+                ->value('clinica_id');
+
+            $updates['clinica_id'] = $fallbackClinicaId;
+        }
+
+        if ($updates !== []) {
+            $targetUser->update($updates);
+        }
+
+        return response()->json([
+            'message' => 'Usuario quitado de este espacio de trabajo. Conserva acceso en sus otros consultorios o clínicas.',
+            'action' => 'removed',
+        ]);
     }
 
     /**
