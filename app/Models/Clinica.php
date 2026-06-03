@@ -24,6 +24,9 @@ class Clinica extends Model
         'duration',
         'pagado',
         'fecha_vencimiento',
+        'trial_ends_at',
+        'plan_type',
+        'billing_cycle',
         'next_billing_date',
         'stripe_subscription_id',
         'stripe_customer_id',
@@ -145,6 +148,70 @@ class Clinica extends Model
                     ->using(UserClinica::class)
                     ->withPivot(['rol_en_clinica', 'activa', 'invitado_por'])
                     ->withTimestamps();
+    }
+
+    /**
+     * Fin efectivo del trial (clínica, propietario o fecha de vencimiento en consultorio sin pago).
+     */
+    public function trialEndsAtEfectivo(): ?\Carbon\Carbon
+    {
+        $now = now();
+
+        if ($this->trial_ends_at && $now->lessThanOrEqualTo($this->trial_ends_at)) {
+            return $this->trial_ends_at->copy();
+        }
+
+        $propietario = $this->relationLoaded('propietario') ? $this->propietario : $this->propietario()->first();
+        if ($propietario?->trial_ends_at && $now->lessThan($propietario->trial_ends_at)) {
+            return $propietario->trial_ends_at->copy();
+        }
+
+        if (
+            $this->es_consultorio_privado
+            && ! $this->pagado
+            && $this->fecha_vencimiento
+            && \App\Services\SubscriptionStatusService::fechaVencimientoVigente($this->fecha_vencimiento->copy())
+            && ! $this->stripe_subscription_id
+        ) {
+            return $this->fecha_vencimiento->copy()->endOfDay();
+        }
+
+        return null;
+    }
+
+    public function estaEnTrial(): bool
+    {
+        return $this->trialEndsAtEfectivo() !== null && ! $this->pagado;
+    }
+
+    /**
+     * Persiste trial_ends_at (y fecha_vencimiento si falta) desde propietario o vencimiento vigente.
+     */
+    public function sincronizarFechasTrial(): bool
+    {
+        $trialEnd = $this->trialEndsAtEfectivo();
+        if (! $trialEnd || now()->greaterThan($trialEnd)) {
+            return false;
+        }
+
+        $attrs = [];
+        if (! $this->trial_ends_at || ! $this->trial_ends_at->equalTo($trialEnd)) {
+            $attrs['trial_ends_at'] = $trialEnd;
+        }
+        if (! $this->fecha_vencimiento) {
+            $attrs['fecha_vencimiento'] = $trialEnd->toDateString();
+        }
+        if (! $this->activa) {
+            $attrs['activa'] = true;
+        }
+
+        if ($attrs === []) {
+            return false;
+        }
+
+        $this->update($attrs);
+
+        return true;
     }
 
     // Métodos auxiliares

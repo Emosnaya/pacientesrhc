@@ -308,7 +308,7 @@ class AdminAuthController extends Controller
         $tipo   = $request->query('tipo', 'todas');
         $search = $request->query('q', '');
 
-        $query = \App\Models\Clinica::with(['propietario:id,nombre,apellidoPat,email,tiene_suscripcion_consultorio,suscripcion_fin'])
+        $query = \App\Models\Clinica::with(['propietario:id,nombre,apellidoPat,email,tiene_suscripcion_consultorio,suscripcion_fin,trial_ends_at'])
             ->select([
                 'id','nombre','email','telefono','direccion','tipo_clinica',
                 'plan_type','billing_cycle','pagado','activa',
@@ -323,8 +323,19 @@ class AdminAuthController extends Controller
             'activas'  => $query->where('pagado', true)
                                 ->where(fn($q) => $q->whereNull('fecha_vencimiento')->orWhere('fecha_vencimiento', '>=', $now)),
             'vencidas' => $query->where('pagado', true)->whereNotNull('fecha_vencimiento')->where('fecha_vencimiento', '<', $now),
-            'trial'    => $query->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now)->where('pagado', false),
-            'nunca'    => $query->where('pagado', false)->where(fn($q) => $q->whereNull('trial_ends_at')->orWhere('trial_ends_at', '<', $now)),
+            'trial'    => $query->where('pagado', false)->where(function ($q) use ($now) {
+                $q->where(fn ($q2) => $q2->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now))
+                    ->orWhereHas('propietario', fn ($p) => $p->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now))
+                    ->orWhere(fn ($q3) => $q3->where('es_consultorio_privado', true)
+                        ->whereNotNull('fecha_vencimiento')
+                        ->where('fecha_vencimiento', '>=', $now->toDateString())
+                        ->whereNull('stripe_subscription_id'));
+            }),
+            'nunca'    => $query->where('pagado', false)->where(function ($q) use ($now) {
+                $q->where(fn ($q2) => $q2->whereNull('trial_ends_at')->orWhere('trial_ends_at', '<', $now))
+                    ->whereDoesntHave('propietario', fn ($p) => $p->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now))
+                    ->where(fn ($q3) => $q3->whereNull('fecha_vencimiento')->orWhere('fecha_vencimiento', '<', $now->toDateString()));
+            }),
             default    => null,
         };
 
@@ -361,24 +372,32 @@ class AdminAuthController extends Controller
                     ];
                 });
 
+            $enTrial = $c->estaEnTrial();
+            $trialEndsAt = $c->trialEndsAtEfectivo();
+            $diasTrial = $enTrial && $trialEndsAt
+                ? (int) $now->diffInDays($trialEndsAt, false)
+                : null;
+
             $tipoCobro = match (true) {
                 (bool) $c->stripe_subscription_id => 'stripe_recurrente',
                 $totalPagos > 0                     => 'pago_registrado',
                 (bool) $c->pagado                   => 'manual_prepagado',
+                $enTrial                            => 'trial_gratuito',
                 default                             => 'sin_pago',
             };
 
             $diasRestantes = $c->fecha_vencimiento
                 ? (int) $now->diffInDays($c->fecha_vencimiento, false)
-                : null;
+                : ($diasTrial ?? null);
 
-            $enTrial = $c->trial_ends_at && $c->trial_ends_at > $now && !$c->pagado;
-            $diasTrial = $enTrial ? (int) $now->diffInDays($c->trial_ends_at, false) : null;
+            $statusAcceso = \App\Services\SubscriptionStatusService::getStatus($c, $c->propietario);
+            $tieneAcceso = (bool) ($statusAcceso['active'] ?? false);
 
             $estadoLabel = match (true) {
                 $c->pagado && ($c->fecha_vencimiento === null || $c->fecha_vencimiento >= $now) => 'activa',
                 $c->pagado && $c->fecha_vencimiento < $now => 'vencida',
                 $enTrial  => 'trial',
+                $tieneAcceso => 'activa',
                 default   => 'inactiva',
             };
 
@@ -397,8 +416,10 @@ class AdminAuthController extends Controller
                 'fecha_registro'        => $c->created_at?->format('Y-m-d'),
                 'fecha_vencimiento'     => $c->fecha_vencimiento?->format('Y-m-d'),
                 'dias_restantes'        => $diasRestantes,
-                'trial_ends_at'         => $c->trial_ends_at?->format('Y-m-d H:i'),
+                'trial_ends_at'         => $trialEndsAt?->format('Y-m-d H:i'),
                 'dias_trial_restantes'  => $diasTrial,
+                'tiene_acceso'          => $tieneAcceso,
+                'acceso_motivo'         => $statusAcceso['tipo'] ?? null,
                 'stripe_customer_id'    => $c->stripe_customer_id,
                 'stripe_subscription_id'=> $c->stripe_subscription_id,
                 'next_billing_date'     => $c->next_billing_date?->format('Y-m-d'),
@@ -410,6 +431,7 @@ class AdminAuthController extends Controller
                     'nombre'     => trim($c->propietario->nombre . ' ' . $c->propietario->apellidoPat),
                     'email'      => $c->propietario->email,
                     'suscripcion_fin' => $c->propietario->suscripcion_fin?->format('Y-m-d'),
+                    'trial_ends_at' => $c->propietario->trial_ends_at?->format('Y-m-d'),
                 ] : null,
                 'ultimo_pago' => $ultimoPago ? (function () use ($ultimoPago) {
                     $meta = is_array($ultimoPago->metadata) ? $ultimoPago->metadata : [];
@@ -659,10 +681,15 @@ class AdminAuthController extends Controller
             ->whereBetween('fecha_vencimiento', [$now, $now->copy()->addDays(30)])
             ->count();
 
-        // Trial activo
-        $trialesActivos = \App\Models\Clinica::whereNotNull('trial_ends_at')
-            ->where('trial_ends_at', '>=', $now)
-            ->where('pagado', false)
+        // Trial activo (consultorios con fecha vigente sin pago o trial_ends_at)
+        $trialesActivos = \App\Models\Clinica::where('pagado', false)
+            ->where(function ($q) use ($now) {
+                $q->where(fn ($q2) => $q2->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now))
+                    ->orWhereHas('propietario', fn ($p) => $p->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now))
+                    ->orWhere(fn ($q3) => $q3->where('es_consultorio_privado', true)
+                        ->whereNotNull('fecha_vencimiento')
+                        ->where('fecha_vencimiento', '>=', $now->toDateString()));
+            })
             ->count();
 
         // Por tipo de clínica

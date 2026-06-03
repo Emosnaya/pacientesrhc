@@ -161,17 +161,28 @@ class SuscripcionConsultorioController extends Controller
         }
 
         // Activar trial de 14 días
+        $trialEndsAt = now()->addDays(30)->endOfDay();
+
         $user->update([
             'tiene_suscripcion_consultorio' => true,
             'plan_consultorio' => $request->plan,
             'ciclo_facturacion' => 'mensual',
-            'trial_ends_at' => now()->addDays(30)->endOfDay(),
+            'trial_ends_at' => $trialEndsAt,
             'consultorios_adicionales_comprados' => 0,
         ]);
 
+        \App\Models\Clinica::query()
+            ->where('propietario_user_id', $user->id)
+            ->where('es_consultorio_privado', true)
+            ->each(fn (\App\Models\Clinica $c) => $c->update([
+                'trial_ends_at' => $trialEndsAt,
+                'fecha_vencimiento' => $c->fecha_vencimiento ?? $trialEndsAt->toDateString(),
+                'activa' => true,
+            ]));
+
         return response()->json([
             'success' => true,
-            'message' => 'Período de prueba activado. Tienes 14 días para probar el sistema.',
+            'message' => 'Período de prueba activado. Tienes 30 días para probar el sistema.',
             'trial_ends_at' => $user->trial_ends_at->format('Y-m-d'),
         ]);
     }
