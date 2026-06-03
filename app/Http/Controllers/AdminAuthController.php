@@ -638,8 +638,9 @@ class AdminAuthController extends Controller
     {
         $now = now();
 
-        $preciosMensual = ['consultorio' => 1299, 'dental' => 1699, 'rehabilitacion_cardiopulmonar' => 2399];
-        $preciosAnual   = ['consultorio' => 11990, 'dental' => 17999, 'rehabilitacion_cardiopulmonar' => 26990];
+        $basePrecios = config('clinica_tipos.base_precios', []);
+        $preciosMensual = collect($basePrecios)->mapWithKeys(fn ($p, $k) => [$k => $p['mensual']])->all();
+        $preciosAnual   = collect($basePrecios)->mapWithKeys(fn ($p, $k) => [$k => $p['anual']])->all();
 
         // Suscripciones activas (no vencidas)
         $activas = \App\Models\Clinica::where('pagado', true)

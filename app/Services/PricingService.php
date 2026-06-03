@@ -15,7 +15,7 @@ class PricingService
      * [tipo_clinica => [mensual, anual]]
      */
     public static array $BASE_LAUNCH = [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 2399, 'anual' => 26990],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000],
         'dental'       => ['mensual' => 1699, 'anual' => 17999],
         'cardiologia'  => ['mensual' => 1699, 'anual' => 17999],
         'fisioterapia' => ['mensual' => 1299, 'anual' => 13990],
@@ -35,7 +35,7 @@ class PricingService
      * Precios normales (post-lanzamiento) por tipo de clínica.
      */
     public static array $BASE_NORMAL = [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 2899, 'anual' => 32999],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000],
         'dental'       => ['mensual' => 1999, 'anual' => 21999],
         'cardiologia'  => ['mensual' => 1999, 'anual' => 21999],
         'fisioterapia' => ['mensual' => 1699, 'anual' => 18999],

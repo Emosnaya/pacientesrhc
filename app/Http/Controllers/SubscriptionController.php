@@ -1541,24 +1541,10 @@ class SubscriptionController extends Controller
             $clinica     = $user->clinicaActiva ?? \App\Models\Clinica::find($user->clinica_efectiva_id);
             $tipoClinica = $clinica?->tipo_clinica ?? 'general';
 
-            $preciosPorTipo = [
-                'rehabilitacion_cardiopulmonar' => ['mensual' => 119900, 'anual' => 1199000],
-                'dental'       => ['mensual' => 84900,  'anual' => 849000],
-                'cardiologia'  => ['mensual' => 84900,  'anual' => 849000],
-                'fisioterapia' => ['mensual' => 64900,  'anual' => 649000],
-                'ginecologia'  => ['mensual' => 64900,  'anual' => 649000],
-                'pediatria'    => ['mensual' => 64900,  'anual' => 649000],
-                'neurologia'   => ['mensual' => 64900,  'anual' => 649000],
-                'neumologia'   => ['mensual' => 64900,  'anual' => 649000],
-                'general'      => ['mensual' => 64900,  'anual' => 649000],
-                'nutricion'    => ['mensual' => 49900,  'anual' => 499000],
-                'psicologia'   => ['mensual' => 49900,  'anual' => 499000],
-                'psiquiatria'  => ['mensual' => 64900,  'anual' => 649000],
-            ];
-            $defaultPrecio = ['mensual' => 69900, 'anual' => 699000];
-            $precios = $preciosPorTipo[$tipoClinica] ?? $defaultPrecio;
-
-            $precioPorSlot = $precios[$billingCycle];
+            $precioPorSlot = \App\Services\PricingService::precioConsultorioAdicional(
+                $tipoClinica,
+                $billingCycle === 'anual' ? 'anual' : 'mensual'
+            ) * 100;
 
             $session = Session::create([
                 'payment_method_types' => ['card'],
@@ -1614,22 +1600,11 @@ class SubscriptionController extends Controller
         $user    = $request->user();
         $clinica = $user->clinicaActiva ?? \App\Models\Clinica::find($user->clinica_efectiva_id);
 
-        $preciosPorTipo = [
-            'rehabilitacion_cardiopulmonar' => ['mes' => 1199, 'anio' => 11990],
-            'dental'       => ['mes' => 849,  'anio' => 8490],
-            'cardiologia'  => ['mes' => 849,  'anio' => 8490],
-            'fisioterapia' => ['mes' => 649,  'anio' => 6490],
-            'ginecologia'  => ['mes' => 649,  'anio' => 6490],
-            'pediatria'    => ['mes' => 649,  'anio' => 6490],
-            'neurologia'   => ['mes' => 649,  'anio' => 6490],
-            'neumologia'   => ['mes' => 649,  'anio' => 6490],
-            'general'      => ['mes' => 649,  'anio' => 6490],
-            'nutricion'    => ['mes' => 499,  'anio' => 4990],
-            'psicologia'   => ['mes' => 499,  'anio' => 4990],
-            'psiquiatria'  => ['mes' => 649,  'anio' => 6490],
-        ];
         $tipoClinica = $clinica?->tipo_clinica ?? 'general';
-        $precioSlot  = $preciosPorTipo[$tipoClinica] ?? ['mes' => 699, 'anio' => 6990];
+        $precioSlot  = [
+            'mes'  => \App\Services\PricingService::precioConsultorioAdicional($tipoClinica, 'mensual'),
+            'anio' => \App\Services\PricingService::precioConsultorioAdicional($tipoClinica, 'anual'),
+        ];
 
         $max      = $clinica?->max_sucursales ?? 0;
         $usados   = $clinica?->sucursales()->count() ?? 0;
