@@ -6,6 +6,7 @@ use App\Models\Cita;
 use App\Models\ChatConversacion;
 use App\Models\ChatMensaje;
 use App\Models\ChatParticipante;
+use App\Models\Clinica;
 use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Evento;
@@ -130,7 +131,7 @@ class CitaController extends Controller
                     'nuevo_paciente.fechaNacimiento' => 'required|date',
                     'nuevo_paciente.genero' => 'required|in:masculino,femenino',
                     'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
-                    'nuevo_paciente.tipo_paciente' => 'required|in:cardiaca,pulmonar,ambos,fisioterapia',
+                    'nuevo_paciente.tipo_paciente' => 'nullable|string|max:255',
                     'nuevo_paciente.user_id' => 'nullable|exists:users,id',
                     'user_id' => 'nullable|exists:users,id',
                     'custom_email' => 'nullable|email|max:255',
@@ -151,6 +152,10 @@ class CitaController extends Controller
 
                 // Crear nuevo paciente
                 $pacienteData = $request->nuevo_paciente;
+                $clinicaId = $user->clinica_efectiva_id;
+                $clinica = Clinica::find($clinicaId);
+                $tipoPacienteDefault = $clinica?->tipo_clinica ?: 'general';
+                $sucursalIdPaciente = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
                 $peso = $pacienteData['peso'] ?? 0;
                 $talla = $pacienteData['talla'] ?? 0;
                 $imc = $talla > 0 ? ($peso / ($talla * $talla)) : 0;
@@ -177,8 +182,9 @@ class CitaController extends Controller
                 $nuevoPaciente->edad = $edad;
                 $nuevoPaciente->imc = $imc;
                 $nuevoPaciente->genero = $pacienteData['genero'] === 'masculino' ? 1 : 0;
-                $nuevoPaciente->tipo_paciente = $pacienteData['tipo_paciente'] ?? 'cardiaca';
-                
+                $nuevoPaciente->tipo_paciente = $pacienteData['tipo_paciente'] ?? $tipoPacienteDefault;
+                $nuevoPaciente->color = $pacienteData['color'] ?? null;
+
                 // Asignar el paciente al doctor seleccionado o al usuario actual
                 if (!empty($pacienteData['user_id'])) {
                     // Si se proporcionó un doctor, asignar a ese doctor
@@ -201,10 +207,22 @@ class CitaController extends Controller
                     $nuevoPaciente->user_id = $user->id;
                 }
                 
-                $nuevoPaciente->clinica_id = $user->clinica_efectiva_id;
-                $nuevoPaciente->sucursal_id = $user->sucursal_id; // Asignar sucursal del usuario
+                $nuevoPaciente->clinica_id = $clinicaId;
+                $nuevoPaciente->sucursal_id = $sucursalIdPaciente;
                 $nuevoPaciente->save();
-                
+
+                if (! $nuevoPaciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
+                    $nuevoPaciente->clinicas()->attach($clinicaId, [
+                        'sucursal_id' => $sucursalIdPaciente,
+                        'user_id' => $nuevoPaciente->user_id,
+                        'vinculado_at' => now(),
+                        'tipo_paciente' => $nuevoPaciente->tipo_paciente,
+                        'numero_expediente' => $nuevoPaciente->registro,
+                        'portal_visible_citas' => true,
+                        'portal_visible_datos_basicos' => true,
+                    ]);
+                }
+
                 $paciente = $nuevoPaciente;
             } else {
                 return response()->json([

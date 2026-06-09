@@ -1065,6 +1065,8 @@ class SubscriptionController extends Controller
                 'puede_renovar_online' => $status['puede_renovar_online'],
                 'tipo_renovacion' => 'stripe',
                 'renovacion_automatica' => (bool) $clinica->stripe_subscription_id,
+                'stripe_subscription_id' => $clinica->stripe_subscription_id,
+                'puede_renovar_online' => $status['puede_renovar_online'],
                 'mensaje' => $status['message'],
             ],
             'planes_disponibles' => \App\Services\SubscriptionStatusService::planesDisponibles($clinica),
@@ -1078,6 +1080,7 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'billing_cycle' => 'required|in:mensual,anual',
+            'return_to'       => 'nullable|string|in:suscripcion-clinica,clinica,suscripcion',
         ]);
 
         try {
@@ -1106,14 +1109,22 @@ class SubscriptionController extends Controller
 
             Stripe::setApiKey(config('services.stripe.secret'));
 
+            $esConsultorio = (bool) $clinica->es_consultorio_privado;
+            $etiquetaTipo = $esConsultorio ? 'Consultorio' : 'Clínica';
+            $returnTo = $request->input('return_to', $esConsultorio ? 'suscripcion' : 'clinica');
+            $cancelPath = match ($returnTo) {
+                'clinica', 'suscripcion-clinica' => '/clinica?tab=suscripcion&cancelado=1',
+                default => '/suscripcion?cancelado=1',
+            };
+
             $checkoutParams = [
                 'payment_method_types' => ['card'],
                 'line_items' => [[
                     'price_data' => [
                         'currency' => 'mxn',
                         'product_data' => [
-                            'name' => "Renovación Consultorio - " . ucfirst($request->billing_cycle),
-                            'description' => "Renovación de suscripción para {$clinica->nombre}",
+                            'name' => "Suscripción LynkaMed ({$etiquetaTipo}) - " . ucfirst($request->billing_cycle),
+                            'description' => "Suscripción para {$clinica->nombre}",
                         ],
                         'unit_amount' => round($precio * 100),
                         'recurring' => [
@@ -1123,8 +1134,8 @@ class SubscriptionController extends Controller
                     'quantity' => 1,
                 ]],
                 'mode' => 'subscription',
-                'success_url' => config('app.frontend_url') . '/suscripcion/renovacion-exitosa?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => config('app.frontend_url') . '/suscripcion?cancelado=1',
+                'success_url' => config('app.frontend_url') . '/suscripcion/renovacion-exitosa?session_id={CHECKOUT_SESSION_ID}&return_to=' . urlencode($returnTo),
+                'cancel_url' => config('app.frontend_url') . $cancelPath,
                 'metadata' => [
                     'type' => 'consultorio_renewal',
                     'clinica_id' => $clinica->id,

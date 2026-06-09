@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class SubscriptionStatusService
 {
     /**
-     * ¿La fecha de vencimiento aún cubre hoy? (válido hasta el día anterior al vencimiento).
+     * La fecha de vencimiento an cubre hoy? (vlido hasta el da anterior al vencimiento).
      * Si vence el 15-jun, el 14 tiene acceso; el 15 ya vence.
      */
     public static function fechaVencimientoVigente(?Carbon $fechaVencimiento): bool
@@ -35,7 +35,7 @@ class SubscriptionStatusService
 
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningún pago para esta cuenta.',
+                'No se ha registrado ningn pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -55,8 +55,8 @@ class SubscriptionStatusService
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_vencido' : 'clinica_vencida',
                 $esConsultorio
-                    ? "Tu suscripción venció hace {$diasVencido} días. Renueva para continuar usando el sistema."
-                    : 'La suscripción de tu clínica ha vencido. Renueva para continuar.',
+                    ? "Tu suscripcin venci hace {$diasVencido} das. Renueva para continuar usando el sistema."
+                    : 'La suscripcin de tu clnica ha vencido. Renueva para continuar.',
                 $esConsultorio,
                 $diasVencido
             );
@@ -69,7 +69,7 @@ class SubscriptionStatusService
             if ($esPropietario && ! $user->tieneSuscripcionConsultorioActiva() && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
+                    'Tu suscripcin de consultorio ha vencido. Renueva para continuar.',
                     true,
                     0
                 );
@@ -78,7 +78,7 @@ class SubscriptionStatusService
             if (! $esPropietario && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'El consultorio no tiene suscripción activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
+                    'El consultorio no tiene suscripcin activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
                     true,
                     0
                 );
@@ -88,7 +88,7 @@ class SubscriptionStatusService
         if (! $clinica->activa) {
             return self::inactivePayload(
                 'clinica_inactiva',
-                'Tu espacio de trabajo está desactivado. Contacta al administrador.',
+                'Tu espacio de trabajo est desactivado. Contacta al administrador.',
                 $esConsultorio,
                 null
             );
@@ -98,7 +98,7 @@ class SubscriptionStatusService
             && ! ($fechaVencimiento && self::fechaVencimientoVigente($fechaVencimiento))) {
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningún pago para esta cuenta.',
+                'No se ha registrado ningn pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -156,7 +156,7 @@ class SubscriptionStatusService
             'message' => null,
             'dias_vencido' => null,
             'dias_restantes' => $diasRestantes,
-            'puede_renovar_online' => $esConsultorio,
+            'puede_renovar_online' => true,
             'contacto_url' => null,
             'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
         ];
@@ -174,7 +174,12 @@ class SubscriptionStatusService
             'message' => $message,
             'dias_vencido' => $diasVencido,
             'dias_restantes' => null,
-            'puede_renovar_online' => $esConsultorio || in_array($tipo, ['clinica_vencida', 'consultorio_vencido', 'consultorio_sin_pago'], true),
+            'puede_renovar_online' => $esConsultorio || in_array($tipo, [
+                'clinica_vencida',
+                'clinica_sin_pago',
+                'consultorio_vencido',
+                'consultorio_sin_pago',
+            ], true),
             'contacto_url' => '/api/clinica-contacto-comercial',
             'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
         ];
