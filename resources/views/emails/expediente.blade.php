@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Expediente Médico - {{ $clinica->nombre ?? 'Clínica' }}</title>
+    <title>Historia Clínica - {{ $clinica->nombre ?? 'Clínica' }}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -87,7 +87,7 @@
             @if($clinica && $clinica->logo)
                 <img src="{{ $clinica->logo_url ?? config('app.url') . '/storage/' . $clinica->logo }}" alt="{{ $clinica->nombre }} Logo" class="logo">
             @endif
-            <h1>{{ $tipoExpedienteNombre ?? 'Expediente Médico' }}</h1>
+            <h1>{{ $tipoExpedienteNombre ?? 'Historia Clínica' }}</h1>
             <p>{{ $clinica->nombre ?? 'Clínica Médica' }}</p>
         </div>
         
@@ -109,7 +109,7 @@
                 @endif
             </div>
             
-            <p>El expediente se encuentra adjunto a este correo en formato PDF.</p>
+            <p>La historia clínica se encuentra adjunta a este correo en formato PDF.</p>
             
             <p>Si tiene alguna pregunta o necesita información adicional, no dude en contactarnos.</p>
             

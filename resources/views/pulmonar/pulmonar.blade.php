@@ -348,7 +348,7 @@
                     </div>
                 </td>
                 <td style="padding-left: 10px;">
-                    <div class="header-title">Expediente de Rehabilitación Pulmonar</div>
+                    <div class="header-title">Historia Clínica de Rehabilitación Pulmonar</div>
                     <div class="header-subtitle">Historia clínica pulmonar</div>
                 </td>
                 <td class="header-meta-cell">

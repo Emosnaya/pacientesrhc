@@ -56,14 +56,19 @@ class ExpedienteUnificadoController extends Controller
         $esfuerzos = Esfuerzo::where('paciente_id', $pacienteId)
             ->where('clinica_id', $clinicaId)
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
+                $esPulmonar = ($item->tipo_esfuerzo ?? 'cardiaco') === 'pulmonar';
+
                 return [
                     'id' => $item->id,
                     'tipo_exp' => 1,
+                    'tipo_esfuerzo' => $item->tipo_esfuerzo ?? 'cardiaco',
                     'fecha' => $item->fecha,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
-                    'tipo_nombre' => 'Prueba de Esfuerzo'
+                    'tipo_nombre' => $esPulmonar
+                        ? 'Prueba de Esfuerzo Pulmonar'
+                        : 'Prueba de Esfuerzo Cardíaca',
                 ];
             });
 
@@ -99,7 +104,7 @@ class ExpedienteUnificadoController extends Controller
                     'fecha' => $item->fecha,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
-                    'tipo_nombre' => 'Expediente Clínico'
+                    'tipo_nombre' => 'Historia Clínica Cardíaca'
                 ];
             });
 
@@ -144,7 +149,7 @@ class ExpedienteUnificadoController extends Controller
                     'fecha' => $item->fecha,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
-                    'tipo_nombre' => 'Nota Psicológica'
+                    'tipo_nombre' => 'Nota de Psicología'
                 ];
             });
 
@@ -174,7 +179,7 @@ class ExpedienteUnificadoController extends Controller
                     'fecha' => $item->fecha_consulta,
                     'created_at' => $item->created_at,
                     'updated_at' => $item->updated_at,
-                    'tipo_nombre' => 'Expediente Clínico Pulmonar'
+                    'tipo_nombre' => 'Historia Clínica Pulmonar'
                 ];
             });
 

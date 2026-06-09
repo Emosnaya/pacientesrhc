@@ -144,7 +144,7 @@
         </div>
     </div>
     <div class="col" style="width:18%">
-        <div class="label">Expediente</div>
+        <div class="label">Historia Clínica</div>
         <div class="value">{{ $paciente->numero_expediente ?? '—' }}</div>
     </div>
     <div class="col" style="width:18%">

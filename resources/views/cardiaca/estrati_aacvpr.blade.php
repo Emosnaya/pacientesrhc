@@ -429,21 +429,22 @@
         <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
         <table class="patient-table">
             <tr>
+            <td><span class="patient-label">F. Nac.:</span> <span class="patient-value">{{ $paciente->fechaNacimiento ? date('d/m/Y', strtotime($paciente->fechaNacimiento)) : '—' }}</span></td>
+                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
+                <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Hombre' : 'Mujer' }}</span></td>
                 <td><span class="patient-label">Peso:</span> <span class="patient-value">{{ $paciente->peso }} kg</span></td>
                 <td><span class="patient-label">Talla:</span> <span class="patient-value">{{ $paciente->talla }} m</span></td>
-                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
-                <td><span class="patient-label">IMC:</span> <span class="patient-value">{{ number_format($paciente->imc, 2) }}</span></td>
-                <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Hombre' : 'Mujer' }}</span></td>
+                <td><span class="patient-label">IMC:</span> <span class="patient-value">{{ round($paciente->imc, 2) }}</span></td>
             </tr>
         </table>
-        @if($paciente->medicamentos)
-        <div class="patient-diagnosis">
-            <span class="patient-diagnosis-label">Medicamentos:</span> {{ $paciente->medicamentos }}
-        </div>
-        @endif
         @if($paciente->diagnostico)
         <div class="patient-diagnosis">
             <span class="patient-diagnosis-label">Diagnóstico:</span> {{ $paciente->diagnostico }}
+        </div>
+        @endif
+        @if($paciente->medicamentos)
+        <div class="patient-diagnosis">
+            <span class="patient-diagnosis-label">Medicamentos:</span> {{ $paciente->medicamentos }}
         </div>
         @endif
     </div>

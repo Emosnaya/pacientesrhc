@@ -104,7 +104,7 @@
                 </div>
             </td>
             <td style="padding-left:8px;">
-                <div class="header-title">Expediente Clínico de Rehabilitación Cardiaca</div>
+                <div class="header-title">Historia Clínica de Rehabilitación Cardiaca</div>
                 <div class="header-subtitle">Historia clínica del paciente</div>
             </td>
             <td class="header-meta-cell">
@@ -122,16 +122,16 @@
     <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
     <table class="pt">
         <tr>
+        <td><span class="plabel">Edad:</span> <span class="pvalue">{{ $paciente->edad }} años</span></td>
+        <td><span class="plabel">Género:</span> <span class="pvalue">{{ $paciente->genero == 1 ? 'Hombre' : 'Mujer' }}</span></td>
             <td><span class="plabel">Peso:</span> <span class="pvalue">{{ $paciente->peso }} kg</span></td>
             <td><span class="plabel">Talla:</span> <span class="pvalue">{{ $paciente->talla }} m</span></td>
-            <td><span class="plabel">Edad:</span> <span class="pvalue">{{ $paciente->edad }} años</span></td>
             <td><span class="plabel">IMC:</span> <span class="pvalue">{{ round($paciente->imc, 2) }}</span></td>
-            <td><span class="plabel">Género:</span> <span class="pvalue">{{ $paciente->genero == 1 ? 'Hombre' : 'Mujer' }}</span></td>
             <td><span class="plabel">E. Civil:</span> <span class="pvalue">{{ $paciente->estadoCivil }}</span></td>
         </tr>
         <tr>
+            <td><span class="plabel">F. Nac.:</span> <span class="pvalue">{{ $paciente->fechaNacimiento ? date('d/m/Y', strtotime($paciente->fechaNacimiento)) : '—' }}</span></td>
             <td><span class="plabel">Profesión:</span> <span class="pvalue">{{ $paciente->profesion }}</span></td>
-            <td><span class="plabel">F. Nac.:</span> <span class="pvalue">{{ $paciente->fechaNacimiento }}</span></td>
             <td><span class="plabel">Ingreso (1ª):</span> <span class="pvalue">{{ date('d/m/Y', strtotime($data->fecha_1vez)) }}</span></td>
             <td><span class="plabel">Estratif.:</span> <span class="pvalue">{{ date('d/m/Y', strtotime($data->estratificacion)) }}</span></td>
             <td colspan="2"><span class="plabel">Dom.:</span> <span class="pvalue">{{ $paciente->domicilio }}</span> &nbsp; <span class="plabel">Tel:</span> <span class="pvalue">{{ $paciente->telefono }}</span></td>
@@ -186,7 +186,7 @@
             </table>
         </td>
         <td style="width:50%;padding-left:5px !important;">
-            <div class="section-title">Factores de Riesgo</div>
+            <div class="section-title">Factores de Riesgo Cardiovascular</div>
             <table class="dt">
                 <tr>
                     <td><span class="lbl">Hipercolest.:</span> <span class="val">{{$data->hipercolesterolemia_y===null||$data->hipercolesterolemia_y==0?"n":$data->hipercolesterolemia_y}}</span></td>
@@ -229,7 +229,7 @@
 <table class="cols" style="margin-top:4px;">
     <tr>
         <td style="width:60%;">
-            <div class="section-title">Tratamiento</div>
+            <div class="section-title">Tratamiento Médico</div>
             <div class="section-accent">{{ $paciente->medicamentos }}</div>
         </td>
         <td style="width:40%;padding-left:5px !important;">
@@ -265,7 +265,7 @@
         </td>
         <td style="width:50%;padding-left:5px !important;">
             <table class="dt">
-                <thead><tr><th colspan="4" style="text-align:left;">Lípidos / Coagulación</th></tr></thead>
+                <thead><tr><th colspan="4" style="text-align:left;">Lípidos / Coagulación / Biomarcadores</th></tr></thead>
                 <tr>
                     <td><span class="lbl">Col.:</span> <span class="val">{{$data->colesterol===null||$data->colesterol===0?"n":$data->colesterol}}</span></td>
                     <td><span class="lbl">LDL:</span> <span class="val">{{$data->ldl===null||$data->ldl===0?"n":$data->ldl}}</span></td>
@@ -277,6 +277,10 @@
                     <td><span class="lbl">INR:</span> <span class="val">{{$data->inr===0||$data->inr===null?"n":$data->inr}}</span></td>
                     <td><span class="lbl">TPT:</span> <span class="val">{{$data->tpt===null||$data->tpt==0?"n":$data->tpt}}</span></td>
                     <td><span class="lbl">PCRas:</span> <span class="val">{{$data->pcras===null||$data->pcras==0?"n":$data->pcras}}</span></td>
+                </tr>
+                <tr>
+                    <td><span class="lbl">PRO-BNP:</span> <span class="val">{{$data->pro_bnp===null||$data->pro_bnp===''?"n":$data->pro_bnp}}</span></td>
+                    <td colspan="3"></td>
                 </tr>
                 @if($data->otros_lab)
                 <tr><td colspan="4"><span class="lbl">Otros:</span> <span class="val">{{$data->otros_lab}}</span></td></tr>
@@ -293,27 +297,44 @@
             <table class="dt">
                 <tr>
                     <td><span class="lbl">Fecha:</span> <span class="val">{{$data->ecg_fecha===null?"—":date('d/m/Y',strtotime($data->ecg_fecha))}}</span></td>
-                    <td><span class="lbl">Ritmo:</span> <span class="val">{{$data->ritmo===null?"n":$data->ritmo}}</span></td>
+                    <td><span class="lbl">Ritmo:</span> <span class="val">{{$data->ritmo===null||$data->ritmo===''?"n":$data->ritmo}}</span></td>
                     <td><span class="lbl">FC:</span> <span class="val">{{$data->fc_ecog===null||$data->fc_ecog==0?"n":round($data->fc_ecog)}} lpm</span></td>
                 </tr>
                 <tr>
-                    <td><span class="lbl">aP:</span> <span class="val">{{$data->aP===null||$data->aP==0?"n":$data->aP}}</span></td>
+                    <td><span class="lbl">aP:</span> <span class="val">{{$data->aP===null||$data->aP==0?"n":$data->aP."°"}}</span></td>
+                    <td><span class="lbl">aQRS:</span> <span class="val">{{$data->aQRS===null||$data->aQRS==0?"n":$data->aQRS."°"}}</span></td>
+                    <td><span class="lbl">aT:</span> <span class="val">{{$data->aT===0||$data->aT===null?"n":$data->aT."°"}}</span></td>
+                </tr>
+                <tr>
+                    <td><span class="lbl">Dur. QRS:</span> <span class="val">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}} ms</span></td>
+                    <td><span class="lbl">Dur. P:</span> <span class="val">{{$data->duracion_p===null||$data->duracion_p==0?"n":$data->duracion_p}} ms</span></td>
                     <td><span class="lbl">PR:</span> <span class="val">{{$data->pr===null||$data->pr===0?"n":$data->pr}} ms</span></td>
-                    <td><span class="lbl">aQRS:</span> <span class="val">{{$data->aQRS===null||$data->aQRS==0?"n":$data->aQRS}}</span></td>
                 </tr>
                 <tr>
-                    <td><span class="lbl">QRS:</span> <span class="val">{{$data->duracion_qrs===null||$data->duracion_qrs==0?"n":$data->duracion_qrs}} ms</span></td>
-                    <td><span class="lbl">aT:</span> <span class="val">{{$data->aT===0||$data->aT===null?"n":$data->aT}}</span></td>
                     <td><span class="lbl">QTm:</span> <span class="val">{{$data->qtm===null||$data->qtm===0?"n":sprintf("%.2f",floor($data->qtm*100)/100)}} ms</span></td>
+                    <td><span class="lbl">QTc:</span> <span class="val">{{$data->qtc===0||$data->qtc===null?"n":sprintf("%.2f",floor($data->qtc*100)/100)}} ms</span></td>
+                    <td><span class="lbl">BAV:</span> <span class="val">{{$data->bav===null||$data->bav===''||$data->bav==0?"n":$data->bav}}</span></td>
                 </tr>
                 <tr>
-                    <td><span class="lbl">QTc:</span> <span class="val">{{$data->qtc===0||$data->qtc===null?"n":sprintf("%.2f",floor($data->qtc*100)/100);}} ms</span></td>
-                    <td><span class="lbl">Q Ant./Sep.:</span> <span class="val">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
+                    <td><span class="lbl">BRIHH:</span> <span class="val">{{$data->brihh===null||$data->brihh===0?"n":"s"}}</span></td>
+                    <td><span class="lbl">BRDHH:</span> <span class="val">{{$data->brdhh===null||$data->brdhh===0?"n":"s"}}</span></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><span class="lbl">Q AS:</span> <span class="val">{{$data->q_as===null||$data->q_as===0?"n":"s"}}</span></td>
                     <td><span class="lbl">Q Inf.:</span> <span class="val">{{$data->q_inf===null||$data->q_inf===0?"n":"s"}}</span></td>
+                    <td><span class="lbl">Q Lat.:</span> <span class="val">{{$data->q_lat===0||$data->q_lat===null?"n":"s"}}</span></td>
                 </tr>
                 <tr>
-                    <td colspan="3"><span class="lbl">Q Lat.:</span> <span class="val">{{$data->q_lat===0||$data->q_lat===null?"n":"s"}}</span> &nbsp; <span class="lbl">Otros:</span> <span class="val">{{$data->otros_ecg}}</span></td>
+                    <td><span class="lbl">Q Ant.:</span> <span class="val">{{$data->q_ant===null||$data->q_ant===0?"n":"s"}}</span></td>
+                    <td><span class="lbl">Q Post. Inf.:</span> <span class="val">{{$data->q_poster_inferior===null||$data->q_poster_inferior===0?"n":"s"}}</span></td>
+                    <td></td>
                 </tr>
+                @if($data->otros_ecg)
+                <tr>
+                    <td colspan="3"><span class="lbl">Otros hallazgos:</span> <span class="val">{{$data->otros_ecg}}</span></td>
+                </tr>
+                @endif
             </table>
         </td>
         <td style="width:50%;padding-left:5px !important;">
@@ -378,9 +399,22 @@
                     </tr>
                 </tbody>
             </table>
+            <div class="section-title" style="margin-top:6px;">Holter</div>
+            <table class="dt">
+                <tr>
+                    <td><span class="lbl">Holter:</span> <span class="val">{{$data->holter===null||$data->holter===0?"n":"s"}}</span></td>
+                    <td><span class="lbl">Fecha:</span> <span class="val">{{$data->holter_fecha===null?"—":date('d/m/Y',strtotime($data->holter_fecha))}}</span></td>
+                    <td><span class="lbl">Riesgo:</span> <span class="val">{{$data->holter_riesgo===null||$data->holter_riesgo===''?"n":$data->holter_riesgo}}</span></td>
+                </tr>
+                @if($data->holter_dignostico)
+                <tr>
+                    <td colspan="3"><span class="lbl">Diagnóstico:</span> <span class="val">{{$data->holter_dignostico}}</span></td>
+                </tr>
+                @endif
+            </table>
         </td>
         <td style="width:50%;padding-left:5px !important;">
-            <div class="section-title">Cateterismo</div>
+            <div class="section-title">Cateterismo / Antiotag Coronaria</div>
             <div class="section-content" style="margin-bottom:3px;">
                 <span class="f-bold">Fecha:</span> {{$data->catet_fecha===null?"—":date('d/m/Y',strtotime($data->catet_fecha))}} &nbsp;
                 <span class="f-bold">FE:</span> {{$data->catet_fe===null?0:$data->catet_fe}} &nbsp;
@@ -389,32 +423,60 @@
             </div>
             <table class="dt">
                 <thead>
-                    <tr><th>Arteria</th><th>Prox.</th><th>Medio</th><th>Distal</th><th>Otro</th></tr>
+                    <tr><th>Arteria</th><th>Prox.</th><th>Medio</th><th>Distal</th></tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td class="f-bold">DA</td>
-                        <td>{{$data->catet_da_prox===null||$data->catet_da_prox===0?"n":$data->catet_da_prox}}%</td>
-                        <td>{{$data->catet_da_med===null||$data->catet_da_med===0?"n":$data->catet_da_med}}%</td>
-                        <td>{{$data->catet_da_dist===null||$data->catet_da_dist===0?"n":$data->catet_da_dist}}%</td>
-                        <td>1aD:{{$data->catet_1a_d===null||$data->catet_1a_d===0?"n":$data->catet_1a_d}}% {{$data->catet_otros}}</td>
+                        <td>{{$data->catet_da_prox===null||$data->catet_da_prox===''||$data->catet_da_prox===0||$data->catet_da_prox==='0'?"n":$data->catet_da_prox.(is_numeric($data->catet_da_prox)?'%':'')}}</td>
+                        <td>{{$data->catet_da_med===null||$data->catet_da_med===''||$data->catet_da_med===0||$data->catet_da_med==='0'?"n":$data->catet_da_med.(is_numeric($data->catet_da_med)?'%':'')}}</td>
+                        <td>{{$data->catet_da_dist===null||$data->catet_da_dist===''||$data->catet_da_dist===0||$data->catet_da_dist==='0'?"n":$data->catet_da_dist.(is_numeric($data->catet_da_dist)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">1a Diagonal</td>
+                        <td colspan="3">{{$data->catet_1a_d===null||$data->catet_1a_d===''||$data->catet_1a_d===0||$data->catet_1a_d==='0'?"n":$data->catet_1a_d.(is_numeric($data->catet_1a_d)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">2a Diagonal</td>
+                        <td colspan="3">{{$data->catet_2a_d===null||$data->catet_2a_d===''||$data->catet_2a_d===0||$data->catet_2a_d==='0'?"n":$data->catet_2a_d.(is_numeric($data->catet_2a_d)?'%':'')}}</td>
                     </tr>
                     <tr>
                         <td class="f-bold">Cx</td>
-                        <td>{{$data->catet_cx_prox===null||$data->catet_cx_prox===0?"n":$data->catet_cx_prox}}%</td>
+                        <td>{{$data->catet_cx_prox===null||$data->catet_cx_prox===''||$data->catet_cx_prox===0||$data->catet_cx_prox==='0'?"n":$data->catet_cx_prox.(is_numeric($data->catet_cx_prox)?'%':'')}}</td>
                         <td>—</td>
-                        <td>{{$data->catet_cx_dist===null||$data->catet_cx_dist===0?"n":$data->catet_cx_dist}}%</td>
-                        <td>OM:{{$data->catet_om===null||$data->catet_om===0?"n":$data->catet_om}}% PL:{{$data->catet_pl===null||$data->catet_pl===0?"n":$data->catet_pl}}%</td>
+                        <td>{{$data->catet_cx_dist===null||$data->catet_cx_dist===''||$data->catet_cx_dist===0||$data->catet_cx_dist==='0'?"n":$data->catet_cx_dist.(is_numeric($data->catet_cx_dist)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">OM</td>
+                        <td colspan="3">{{$data->catet_om===null||$data->catet_om===''||$data->catet_om===0||$data->catet_om==='0'?"n":$data->catet_om.(is_numeric($data->catet_om)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">PL</td>
+                        <td colspan="3">{{$data->catet_pl===null||$data->catet_pl===''||$data->catet_pl===0||$data->catet_pl==='0'?"n":$data->catet_pl.(is_numeric($data->catet_pl)?'%':'')}}</td>
                     </tr>
                     <tr>
                         <td class="f-bold">CD</td>
-                        <td>{{$data->catet_cd_aprox===null||$data->catet_cd_aprox===0?"n":$data->catet_cd_aprox}}%</td>
-                        <td>{{$data->catet_cd_med===null||$data->catet_cd_med===0?"n":$data->catet_cd_med}}%</td>
-                        <td>{{$data->catet_cd_dist===null||$data->catet_cd_dist===0?"n":$data->catet_cd_dist}}%</td>
-                        <td>RVI:{{$data->catet_r_vent_izq===null||$data->catet_r_vent_izq===0?"n":$data->catet_r_vent_izq}}% DP:{{$data->catet_dp===null||$data->catet_dp===0?"n":$data->catet_dp}}%</td>
+                        <td>{{$data->catet_cd_aprox===null||$data->catet_cd_aprox===''||$data->catet_cd_aprox===0||$data->catet_cd_aprox==='0'?"n":$data->catet_cd_aprox.(is_numeric($data->catet_cd_aprox)?'%':'')}}</td>
+                        <td>{{$data->catet_cd_med===null||$data->catet_cd_med===''||$data->catet_cd_med===0||$data->catet_cd_med==='0'?"n":$data->catet_cd_med.(is_numeric($data->catet_cd_med)?'%':'')}}</td>
+                        <td>{{$data->catet_cd_dist===null||$data->catet_cd_dist===''||$data->catet_cd_dist===0||$data->catet_cd_dist==='0'?"n":$data->catet_cd_dist.(is_numeric($data->catet_cd_dist)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">R. Vent. Izq.</td>
+                        <td colspan="3">{{$data->catet_r_vent_izq===null||$data->catet_r_vent_izq===''||$data->catet_r_vent_izq===0||$data->catet_r_vent_izq==='0'?"n":$data->catet_r_vent_izq.(is_numeric($data->catet_r_vent_izq)?'%':'')}}</td>
+                    </tr>
+                    <tr>
+                        <td class="f-bold">DP</td>
+                        <td colspan="3">{{$data->catet_dp===null||$data->catet_dp===''||$data->catet_dp===0||$data->catet_dp==='0'?"n":$data->catet_dp.(is_numeric($data->catet_dp)?'%':'')}}</td>
                     </tr>
                 </tbody>
             </table>
+            @if($data->catet_otros || $data->catet_movilidad || $data->catet_riesgo)
+            <div class="section-content" style="margin-top:3px;">
+                @if($data->catet_movilidad)<span class="f-bold">Movilidad:</span> {{$data->catet_movilidad}} &nbsp;@endif
+                @if($data->catet_riesgo)<span class="f-bold">Riesgo:</span> {{$data->catet_riesgo}} &nbsp;@endif
+                @if($data->catet_otros)<span class="f-bold">Otros:</span> {{$data->catet_otros}}@endif
+            </div>
+            @endif
         </td>
     </tr>
 </table>
