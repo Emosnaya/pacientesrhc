@@ -111,7 +111,7 @@ class EsfuerzoController extends Controller
 
         $prevalencia = 0.98;
         $sensibilidad = $data['confusor'] === 'true'?.64:.68;
-        $especificidad = $data['especificidad'];
+        $especificidad = $data['confusor'] === 'true' ? 0.74 : 0.77;
 
         $vpp = ($sensibilidad*$prevalencia)/(($sensibilidad*$prevalencia)+(1-$especificidad)*(1-$prevalencia));
         $vpn = ($especificidad*$prevalencia)/(($especificidad*$prevalencia)+(1-$sensibilidad)*(1-$prevalencia));
@@ -268,7 +268,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->prevalencia =  $prevalencia;
         $pesfuerzo->confusor = ($data['confusor'] == 'true') ? 1:0;
         $pesfuerzo->sensibilidad = $sensibilidad;
-        $pesfuerzo->especificidad = $data['especificidad'];
+        $pesfuerzo->especificidad = $especificidad;
         $pesfuerzo->vpp = $vpp;
         $pesfuerzo->vpn = $vpn;
         $pesfuerzo->pruebaIngreso = ($data['pruebaIngreso']== 'true') ? 1:0;
@@ -464,7 +464,7 @@ class EsfuerzoController extends Controller
 
         $prevalencia = 0.98;
         $sensibilidad = $data['confusor'] === 'true' ? .64 : .68;
-        $especificidad = $data['especificidad'];
+        $especificidad = $data['confusor'] === 'true' ? 0.74 : 0.77;
 
         $vpp = ($sensibilidad*$prevalencia)/(($sensibilidad*$prevalencia)+(1-$especificidad)*(1-$prevalencia));
         $vpn = ($especificidad*$prevalencia)/(($especificidad*$prevalencia)+(1-$sensibilidad)*(1-$prevalencia));
@@ -623,7 +623,7 @@ class EsfuerzoController extends Controller
         $pesfuerzo->prevalencia =  $prevalencia;
         $pesfuerzo->confusor = ($data['confusor'] == 'true') ? 1:0;
         $pesfuerzo->sensibilidad = $sensibilidad;
-        $pesfuerzo->especificidad = $data['especificidad'];
+        $pesfuerzo->especificidad = $especificidad;
         $pesfuerzo->vpp = $vpp;
         $pesfuerzo->vpn = $vpn;
         $pesfuerzo->pruebaIngreso = ($data['pruebaIngreso'] == 'true') ? 1:0;

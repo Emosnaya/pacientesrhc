@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Nota Psicológica</title>
+    <title>Nota de Psicología</title>
     <style>
         /* === RESET & BASE === */
         * {
@@ -558,7 +558,7 @@
                     </div>
                 </td>
                 <td style="padding-left: 10px;">
-                    <div class="header-title">Nota Psicológica</div>
+                    <div class="header-title">Nota de Psicología</div>
                     <div class="header-subtitle">Evaluación y seguimiento psicológico</div>
                 </td>
                 <td class="header-meta-cell">

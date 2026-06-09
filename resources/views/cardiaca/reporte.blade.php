@@ -17,7 +17,7 @@
             line-height: 1.3;
             color: #1e293b;
             background: #ffffff;
-            padding: 10px 20px;
+            padding: 8px 16px;
         }
         /* Estilo para el logo */
         .logo-container {
@@ -216,7 +216,7 @@
     margin-top: 7rem
   }
         /* === HEADER MODERNO === */
-        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+        .header { width: 100%; background: {!! $clinica->color_principal ?? '#0A1628' !!}; border-radius: 8px; margin-bottom: 6px; padding: 6px 10px; }
         .header-table { width: 100%; border-collapse: collapse; }
         .header-table td { vertical-align: middle; padding: 0; }
         .header-logo-cell { width: 60px; padding-right: 12px !important; }
@@ -229,19 +229,356 @@
         .header-badge-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
         .header-badge-value { font-size: 12px; font-weight: 700; color: white; }
         .header-date { font-size: 9px; color: #94a3b8; }
-        .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; }
         .patient-table { width: 100%; border-collapse: collapse; }
-        .patient-table td { padding: 2px 6px; font-size: 10px; }
-        .patient-name { font-size: 13px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 6px; }
-        .patient-label { color: #64748b; font-size: 9px; }
+        .patient-table td { padding: 1px 6px; font-size: 9px; }
+        .patient-name { font-size: 12px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 3px; }
+        .patient-label { color: #64748b; font-size: 8.5px; }
         .patient-value { font-weight: 600; color: #334155; }
-        .patient-diagnosis { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 10px; }
-        .patient-diagnosis-label { font-size: 9px; color: #64748b; font-weight: 600; }
+        .patient-diagnosis { margin-top: 3px; padding-top: 3px; border-top: 1px solid #e2e8f0; font-size: 9px; }
+        .patient-diagnosis-label { font-size: 8.5px; color: #64748b; font-weight: 600; }
+
+        /* === PÁGINA 1 COMPACTA === */
+        .page-one-intro {
+            font-size: 11px;
+            line-height: 1.35;
+            margin: 0 0 5px;
+        }
+        .page-one-method { margin: 0 0 4px; }
+        .page-one-method-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin-bottom: 3px;
+        }
+        .page-one-method p {
+            font-size: 10px;
+            line-height: 1.35;
+            margin: 0 0 3px;
+        }
         .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
         .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
         .page-footer .clinic-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 35px; }
+
+        /* === TABLA DE RESULTADOS === */
+        .results-section { margin: 4px 0 0; }
+        .results-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin-bottom: 4px;
+            padding-bottom: 2px;
+            border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
+        }
+        .results-table-wrap {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-bottom: 0;
+        }
+        .results-table thead th {
+            padding: 5px 6px;
+            font-size: 9px;
+            font-weight: 700;
+            text-align: center;
+            color: #ffffff;
+            border: none;
+        }
+        .results-table thead th:first-child {
+            background: {!! $clinica->color_principal ?? '#0A1628' !!};
+            text-align: left;
+        }
+        .results-table thead th:nth-child(2) { background: #255FA5; }
+        .results-table thead th:nth-child(3) { background: #FB0006; }
+        .results-table thead th:nth-child(4) { background: #475569; }
+        .results-table tbody th {
+            background: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            text-align: left;
+            padding: 3px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+        }
+        .results-table tbody td {
+            padding: 3px 6px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            font-weight: 600;
+        }
+        .results-table tbody td:nth-child(2) { background: rgba(37, 95, 165, 0.07); }
+        .results-table tbody td:nth-child(3) { background: rgba(251, 0, 6, 0.05); }
+        .results-table tbody tr:nth-child(even) th { background: #e8edf3; }
+        .results-table tbody tr:nth-child(even) td:nth-child(2) { background: rgba(37, 95, 165, 0.11); }
+        .results-table tbody tr:nth-child(even) td:nth-child(3) { background: rgba(251, 0, 6, 0.08); }
+        .results-table tbody tr:last-child th,
+        .results-table tbody tr:last-child td { border-bottom: none; }
+        .table-footnotes {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 5px 8px;
+            font-size: 8px;
+            color: #64748b;
+            line-height: 1.45;
+        }
+        .table-footnotes p { margin: 0; }
+
+        /* === SALTOS DE PÁGINA === */
+        .charts-section { page-break-before: always; }
+        .page-letter {
+            page-break-before: always;
+            padding-top: 6px;
+            padding-bottom: 42px;
+        }
+        .letter-patient-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 8px 0 10px;
+        }
+        .letter-patient-table { width: 100%; border-collapse: collapse; }
+        .letter-patient-table td {
+            padding: 2px 6px;
+            font-size: 10px;
+            vertical-align: top;
+        }
+        .letter-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin-bottom: 8px;
+        }
+        .letter-greeting {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .letter-body p {
+            font-size: 11px;
+            line-height: 1.45;
+            margin: 0 0 8px;
+            text-align: justify;
+        }
+        .letter-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin: 10px 0 4px;
+        }
+        .letter-elaboro {
+            font-size: 10px;
+            color: #64748b;
+            margin: 12px 0 0;
+        }
+        .letter-signature-block {
+            margin-top: 14px;
+        }
+        .letter-signature-block .signature {
+            margin: 0 0 6px;
+        }
+        .letter-signature-block .signature img {
+            max-width: 160px;
+            max-height: 65px;
+        }
+        .letter-sign-atentamente {
+            font-size: 11px;
+            margin: 0 0 8px;
+        }
+        .letter-sign-name {
+            font-size: 12px;
+            font-weight: 700;
+            margin: 0;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+        }
+        .letter-sign-role {
+            font-size: 11px;
+            margin: 2px 0 0;
+            color: #475569;
+        }
+
+        /* === GRÁFICAS COMPARATIVAS === */
+        .charts-section { margin-top: 0; margin-bottom: 10px; }
+        .charts-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin-bottom: 8px;
+            border-bottom: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
+            padding-bottom: 3px;
+        }
+        .charts-row { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .charts-row td { width: 50%; vertical-align: top; padding: 4px 8px; }
+        .chart-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            min-height: 125px;
+        }
+        .chart-box-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .bar-row { margin-bottom: 8px; }
+        .bar-row-label {
+            font-size: 9px;
+            color: #64748b;
+            margin-bottom: 2px;
+        }
+        .bar-row-track {
+            width: 100%;
+            height: 18px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            position: relative;
+        }
+        .bar-row-fill {
+            height: 18px;
+            border-radius: 3px;
+            min-width: 2px;
+        }
+        .bar-primera { background: #255FA5; }
+        .bar-segunda { background: #FB0006; }
+        .bar-row-value {
+            font-size: 10px;
+            font-weight: 700;
+            color: #334155;
+            margin-top: 2px;
+        }
+        .chart-legend {
+            margin-top: 6px;
+            font-size: 9px;
+            color: #64748b;
+            text-align: center;
+        }
+        .legend-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+        .legend-primera { background: #255FA5; }
+        .legend-segunda { background: #FB0006; }
+
+        /* Barras verticales */
+        .charts-title-isq {
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+        .vbar-chart-wrap {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 6px 6px;
+            background: #f8fafc;
+            margin-top: 0;
+        }
+        .vbar-chart { width: 100%; border-collapse: collapse; }
+        .vbar-chart > tbody > tr > td {
+            width: 25%;
+            vertical-align: bottom;
+            text-align: center;
+            padding: 0 2px;
+        }
+        .vbar-chart-7 > tbody > tr > td {
+            width: 14.28%;
+            vertical-align: bottom;
+            text-align: center;
+            padding: 0 1px;
+        }
+        .vbar-chart-7 .vbar-label {
+            font-size: 8px;
+        }
+        .vbar-chart-7 .vbar-val {
+            font-size: 8.5px;
+        }
+        .vbar-group {
+            width: 46px;
+            border-collapse: collapse;
+            margin: 0 auto;
+            table-layout: fixed;
+        }
+        .vbar-group td {
+            width: 23px;
+            vertical-align: bottom;
+            text-align: center;
+            padding: 0;
+        }
+        .vbar-area { height: 105px; vertical-align: bottom; }
+        .vbar-val {
+            font-size: 9px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 2px;
+            line-height: 1.1;
+        }
+        .vbar {
+            width: 20px;
+            margin: 0;
+            border-radius: 3px 3px 0 0;
+            min-height: 2px;
+            display: inline-block;
+        }
+        .vbar.bar-primera { background: #255FA5; }
+        .vbar.bar-segunda { background: #FB0006; }
+        .vbar-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: #475569;
+            padding-top: 5px;
+            line-height: 1.2;
+            text-align: center;
+        }
+        .vbar-sublabel {
+            font-size: 8px;
+            color: #94a3b8;
+            padding-top: 4px;
+        }
+
+        /* Cuadro reducción riesgo CV */
+        .riesgo-cv-highlight {
+            margin-top: 16px;
+            border: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!};
+            border-radius: 10px;
+            background: #f8fafc;
+            text-align: center;
+            padding: 20px 16px;
+        }
+        .riesgo-cv-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .riesgo-cv-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: #255FA5;
+            line-height: 1;
+            margin: 4px 0;
+        }
+        .riesgo-cv-sub {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 8px;
+        }
     </style>
   </head>
   <body>
@@ -290,8 +627,15 @@
         <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
         <table class="patient-table">
             <tr>
-                <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
-                <td><span class="patient-label">Enviado a:</span> <span class="patient-value">Dr(a). {{ $paciente->envio }}</span></td>
+                <td width="50%"><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
+                <td width="50%"><span class="patient-label">Enviado a:</span> <span class="patient-value">Dr(a). {{ $paciente->envio }}</span></td>
+            </tr>
+            <tr>
+                <td><span class="patient-label">Fecha de Ingreso:</span> <span class="patient-value">{{ date('d/m/Y', strtotime($data->fecha_inicio)) }}</span></td>
+                <td><span class="patient-label">Fecha de Egreso:</span> <span class="patient-value">{{ date('d/m/Y', strtotime($data->fecha_final)) }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2"><span class="patient-label">Núm. de Sesiones:</span> <span class="patient-value">{{ $estrati[0]->sesiones }}</span></td>
             </tr>
         </table>
         @if($paciente->diagnostico)
@@ -301,239 +645,495 @@
         @endif
     </div>
   <main class="ma-t-0">
-    <p class="f-15 mb-1 mt-0">Estimado(a): <strong>Dr(a). {{ $paciente->envio }}</strong> — Por medio de este conducto me permito informarle de los pormenores del programa de Rehabilitación Cardiaca.</p>
-    <div class="medio f-15">
-      <p class=" texto-izquierda mb-0 f-bold">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre }}</span> </p> <span class="ml-5 text-right texto-derecha f-bold">Fecha de Ingreso: <span class="f-normal">{{date('d/m/Y',strtotime($data->fecha_inicio ))}}</span></span>
-      <p class=" texto-izquierda mb-0 f-bold mt-3">Edad: <span class="f-normal">{{$paciente->edad}}</span> </p> <span class="ml-5 text-right texto-derecha f-bold mt-3">Fecha de Egreso: <span class="f-normal">{{date('d/m/Y',strtotime($data->fecha_final))}}</span></span>
-      <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
+    <p class="page-one-intro">Estimado(a): <strong>Dr(a). {{ $paciente->envio }}</strong> — Por medio de este conducto me permito informarle de los pormenores del programa de Rehabilitación Cardiaca.</p>
+    <div class="page-one-method">
+      <div class="page-one-method-title">Metodología</div>
+      <p>Al ingreso se realizó la estratificación de riesgo cardiovascular correspondiente y se comenzó con la rehabilitación cardiaca, consistente en sesiones ergométricas intercalando diversos grupos musculares y de forma progresiva.</p>
+      <p>Las sesiones fueron controladas mediante supervisión intensiva de la tensión arterial y trazo electrocardiográfico continuos. Durante el proceso el paciente aprendió adecuadamente la graduación de la intensidad del ejercicio mediante la escala de percepción del esfuerzo (Borg).</p>
+      <p>Durante las sesiones no presentó complicaciones y ningún evento adverso que consignar. Al egreso se realizó una prueba de esfuerzo submáxima para evaluación del acondicionamiento cardiovascular y físico.</p>
+      <p><strong>Los resultados se muestran en la siguiente tabla:</strong></p>
     </div>
-    <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold mt-1"> <span class="f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span> </p> 
-    </div>
-    <div class="paciente mt-4">
-      <h2 class="h5 titulo">Metodología: </h2>
-      <p  class="f-15 f-normal mb-2">Al ingreso se realizó la estratificación de riesgo cardiovascular correspondiente y se comenzó con la rehabilitación cardiaca, consistente en sesiones ergométricas intercalando diversos grupos musculares y de forma progresiva.</p>
-      <p class="f-15 f-normal mb-2">Las sesiones fueron controladas mediante supervisión intensiva de la tensión arterial y trazo electrocardiográfico continuos. Durante el proceso el paciente aprendió adecuadamente la graduación de la intensidad del ejercicio  mediante la escala de percepción del esfuerzo (Borg).</p>
-      <p class="f-15 f-normal mb-2">Durante las sesiones no presentó complicaciones y ningún evento adverso que consignar.</p>
-      <p class="f-15 f-normal mb-2">Al egreso se realizó una prueba de esfuerzo submáxima para evaluación del acondicionamiento cardiovascular y físico.</p>
-      <p class="f-15 f-normal mb-0">Los resultados se muestran en la siguiente tabla:</p>
-    </div>
-    <table class="tabla text-lft border-t table-striped mt-0">
-      <thead class="border-t text-center">
-        <tr>
-          <th scope="col border-t">Rubro</th>
-          <th scope="col border-t">Primera Prueba</th>
-          <th scope="col border-t">Segunda Prueba</th>
-          <th scope="col border-t">Variación (%)</th>
-        </tr>
-      </thead >
-      <tbody class="text-lft border-t">
-        <tr>
-          <th scope="row border-r">Fecha</th>
-          <td class="border-l border-r text-ctr">{{date('d/m/Y',strtotime($data->fecha_inicio ))}}</td>
-          <td class="border-l border-r text-ctr">{{date('d/m/Y',strtotime($data->fecha_final ))}}</td>
-          <td class="border-l border-r text-ctr">{{$data->fecha}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Fc basal (lpm)*</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcBasal }}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcBasal}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->fc_basal,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Doble Producto basal**</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dapBasal}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dapBasal}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->doble_pr_bas,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">FC máxima</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcMax}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcMax}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->fc_maxima,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Doble Producto máximo</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dpMax}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dpMax}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->doble_pr_max,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">FC Borg 12</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcBorg12}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcBorg12}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->fc_borg12,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Doble Producto Borg 12</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->dpBorg12 }}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->dpBorg12}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->doble_pr_b12,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Carga máxima (METs)</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->mets_max,1)}}</td>
-          <td class="border-l border-r text-ctr">{{ round($esfuerzoDos->mets_max,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->carga_max,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">% METs alcanzado</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->vo2_alcanzado,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->vo2_alcanzado,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->mets_por,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Tiempo de ejercicio (min)^</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->tiempoEsfuerzo,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->tiempoEsfuerzo,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->tiempo_ejer,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Recuperación de la FC 1'(lpm)</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->fcmax_fc1er}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->fcmax_fc1er}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->recup_fc,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Umbral Isquémico (METs)</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->mets_U_isq,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->mets_U_isq,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->umbral_isq,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Umbral Isquémico (FC)</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->fc_U_isq,1)}}</td>
-          <td class="border-l border-r text-ctr">{{ round($esfuerzoDos->fc_U_isq,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->umbral_isq_fc,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Máximo Desnivel ST</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->MaxInfra,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->MaxInfra,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->max_des_st,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Índice TA en esfuerzo</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->indice_tas  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->indice_tas  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->indice_ta_es,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Recuperación de la TAS 1/3</th>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoUno->recup_tas  * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{sprintf("%.2f", floor($esfuerzoDos->recup_tas   * 100) / 100);}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->recup_tas,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Resp. Cronotrópica (lpm/MET)</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->resp_crono,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->resp_crono,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->resp_crono,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">IEM***</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->iem,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->iem,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->iem,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Poder Cardiaco en ejercicio</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->pce)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->pce)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->pod_car_eje,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Puntuación de Duke</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->duke,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->duke,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->duke,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Puntuación de Veteranos</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->veteranos,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->veteranos,1)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->veteranos,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Score de Angor</th>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoUno->scoreAngina)}}</td>
-          <td class="border-l border-r text-ctr">{{round($esfuerzoDos->scoreAngina)}}</td>
-          <td class="border-l border-r text-ctr">{{round($data->score_ang,1)}}</td>
-        </tr>
-        <tr>
-          <th scope="row border-r">Ectopia Ventricular Frecuente</th>
-          <td class="border-l border-r text-ctr">{{$esfuerzoUno->ectopia_ventricular===1?"si":"no"}}</td>
-          <td class="border-l border-r text-ctr">{{$esfuerzoDos->ectopia_ventricular===1?"si":"no"}}</td>
-          <td class="border-l border-r text-ctr"></td>
-        </tr>
-      </tbody>
-  </table>
-  <p class="f-10 f-normal mb-0">* Frecuencia cardiaca (FC). ** Doble producto=(TA sist)(FC),***Índice de Eficiencia Miocárdica (IEM).</p>
-  <p class="f-10 f-normal mb-0 mt-0">^ Tiempo de ejercicio corregido para  protocolo de Bruce.</p>
-  <div class="medio">
-    <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue mt-1">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold mt-1">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r mt-1">{{ $clinica->email }}</span>@endif</span>
-  </div>
-  <div class="mt-5">
-    <div>
-      <div class="paciente mt-0">
-        <p class="f-bold f-17 text-center mb-0 mt-0">Reporte Final del Programa Rehabilitación Cardiaca.</p>
-        @if(!empty($clinicaLogo))
-        <div class="logo-container"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
-        @endif
-        <br>
-          <p  class="f-bold mb-0 f-15">Estimado (a): <span class="f-normal">Dr (a) {{ $paciente->envio}}</span></p>
+    <div class="results-section">
+      <div class="results-section-title">Resultados comparativos — Primera vs Segunda prueba</div>
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th scope="col">Rubro</th>
+              <th scope="col">Primera Prueba</th>
+              <th scope="col">Segunda Prueba</th>
+              <th scope="col">Variación (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Fecha</th>
+              <td>{{date('d/m/Y',strtotime($data->fecha_inicio ))}}</td>
+              <td>{{date('d/m/Y',strtotime($data->fecha_final ))}}</td>
+              <td>{{$data->fecha}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Fc basal (lpm)*</th>
+              <td>{{$esfuerzoUno->fcBasal }}</td>
+              <td>{{$esfuerzoDos->fcBasal}}</td>
+              <td>{{round($data->fc_basal,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Doble Producto basal**</th>
+              <td>{{$esfuerzoUno->dapBasal}}</td>
+              <td>{{$esfuerzoDos->dapBasal}}</td>
+              <td>{{round($data->doble_pr_bas,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">FC máxima</th>
+              <td>{{$esfuerzoUno->fcMax}}</td>
+              <td>{{$esfuerzoDos->fcMax}}</td>
+              <td>{{round($data->fc_maxima,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Doble Producto máximo</th>
+              <td>{{$esfuerzoUno->dpMax}}</td>
+              <td>{{$esfuerzoDos->dpMax}}</td>
+              <td>{{round($data->doble_pr_max,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">FC Borg 12</th>
+              <td>{{$esfuerzoUno->fcBorg12}}</td>
+              <td>{{$esfuerzoDos->fcBorg12}}</td>
+              <td>{{round($data->fc_borg12,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Doble Producto Borg 12</th>
+              <td>{{$esfuerzoUno->dpBorg12 }}</td>
+              <td>{{$esfuerzoDos->dpBorg12}}</td>
+              <td>{{round($data->doble_pr_b12,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Carga máxima (METs)</th>
+              <td>{{round($esfuerzoUno->mets_max,1)}}</td>
+              <td>{{ round($esfuerzoDos->mets_max,1)}}</td>
+              <td>{{round($data->carga_max,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">% METs alcanzado</th>
+              <td>{{round($esfuerzoUno->vo2_alcanzado,1)}}</td>
+              <td>{{round($esfuerzoDos->vo2_alcanzado,1)}}</td>
+              <td>{{round($data->mets_por,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Tiempo de ejercicio (min)^</th>
+              <td>{{round($esfuerzoUno->tiempoEsfuerzo,1)}}</td>
+              <td>{{round($esfuerzoDos->tiempoEsfuerzo,1)}}</td>
+              <td>{{round($data->tiempo_ejer,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Recuperación de la FC 1'(lpm)</th>
+              <td>{{$esfuerzoUno->fcmax_fc1er}}</td>
+              <td>{{$esfuerzoDos->fcmax_fc1er}}</td>
+              <td>{{round($data->recup_fc,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Umbral Isquémico (METs)</th>
+              <td>{{round($esfuerzoUno->mets_U_isq,1)}}</td>
+              <td>{{round($esfuerzoDos->mets_U_isq,1)}}</td>
+              <td>{{round($data->umbral_isq,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Umbral Isquémico (FC)</th>
+              <td>{{round($esfuerzoUno->fc_U_isq,1)}}</td>
+              <td>{{ round($esfuerzoDos->fc_U_isq,1)}}</td>
+              <td>{{round($data->umbral_isq_fc,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Máximo Desnivel ST</th>
+              <td>{{round($esfuerzoUno->MaxInfra,1)}}</td>
+              <td>{{round($esfuerzoDos->MaxInfra,1)}}</td>
+              <td>{{round($data->max_des_st,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Índice TA en esfuerzo</th>
+              <td>{{sprintf("%.2f", floor($esfuerzoUno->indice_tas  * 100) / 100);}}</td>
+              <td>{{sprintf("%.2f", floor($esfuerzoDos->indice_tas  * 100) / 100);}}</td>
+              <td>{{round($data->indice_ta_es,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Recuperación de la TAS 1/3</th>
+              <td>{{sprintf("%.2f", floor($esfuerzoUno->recup_tas  * 100) / 100);}}</td>
+              <td>{{sprintf("%.2f", floor($esfuerzoDos->recup_tas   * 100) / 100);}}</td>
+              <td>{{round($data->recup_tas,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Resp. Cronotrópica (lpm/MET)</th>
+              <td>{{round($esfuerzoUno->resp_crono,1)}}</td>
+              <td>{{round($esfuerzoDos->resp_crono,1)}}</td>
+              <td>{{round($data->resp_crono,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">IEM***</th>
+              <td>{{round($esfuerzoUno->iem,1)}}</td>
+              <td>{{round($esfuerzoDos->iem,1)}}</td>
+              <td>{{round($data->iem,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Poder Cardiaco en ejercicio</th>
+              <td>{{round($esfuerzoUno->pce)}}</td>
+              <td>{{round($esfuerzoDos->pce)}}</td>
+              <td>{{round($data->pod_car_eje,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Puntuación de Duke</th>
+              <td>{{round($esfuerzoUno->duke,1)}}</td>
+              <td>{{round($esfuerzoDos->duke,1)}}</td>
+              <td>{{round($data->duke,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Puntuación de Veteranos</th>
+              <td>{{round($esfuerzoUno->veteranos,1)}}</td>
+              <td>{{round($esfuerzoDos->veteranos,1)}}</td>
+              <td>{{round($data->veteranos,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Score de Angor</th>
+              <td>{{round($esfuerzoUno->scoreAngina)}}</td>
+              <td>{{round($esfuerzoDos->scoreAngina)}}</td>
+              <td>{{round($data->score_ang,1)}}</td>
+            </tr>
+            <tr>
+              <th scope="row">Ectopia Ventricular Frecuente</th>
+              <td>{{$esfuerzoUno->ectopia_ventricular===1?"si":"no"}}</td>
+              <td>{{$esfuerzoDos->ectopia_ventricular===1?"si":"no"}}</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footnotes">
+          <p>* Frecuencia cardiaca (FC). &nbsp; ** Doble producto = (TA sist) × (FC). &nbsp; *** Índice de Eficiencia Miocárdica (IEM). &nbsp; ^ Tiempo de ejercicio corregido para protocolo de Bruce.</p>
+        </div>
       </div>
     </div>
-    <div class="medio f-15">
-      <p class=" texto-izquierda mb-0 f-bold">Nombre: <span class="f-normal">{{ $paciente->apellidoPat . ' ' . $paciente->apellidoMat . ' ' . $paciente->nombre }}</span> </p> <span class="ml-5 text-right texto-derecha f-bold">Fecha de Ingreso: <span class="f-normal">{{date('d/m/Y',strtotime($data->fecha_inicio ))}}</span></span>
-      <p class=" texto-izquierda mb-0 f-bold mt-3">Edad: <span class="f-normal">{{$paciente->edad}}</span> </p> <span class="ml-5 text-right texto-derecha f-bold mt-3">Fecha de Egreso: <span class="f-normal">{{date('d/m/Y',strtotime($data->fecha_final ))}}</span></span>
-      <p class=" texto-izquierda mb-0 f-bold mt-d">Diagnóstico: <span class="f-normal">{{$paciente->diagnostico}}</span> </p>
+
+  @php
+    $chartMets1 = round($esfuerzoUno->mets_max, 1);
+    $chartMets2 = round($esfuerzoDos->mets_max, 1);
+    $chartPct1 = round($esfuerzoUno->vo2_alcanzado, 1);
+    $chartPct2 = round($esfuerzoDos->vo2_alcanzado, 1);
+    $chartFcMax1 = (float) $esfuerzoUno->fcMax;
+    $chartFcMax2 = (float) $esfuerzoDos->fcMax;
+    $chartDpMax1 = (float) $esfuerzoUno->dpMax;
+    $chartDpMax2 = (float) $esfuerzoDos->dpMax;
+
+    $maxMetsChart = max($chartMets1, $chartMets2, 0.1);
+    $maxPctChart = max($chartPct1, $chartPct2, 0.1);
+    $maxFcMaxChart = max($chartFcMax1, $chartFcMax2, 0.1);
+    $maxDpMaxChart = max($chartDpMax1, $chartDpMax2, 0.1);
+
+    $barMets1 = round(($chartMets1 / $maxMetsChart) * 100, 1);
+    $barMets2 = round(($chartMets2 / $maxMetsChart) * 100, 1);
+    $barPct1 = round(($chartPct1 / $maxPctChart) * 100, 1);
+    $barPct2 = round(($chartPct2 / $maxPctChart) * 100, 1);
+    $barFcMax1 = round(($chartFcMax1 / $maxFcMaxChart) * 100, 1);
+    $barFcMax2 = round(($chartFcMax2 / $maxFcMaxChart) * 100, 1);
+    $barDpMax1 = round(($chartDpMax1 / $maxDpMaxChart) * 100, 1);
+    $barDpMax2 = round(($chartDpMax2 / $maxDpMaxChart) * 100, 1);
+
+    $isqMets1 = round($esfuerzoUno->mets_U_isq, 1);
+    $isqMets2 = round($esfuerzoDos->mets_U_isq, 1);
+    $isqFc1 = round($esfuerzoUno->fc_U_isq, 1);
+    $isqFc2 = round($esfuerzoDos->fc_U_isq, 1);
+    $maxSt1 = round($esfuerzoUno->MaxInfra, 1);
+    $maxSt2 = round($esfuerzoDos->MaxInfra, 1);
+    $angina1 = round($esfuerzoUno->scoreAngina);
+    $angina2 = round($esfuerzoDos->scoreAngina);
+
+    $vbarMaxH = 95;
+    $maxIsqMets = max($isqMets1, $isqMets2, 0.1);
+    $maxIsqFc = max($isqFc1, $isqFc2, 0.1);
+    $maxStChart = max($maxSt1, $maxSt2, 0.1);
+    $maxAngina = max($angina1, $angina2, 0.1);
+
+    $vhIsqMets1 = round(($isqMets1 / $maxIsqMets) * $vbarMaxH);
+    $vhIsqMets2 = round(($isqMets2 / $maxIsqMets) * $vbarMaxH);
+    $vhIsqFc1 = round(($isqFc1 / $maxIsqFc) * $vbarMaxH);
+    $vhIsqFc2 = round(($isqFc2 / $maxIsqFc) * $vbarMaxH);
+    $vhMaxSt1 = round(($maxSt1 / $maxStChart) * $vbarMaxH);
+    $vhMaxSt2 = round(($maxSt2 / $maxStChart) * $vbarMaxH);
+    $vhAngina1 = round(($angina1 / $maxAngina) * $vbarMaxH);
+    $vhAngina2 = round(($angina2 / $maxAngina) * $vbarMaxH);
+
+    $indicesPronosticos = [
+        ['label' => 'Resp. Cronotrópica', 'sub' => 'lpm/MET', 'v1' => round($esfuerzoUno->resp_crono, 1), 'v2' => round($esfuerzoDos->resp_crono, 1)],
+        ['label' => 'Recup. FC 1 min', 'sub' => 'lpm', 'v1' => (float) $esfuerzoUno->fcmax_fc1er, 'v2' => (float) $esfuerzoDos->fcmax_fc1er],
+        ['label' => 'Poder Cardiaco', 'sub' => 'ejercicio', 'v1' => round($esfuerzoUno->pce), 'v2' => round($esfuerzoDos->pce)],
+        ['label' => 'Recup. TAS', 'sub' => '1/3', 'v1' => round(floor($esfuerzoUno->recup_tas * 100) / 100, 2), 'v2' => round(floor($esfuerzoDos->recup_tas * 100) / 100, 2)],
+        ['label' => 'Índice TA', 'sub' => 'esfuerzo', 'v1' => round(floor($esfuerzoUno->indice_tas * 100) / 100, 2), 'v2' => round(floor($esfuerzoDos->indice_tas * 100) / 100, 2)],
+        ['label' => 'Puntuación', 'sub' => 'Duke', 'v1' => round($esfuerzoUno->duke, 1), 'v2' => round($esfuerzoDos->duke, 1)],
+        ['label' => 'Puntuación', 'sub' => 'Veteranos', 'v1' => round($esfuerzoUno->veteranos, 1), 'v2' => round($esfuerzoDos->veteranos, 1)],
+    ];
+
+    foreach ($indicesPronosticos as $idx => $item) {
+        $maxVal = max($item['v1'], $item['v2'], 0.1);
+        $indicesPronosticos[$idx]['h1'] = round(($item['v1'] / $maxVal) * $vbarMaxH);
+        $indicesPronosticos[$idx]['h2'] = round(($item['v2'] / $maxVal) * $vbarMaxH);
+    }
+
+    $riesgoCvReduccion = sprintf('%.2f', floor(($esfuerzoDos->mets_max - $esfuerzoUno->mets_max) * 12));
+  @endphp
+
+  <div class="charts-section">
+    <div class="charts-title"> Evaluación de la Adaptacion Cardiovascular al Ejercicio</div>
+
+    <table class="charts-row">
+      <tr>
+        <td>
+          <div class="chart-box">
+            <div class="chart-box-title">Carga máxima (METs)</div>
+            <div class="bar-row">
+              <div class="bar-row-label">Primera prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-primera" style="width: {{ $barMets1 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartMets1 }} METs</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label">Segunda prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-segunda" style="width: {{ $barMets2 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartMets2 }} METs</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="chart-box">
+            <div class="chart-box-title">% METs alcanzado</div>
+            <div class="bar-row">
+              <div class="bar-row-label">Primera prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-primera" style="width: {{ $barPct1 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartPct1 }}%</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label">Segunda prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-segunda" style="width: {{ $barPct2 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartPct2 }}%</div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="chart-box">
+            <div class="chart-box-title">Frecuencia cardiaca máxima (lpm)</div>
+            <div class="bar-row">
+              <div class="bar-row-label">Primera prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-primera" style="width: {{ $barFcMax1 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartFcMax1 }} lpm</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label">Segunda prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-segunda" style="width: {{ $barFcMax2 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartFcMax2 }} lpm</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="chart-box">
+            <div class="chart-box-title">Doble producto máximo</div>
+            <div class="bar-row">
+              <div class="bar-row-label">Primera prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-primera" style="width: {{ $barDpMax1 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartDpMax1 }}</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-row-label">Segunda prueba</div>
+              <div class="bar-row-track">
+                <div class="bar-row-fill bar-segunda" style="width: {{ $barDpMax2 }}%;"></div>
+              </div>
+              <div class="bar-row-value">{{ $chartDpMax2 }}</div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="chart-legend">
+      <span class="legend-dot legend-primera"></span> Primera prueba &nbsp;&nbsp;
+      <span class="legend-dot legend-segunda"></span> Segunda prueba
     </div>
-    <div class="medio mt-5">
-      <p class="text-sm texto-izquierda mb-0 f-bold mt-1"> <span class="f-bold">Núm de Sesiones: <span class="f-normal">{{$estrati[0]->sesiones}}</span></span> </p> 
+
+    <div class="charts-title charts-title-isq">Evaluación de Umbral Isquémico</div>
+    <div class="vbar-chart-wrap">
+      <table class="vbar-chart">
+        <tr>
+          <td>
+            <table class="vbar-group">
+              <tr>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $isqMets1 }}</div>
+                  <div class="vbar bar-primera" style="height: {{ $vhIsqMets1 }}px;"></div>
+                </td>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $isqMets2 }}</div>
+                  <div class="vbar bar-segunda" style="height: {{ $vhIsqMets2 }}px;"></div>
+                </td>
+              </tr>
+            </table>
+            <div class="vbar-label">Umbral Isquémico<br>(METs)</div>
+          </td>
+          <td>
+            <table class="vbar-group">
+              <tr>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $isqFc1 }}</div>
+                  <div class="vbar bar-primera" style="height: {{ $vhIsqFc1 }}px;"></div>
+                </td>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $isqFc2 }}</div>
+                  <div class="vbar bar-segunda" style="height: {{ $vhIsqFc2 }}px;"></div>
+                </td>
+              </tr>
+            </table>
+            <div class="vbar-label">Umbral Isquémico<br>(FC lpm)</div>
+          </td>
+          <td>
+            <table class="vbar-group">
+              <tr>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $maxSt1 }}</div>
+                  <div class="vbar bar-primera" style="height: {{ $vhMaxSt1 }}px;"></div>
+                </td>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $maxSt2 }}</div>
+                  <div class="vbar bar-segunda" style="height: {{ $vhMaxSt2 }}px;"></div>
+                </td>
+              </tr>
+            </table>
+            <div class="vbar-label">Máximo Desnivel<br>ST (mm)</div>
+          </td>
+          <td>
+            <table class="vbar-group">
+              <tr>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $angina1 }}</div>
+                  <div class="vbar bar-primera" style="height: {{ $vhAngina1 }}px;"></div>
+                </td>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $angina2 }}</div>
+                  <div class="vbar bar-segunda" style="height: {{ $vhAngina2 }}px;"></div>
+                </td>
+              </tr>
+            </table>
+            <div class="vbar-label">Score<br>Angina</div>
+          </td>
+        </tr>
+      </table>
+      <div class="vbar-sublabel text-ctr">
+        <span class="legend-dot legend-primera"></span> 1ª prueba &nbsp;&nbsp;
+        <span class="legend-dot legend-segunda"></span> 2ª prueba
+      </div>
     </div>
-    <div class="paciente mt-5">
-      <p class="f-15 f-normal mb-2">Como parte del programa  y con el fin de supervisar esta etapa promoviendo el apego al método, se llevará la asesoría intermitente de la realización de la terapia ergométrica del paciente por medio de la programación de refuerzos (en los siguientes seis meses)  para así disminuir la incidencia de deserción del paciente durante la parte domiciliaria del programa. Esta supervisión se realizará siempre en estrecha colaboración con su médico tratante. </p>
+
+    <div class="charts-title charts-title-isq"> Evaluación de Índices Pronósticos</div>
+    <div class="vbar-chart-wrap">
+      <table class="vbar-chart vbar-chart-7">
+        <tr>
+          @foreach($indicesPronosticos as $indice)
+          <td>
+            <table class="vbar-group">
+              <tr>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $indice['v1'] }}</div>
+                  <div class="vbar bar-primera" style="height: {{ $indice['h1'] }}px;"></div>
+                </td>
+                <td class="vbar-area">
+                  <div class="vbar-val">{{ $indice['v2'] }}</div>
+                  <div class="vbar bar-segunda" style="height: {{ $indice['h2'] }}px;"></div>
+                </td>
+              </tr>
+            </table>
+            <div class="vbar-label">{{ $indice['label'] }}<br>({{ $indice['sub'] }})</div>
+          </td>
+          @endforeach
+        </tr>
+      </table>
+      <div class="vbar-sublabel text-ctr">
+        <span class="legend-dot legend-primera"></span> 1ª prueba &nbsp;&nbsp;
+        <span class="legend-dot legend-segunda"></span> 2ª prueba
+      </div>
     </div>
-    <div class="paciente mt-4">
-      <h2 class="h5 titulo">Conclusiones: </h2>
-      <p  class="f-15 f-normal mb-2">Después de un periodo inicial de acondicionamiento intensivo la evolución del paciente  es satisfactoria, con un aumento importante de su capacidad física y de su tolerancia al ejercicio, así como una reducción de Riesgo CV del <span>{{ sprintf("%.2f", floor(($esfuerzoDos->mets_max - $esfuerzoUno->mets_max)*12))}}%</span> de origen cardiovascular. Aunque el logro es muy importante todavía se espera que mejore aún más la tolerancia al esfuerzo con el transcurrir de los meses, con el beneficio que con lleva el ejercicio; ya por demás demostrado en los programas de Rehabilitación Cardiaca.</p>
+
+    <div class="riesgo-cv-highlight">
+      <div class="riesgo-cv-label">Reducción de Riesgo Cardiovascular</div>
+      <div class="riesgo-cv-value">{{ $riesgoCvReduccion }}%</div>
+      <div class="riesgo-cv-sub">Estimado comparativo entre la primera y segunda prueba de esfuerzo (origen cardiovascular)</div>
     </div>
-    <div class="paciente mt-4">
-      <p  class="f-15 f-normal mb-5">Agradeciendo su confianza y preferencia. Aprovecho para enviarle un cordial saludo y quedo a sus órdenes.</p>
+  </div>
+
+  <div class="page-letter">
+    <div class="letter-title">Reporte Final del Programa Rehabilitación Cardiaca</div>
+    @if(!empty($clinicaLogo))
+    <div class="logo-container" style="margin-bottom: 6px;"><img src="{{ $clinicaLogo }}" alt="logo clínica"></div>
+    @endif
+    <p class="letter-greeting">Estimado(a): <span style="font-weight:normal;">Dr(a). {{ $paciente->envio }}</span></p>
+
+    <div class="letter-patient-card">
+      <table class="letter-patient-table">
+        <tr>
+          <td width="50%"><strong>Nombre:</strong> {{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</td>
+          <td width="50%" style="text-align:right;"><strong>Fecha de Ingreso:</strong> {{ date('d/m/Y', strtotime($data->fecha_inicio)) }}</td>
+        </tr>
+        <tr>
+          <td><strong>Edad:</strong> {{ $paciente->edad }} años</td>
+          <td style="text-align:right;"><strong>Fecha de Egreso:</strong> {{ date('d/m/Y', strtotime($data->fecha_final)) }}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>Diagnóstico:</strong> {{ $paciente->diagnostico }}</td>
+        </tr>
+        <tr>
+          <td colspan="2"><strong>Núm. de Sesiones:</strong> {{ $estrati[0]->sesiones }}</td>
+        </tr>
+      </table>
     </div>
-    {{-- Siempre mostrar quién elaboró el documento --}}
-    <div class="paciente mt-3">
-      <p class="f-15 f-normal mb-1"><strong>Elaboró:</strong>
-        @if(isset($autor) && $autor)
-          {{ $autor->nombre_completo }}
-          @if($autor->cedula)
-            | Cédula: {{ $autor->cedula }}
-          @endif
-        @else
-          {{ $user->nombre_con_titulo }}
+
+    <div class="letter-body">
+      <p>Como parte del programa y con el fin de supervisar esta etapa promoviendo el apego al método, se llevará la asesoría intermitente de la realización de la terapia ergométrica del paciente por medio de la programación de refuerzos (en los siguientes seis meses) para así disminuir la incidencia de deserción del paciente durante la parte domiciliaria del programa. Esta supervisión se realizará siempre en estrecha colaboración con su médico tratante.</p>
+
+      <div class="letter-section-title">Conclusiones</div>
+      <p>Después de un periodo inicial de acondicionamiento intensivo la evolución del paciente es satisfactoria, con un aumento importante de su capacidad física y de su tolerancia al ejercicio, así como una reducción de Riesgo CV del {{ $riesgoCvReduccion }}% de origen cardiovascular. Aunque el logro es muy importante todavía se espera que mejore aún más la tolerancia al esfuerzo con el transcurrir de los meses, con el beneficio que conlleva el ejercicio; ya por demás demostrado en los programas de Rehabilitación Cardiaca.</p>
+
+      <p>Agradeciendo su confianza y preferencia. Aprovecho para enviarle un cordial saludo y quedo a sus órdenes.</p>
+    </div>
+
+    <p class="letter-elaboro"><strong>Elaboró:</strong>
+      @if(isset($autor) && $autor)
+        {{ $autor->nombre_completo }}
+        @if($autor->cedula)
+          | Cédula: {{ $autor->cedula }}
         @endif
-      </p>
-    </div>
-    {{-- Solo mostrar firma si el usuario actual es el autor --}}
+      @else
+        {{ $user->nombre_con_titulo }}
+      @endif
+    </p>
+
     @if(isset($esAutor) && $esAutor && isset($firmaBase64) && $firmaBase64)
-    <div class="paciente mt-5">
-      <p  class="f-15 f-normal mb-5">Atentamente,</p>
-    </div>
-    <div class="paciente mt-5 text-left">
+    <div class="letter-signature-block">
+      <p class="letter-sign-atentamente">Atentamente,</p>
       <div class="signature">
         <img src="{{ $firmaBase64 }}" alt="Firma Digital">
       </div>
-      <p  class="f-15 f-bold mb-0">{{ $user->nombre_con_titulo }}</p>
-      <p  class="f-15 f-normal mb-2">Rehabilitación Cardiaca.</p>
+      <p class="letter-sign-name">{{ $user->nombre_con_titulo }}</p>
+      <p class="letter-sign-role">Rehabilitación Cardiaca</p>
     </div>
     @endif
-    <div class="medio marg-final">
-      <p class=" texto-izquierda mb-0 f-bold f-15 txt-blue marg-final">{{ $clinica->nombre ?? 'Clínica' }}</p> <span class="ml-5 text-right texto-derecha f-bold marg-final">{{ $clinica->telefono ?? '' }}@if($clinica->email ?? null)/<span class="f-normal txt-r marg-final">{{ $clinica->email }}</span>@endif</span>
-    </div>
-
-
-
   </div>
   </main>
   </div><!-- End content-wrapper -->

@@ -395,7 +395,7 @@
                     <div class="recommendations">
                         <div class="recommendations-title">Recordatorios para tu agenda</div>
                         <ul>
-                            <li>Revisa en Lynkamed el expediente del paciente antes de la consulta</li>
+                            <li>Revisa en Lynkamed la historia clínica del paciente antes de la consulta</li>
                             <li>Si la cita sigue en <strong>pendiente</strong>, confirma asistencia con el paciente</li>
                             <li>Los cambios futuros en fecha u hora generarán un nuevo correo con .ics actualizado</li>
                         </ul>

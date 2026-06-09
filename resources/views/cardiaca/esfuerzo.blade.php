@@ -63,13 +63,12 @@
       border-radius: 6px; padding: 6px 10px; margin-bottom: 7px;
     }
     .patient-name { font-size: 12px; font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; margin-bottom: 4px; }
-    .patient-table { width: 100%; border-collapse: collapse; }
-    .patient-table td { padding: 1.5px 5px; font-size: 8.5px; }
-    .patient-label { color: #64748b; text-transform: uppercase; font-size: 8px; letter-spacing: 0.3px; }
-    .patient-value { font-weight: 600; color: #334155; }
-    .patient-diagnosis { margin-top: 4px; padding-top: 3px; border-top: 1px solid #e2e8f0; }
-    .patient-diagnosis-label { font-size: 8px; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
-    .patient-diagnosis-value { font-size: 8.5px; color: #334155; }
+    .pt { width: 100%; border-collapse: collapse; }
+    .pt td { padding: 1.5px 5px; font-size: 8.5px; }
+    .plabel { color: #64748b; }
+    .pvalue { font-weight: 600; color: #334155; }
+    .pdx { margin-top: 4px; padding-top: 4px; border-top: 1px solid #e2e8f0; font-size: 8.5px; }
+    .pdx-label { color: #64748b; font-weight: 600; }
 
     /* ── METRICS BAR ── */
     .metrics-table { width: 100%; border-collapse: collapse; margin-bottom: 7px; }
@@ -182,7 +181,6 @@
     </td>
     <td style="padding-left:10px;">
       <div class="header-title">Prueba Ergométrica {{ isset($data->tipo_esfuerzo) && $data->tipo_esfuerzo === 'pulmonar' ? 'Pulmonar' : 'Cardíaca' }}</div>
-      <div class="header-subtitle">Reporte de evaluación funcional</div>
     </td>
     <td class="header-meta-cell">
       <div class="header-badge">
@@ -197,21 +195,25 @@
 <!-- PACIENTE -->
 <div class="patient-card">
   <div class="patient-name">{{ $paciente->apellidoPat }} {{ $paciente->apellidoMat }} {{ $paciente->nombre }}</div>
-  <table class="patient-table"><tr>
-    <td><span class="patient-label">Peso:</span> <span class="patient-value">{{ $paciente->peso }} kg</span></td>
-    <td><span class="patient-label">Talla:</span> <span class="patient-value">{{ $paciente->talla }} cm</span></td>
-    <td><span class="patient-label">Edad:</span> <span class="patient-value">{{ $paciente->edad }} años</span></td>
-    <td><span class="patient-label">IMC:</span> <span class="patient-value">{{ round($paciente->imc,2) }}</span></td>
-    <td><span class="patient-label">Género:</span> <span class="patient-value">{{ $paciente->genero == 1 ? 'Masculino' : 'Femenino' }}</span></td>
-    @if($paciente->medicamentos)
-    <td colspan="2"><span class="patient-label">Medicamentos:</span> <span class="patient-value">{{ $paciente->medicamentos }}</span></td>
-    @endif
-  </tr></table>
+  <table class="pt">
+    <tr>
+      <td><span class="plabel">Edad:</span> <span class="pvalue">{{ $paciente->edad }} años</span></td>
+      <td><span class="plabel">Género:</span> <span class="pvalue">{{ $paciente->genero == 1 ? 'Hombre' : 'Mujer' }}</span></td>
+      <td><span class="plabel">Peso:</span> <span class="pvalue">{{ $paciente->peso }} kg</span></td>
+      <td><span class="plabel">Talla:</span> <span class="pvalue">{{ $paciente->talla }} m</span></td>
+      <td><span class="plabel">IMC:</span> <span class="pvalue">{{ round($paciente->imc, 2) }}</span></td>
+    </tr>
+    <tr>
+      <td><span class="plabel">F. Nac.:</span> <span class="pvalue">{{ $paciente->fechaNacimiento ? date('d/m/Y', strtotime($paciente->fechaNacimiento)) : '—' }}</span></td>
+      <td><span class="plabel">Prueba:</span> <span class="pvalue">#{{ $data->numPrueba ?? '—' }}</span></td>
+      <td><span class="plabel">F. Prueba:</span> <span class="pvalue">{{ $data->fecha ? date('d/m/Y', strtotime($data->fecha)) : '—' }}</span></td>
+    </tr>
+  </table>
+  @if($paciente->medicamentos)
+  <div class="pdx"><span class="pdx-label">Diagnóstico:</span> {{ $paciente->diagnostico }}</div>
+  @endif
   @if($paciente->diagnostico)
-  <div class="patient-diagnosis">
-    <div class="patient-diagnosis-label">Diagnóstico</div>
-    <div class="patient-diagnosis-value">{{ $paciente->diagnostico }}</div>
-  </div>
+  <div class="pdx"><span class="pdx-label">Medicamentos:</span> {{ $paciente->medicamentos }}</div>
   @endif
 </div>
 
@@ -239,7 +241,7 @@
       <div class="metric-value" style="color:{!! $clinica->color_principal ?? '#0A1628' !!};">{{ round($data->tiempoEsfuerzo,2) }} <span class="metric-unit">min</span></div>
     </td>
     <td>
-      <div class="metric-label">Suspensión</div>
+      <div class="metric-label">Motivo de suspensión:</div>
       <div class="metric-value" style="font-size:9px; color:{!! $clinica->color_principal ?? '#0A1628' !!};">{{ $data->motivoSuspension }}</div>
     </td>
   </tr>
@@ -337,7 +339,7 @@
       </div>
     </td>
     <td class="w33">
-      <div class="section-title">Gases Espirados</div>
+      <div class="section-title">Gases Espirados (CPET)</div>
       <div class="section-content">
         <b>VO2max:</b> {{ round($data->vo2_max_gases,2) }} mlO2/Kg/min<br>
         <b>VO2pico:</b> {{round($data->vo2_pico_gases,2)}} mlO2/Kg/min<br>
@@ -357,7 +359,7 @@
       <div class="section-content">
         <b>Índice Angina:</b> {{$data->scoreAngina}}<br>
         <b>Dep. máx ST (mm):</b> {{$data->MaxInfra}}<br>
-        <b>Tipo cambio:</b> {{$data->tipoCambioElectrico}}
+        <b>Tipo cambio del ST:</b> {{$data->tipoCambioElectrico}}
       </div>
     </td>
     <td class="w33">
@@ -374,18 +376,23 @@
   </tr>
 </table>
 
-<!-- CONCLUSIONES + CARDIOPATÍA -->
+<!-- RIESGO GLOBAL -->
 <table class="cols" style="margin-bottom:5px;">
   <tr>
-    <td class="w50">
-      <div class="section-title">Conclusiones</div>
-      <div class="section-accent">
-        <b>Conclusiones:</b> {{ $data->conclusiones }}<br>
-        <b>Riesgo general:</b> {{$data->riesgo}}
-      </div>
+    <td>
+      <div class="section-title">Riesgo Global</div>
+      <div class="section-accent">{{ $data->riesgo }}</div>
     </td>
-    <td class="w50">
-      <div class="section-content">
+  </tr>
+</table>
+
+<!-- CONCLUSIONES -->
+<table class="cols" style="margin-bottom:5px;">
+  <tr>
+    <td>
+      <div class="section-title">Conclusiones</div>
+      <div class="section-accent">{{ $data->conclusiones }}</div>
+      <div class="section-content" style="margin-top:4px;">
         <b>Confusor:</b> {{$data->confusor}}<br>
         <b>Prob. pre-prueba:</b> {{$data->prevalencia*100}}%<br>
         <b>Sensibilidad:</b> {{$data->sensibilidad*100}}% &nbsp; <b>Especificidad:</b> {{$data->especificidad*100}}%<br>

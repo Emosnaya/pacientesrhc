@@ -92,6 +92,21 @@ class ClinicoController extends Controller
             }
         }
         
+        $this->fillFromFormDatos($clinico, $data);
+        $clinico->tipo_exp = 3;
+
+        // Asignar el user_id del dueño del paciente
+        $clinico->user_id = $nuevoPaciente->user_id;
+        $clinico->paciente_id = $nuevoPaciente->id;
+        $clinico->clinica_id = $user->clinica_efectiva_id;
+        $clinico->sucursal_id = $nuevoPaciente->sucursal_id;
+        $clinico->save();
+
+        return response()->json("Guardado correctamente");
+    }
+
+    private function fillFromFormDatos(Clinico $clinico, array $data): void
+    {
         $clinico->fecha = $data['fecha'];
         $clinico->fecha_1vez = $data['fecha_1vez'];
         $clinico->hora = $data['hora'];
@@ -101,7 +116,7 @@ class ClinicoController extends Controller
         $clinico->imApical = $data['imApical'];
         $clinico->imLateral = $data['imLateral'];
         $clinico->imInferior = $data['imInferior'];
-        $clinico->imdelVD = $data['imdelVd'];
+        $clinico->imdelVD = $data['imdelVD'] ?? $data['imdelVd'] ?? null;
         $clinico->im_post_inferior = $data['imPostInferior'];
         $clinico->anginaInestabale = $data['anginaInestable'];
         $clinico->anginaEstabale = $data['anginaEstable'];
@@ -200,8 +215,8 @@ class ClinicoController extends Controller
         $clinico->q_as = $data['qAs']==="true"?1:0;
         $clinico->q_inf = $data['qInf']==="true"?1:0;
         $clinico->q_lat = $data['qLat']==="true"?1:0;
-        $clinico->q_ant = $data['qAnt'];
-        $clinico->q_poster_inferior = $data['qPosterInferior'];
+        $clinico->q_ant = $data['qAnt'] === 'true' ? 1 : 0;
+        $clinico->q_poster_inferior = $data['qPosterInferior'] === 'true' ? 1 : 0;
         $clinico->otros_ecg = $data['otrosEcg'];
         $clinico->eco_fecha = $data['ecoFecha'];
         $clinico->fe_por = $data['fePor'];
@@ -288,17 +303,7 @@ class ClinicoController extends Controller
         $clinico->estudios = $data['estudios'];
         $clinico->diagnostico_general = $data['diagnosticoGeneral'];
         $clinico->plan = $data['plan'];
-        $clinico->tipo_exp = 3;
         $clinico->dasi =(0.43*((2.75*$clinico->comer_vestirse)+(1.75*$clinico->caminar_casa)+(2.75*$clinico->caminar_2_cuadras)+(5.5*$clinico->subir_piso)+(8*$clinico->correr_corta)+(2.7*$clinico->lavar_trastes)+(3.5*$clinico->aspirar_casa)+(8*$clinico->trapear)+(4.5*$clinico->jardineria)+(5.25*$clinico->relaciones)+(6*$clinico->jugar)+(7.5*$clinico->deportes_extenuantes))+9.6)/3.5 ;
-        
-        // Asignar el user_id del dueño del paciente
-        $clinico->user_id = $nuevoPaciente->user_id;
-        $clinico->paciente_id = $nuevoPaciente->id;
-        $clinico->clinica_id = $user->clinica_efectiva_id;
-        $clinico->sucursal_id = $nuevoPaciente->sucursal_id;
-        $clinico->save();
-
-        return response()->json("Guardado correctamente");
     }
 
     /**
@@ -327,7 +332,7 @@ class ClinicoController extends Controller
      * @param  \App\Models\Clinico  $clinico
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $data, Clinico $clinico)
+    public function update(Request $request, Clinico $clinico)
     {
         $user = Auth::user();
         
@@ -337,8 +342,16 @@ class ClinicoController extends Controller
             return response()->json(['error' => 'No tienes acceso a este expediente clínico'], 403);
         }
 
-        $clinicoFind = Clinico::find($data->id);
-        $nuevoPaciente = Paciente::find($data->paciente_id);
+        if ($request->has('datos')) {
+            $this->fillFromFormDatos($clinico, $request->input('datos'));
+            $clinico->save();
+
+            return response()->json('Actualizado correctamente');
+        }
+
+        $data = $request->all();
+        $clinicoFind = Clinico::find($data['id'] ?? $clinico->id);
+        $nuevoPaciente = Paciente::find($data['paciente_id'] ?? $clinico->paciente_id);
 
         $clinico->fecha = $data['fecha'];
         $clinico->fecha_1vez = $data['fecha_1vez'];
@@ -448,8 +461,8 @@ class ClinicoController extends Controller
         $clinico->q_as = $data['q_as']==="true"||$data['q_as']===1?1:0;
         $clinico->q_inf = $data['q_inf']==="true"||$data['q_inf']===1?1:0;
         $clinico->q_lat = $data['q_lat']==="true"||$data['q_lat']===1?1:0;
-        $clinico->q_ant = $data['q_ant'];
-        $clinico->q_poster_inferior = $data['q_poster_inferior'];
+        $clinico->q_ant = $data['q_ant'] === 'true' || $data['q_ant'] === 1 ? 1 : 0;
+        $clinico->q_poster_inferior = $data['q_poster_inferior'] === 'true' || $data['q_poster_inferior'] === 1 ? 1 : 0;
         $clinico->otros_ecg = $data['otros_ecg'];
         $clinico->eco_fecha = $data['eco_fecha'];
         $clinico->fe_por = $data['fe_por'];

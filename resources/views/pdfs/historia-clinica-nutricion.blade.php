@@ -174,7 +174,7 @@
             </td>
             <td class="header-meta-cell">
                 <div class="header-badge">
-                    <div class="header-badge-label">Expediente</div>
+                    <div class="header-badge-label">Historia Clínica</div>
                     <div class="header-badge-value">{{ $historia->numero_expediente ?? $paciente->registro ?? 'N/A' }}</div>
                 </div>
                 <div class="header-date">{{ $historia->fecha_elaboracion ? $historia->fecha_elaboracion->format('d/m/Y') : '' }}</div>
