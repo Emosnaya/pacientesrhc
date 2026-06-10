@@ -198,9 +198,6 @@
             <tr>
                 <td colspan="2"><span class="patient-label">Médico:</span> <span class="patient-value">{{ $user->name ?? '' }}</span></td>
                 <td><span class="patient-label">Hora:</span> <span class="patient-value">{{ $historia->hora ?? '' }}</span></td>
-                @if($historia->clasificacion_riesgo)
-                <td colspan="2"><span class="patient-label">Clasificación de riesgo:</span> <span class="patient-value">{{ $historia->clasificacion_riesgo }}</span></td>
-                @endif
             </tr>
         </table>
     </div>
@@ -223,7 +220,14 @@
     </div>
 
     <!-- ANTECEDENTES CARDIOVASCULARES -->
-    @php $acv = $historia->antecedentes_cardiovasculares ?? []; @endphp
+    @php
+        $acv = $historia->antecedentes_cardiovasculares ?? [];
+        $anpObesidad = $historia->antecedentes_no_patologicos ?? [];
+        $frObesidad = $historia->factores_riesgo ?? [];
+        if (!($acv['obesidad'] ?? false) && (($anpObesidad['obesidad'] ?? false) || ($frObesidad['obesidad'] ?? false))) {
+            $acv['obesidad'] = true;
+        }
+    @endphp
     <div class="section">
         <div class="section-title">Antecedentes cardiovasculares</div>
         <div class="section-body">
@@ -339,6 +343,12 @@
                         @else <span class="check-no">No</span> @endif
                     </td>
                 </tr>
+                <tr>
+                    <td colspan="4">
+                        <span class="lbl">Obesidad:</span>
+                        @if($acv['obesidad'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif
+                    </td>
+                </tr>
             </table>
         </div>
     </div>
@@ -401,53 +411,64 @@
     </div>
     @endif
 
-    <!-- FACTORES DE RIESGO + ANTECEDENTES FAMILIARES -->
-    @php $fr = $historia->factores_riesgo ?? []; $af = $historia->antecedentes_familiares ?? []; @endphp
+    <!-- ANTECEDENTES NO PATOLÓGICOS + ANTECEDENTES FAMILIARES -->
+    @php
+        $anp = $historia->antecedentes_no_patologicos ?? [];
+        if (empty($anp)) {
+            $frLegacy = $historia->factores_riesgo ?? [];
+            $anp = [
+                'tabaquismo' => $frLegacy['tabaquismo'] ?? ['tiene' => false],
+                'actividad_fisica' => ['tiene' => false, 'detalle' => ''],
+                'alcoholismo' => ['tiene' => false, 'detalle' => ''],
+                'consumo_drogas' => ['tiene' => false, 'detalle' => ''],
+                'sedentarismo' => $frLegacy['sedentarismo'] ?? false,
+                'estres' => $frLegacy['estres'] ?? false,
+                'otros' => $frLegacy['otros'] ?? '',
+            ];
+        }
+        $af = $historia->antecedentes_familiares ?? [];
+    @endphp
     <table style="width:100%;border-collapse:collapse;">
         <tr>
             <td style="width:55%;vertical-align:top;padding-right:4px;">
                 <div class="section">
-                    <div class="section-title">Factores de riesgo</div>
+                    <div class="section-title">Antecedentes personales no patológicos</div>
                     <div class="section-body">
                         <table class="row-table">
                             <tr>
                                 <td width="50%">
-                                    <span class="lbl">HTA:</span>
-                                    @if($fr['hta']['tiene'] ?? false)
-                                        <span class="check-yes">Sí</span> {{ $fr['hta']['tiempo'] ?? '' }} — {{ $fr['hta']['tratamiento'] ?? '' }}
+                                    <span class="lbl">Tabaquismo:</span>
+                                    @if($anp['tabaquismo']['tiene'] ?? false)
+                                        <span class="check-yes">Sí</span> {{ $anp['tabaquismo']['estado'] ?? '' }} {{ $anp['tabaquismo']['cigarros_dia'] ?? '' }} cig/día
                                     @else <span class="check-no">No</span> @endif
                                 </td>
                                 <td width="50%">
-                                    <span class="lbl">DM:</span>
-                                    @if($fr['dm']['tiene'] ?? false)
-                                        <span class="check-yes">Sí</span> Tipo {{ $fr['dm']['tipo'] ?? '' }} — {{ $fr['dm']['tiempo'] ?? '' }}
+                                    <span class="lbl">Actividad física:</span>
+                                    @if($anp['actividad_fisica']['tiene'] ?? false)
+                                        <span class="check-yes">Sí</span> — {{ $anp['actividad_fisica']['detalle'] ?? '' }}
                                     @else <span class="check-no">No</span> @endif
                                 </td>
                             </tr>
                             <tr>
                                 <td>
-                                    <span class="lbl">Dislipidemia:</span>
-                                    @if($fr['dislipidemia']['tiene'] ?? false)
-                                        <span class="check-yes">Sí</span> {{ $fr['dislipidemia']['detalle'] ?? '' }}
+                                    <span class="lbl">Alcoholismo:</span>
+                                    @if($anp['alcoholismo']['tiene'] ?? false)
+                                        <span class="check-yes">Sí</span> — {{ $anp['alcoholismo']['detalle'] ?? '' }}
                                     @else <span class="check-no">No</span> @endif
                                 </td>
                                 <td>
-                                    <span class="lbl">Tabaquismo:</span>
-                                    @if($fr['tabaquismo']['tiene'] ?? false)
-                                        <span class="check-yes">Sí</span> {{ $fr['tabaquismo']['estado'] ?? '' }} {{ $fr['tabaquismo']['cigarros_dia'] ?? '' }} cig/día
+                                    <span class="lbl">Consumo de drogas:</span>
+                                    @if($anp['consumo_drogas']['tiene'] ?? false)
+                                        <span class="check-yes">Sí</span> — {{ $anp['consumo_drogas']['detalle'] ?? '' }}
                                     @else <span class="check-no">No</span> @endif
                                 </td>
                             </tr>
                             <tr>
-                                <td><span class="lbl">Obesidad:</span> @if($fr['obesidad'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
-                                <td><span class="lbl">Sedentarismo:</span> @if($fr['sedentarismo'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
+                                <td><span class="lbl">Sedentarismo:</span> @if($anp['sedentarismo'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
+                                <td><span class="lbl">Estrés:</span> @if($anp['estres'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
                             </tr>
-                            <tr>
-                                <td><span class="lbl">Estrés:</span> @if($fr['estres'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
-                                <td><span class="lbl">Apnea:</span> @if($fr['apnea'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif</td>
-                            </tr>
-                            @if($fr['otros'] ?? '')
-                            <tr><td colspan="2"><span class="lbl">Otros:</span> {{ $fr['otros'] }}</td></tr>
+                            @if($anp['otros'] ?? '')
+                            <tr><td colspan="2"><span class="lbl">Otros:</span> {{ $anp['otros'] }}</td></tr>
                             @endif
                         </table>
                     </div>
@@ -512,50 +533,6 @@
         </div>
     </div>
 
-    <!-- SÍNTOMAS -->
-    @php $sint = $historia->sintomas ?? []; @endphp
-    <div class="section">
-        <div class="section-title">Síntomas</div>
-        <div class="section-body">
-            <table class="row-table">
-                <tr>
-                    <td width="40%">
-                        <span class="lbl">Dolor torácico:</span>
-                        @if($sint['dolor_toracico']['tiene'] ?? false)
-                            <span class="check-yes">Sí</span>
-                            @if($sint['dolor_toracico']['tipo'] ?? '') — Tipo: {{ $sint['dolor_toracico']['tipo'] }} @endif
-                            @if($sint['dolor_toracico']['localizacion'] ?? '') | Loc: {{ $sint['dolor_toracico']['localizacion'] }} @endif
-                        @else <span class="check-no">No</span> @endif
-                    </td>
-                    <td width="30%">
-                        <span class="lbl">Disnea (NYHA):</span>
-                        @if($sint['disnea']['tiene'] ?? false)
-                            <span class="check-yes">Sí</span> {{ $sint['disnea']['clase_nyha'] ?? '' }}
-                        @else <span class="check-no">No</span> @endif
-                    </td>
-                    <td width="30%">
-                        <span class="lbl">Palpitaciones:</span>
-                        @if($sint['palpitaciones']['tiene'] ?? false)
-                            <span class="check-yes">Sí</span> {{ $sint['palpitaciones']['tipo'] ?? '' }}
-                        @else <span class="check-no">No</span> @endif
-                    </td>
-                </tr>
-                <tr>
-                    <td><span class="lbl">Síncope:</span> @if($sint['sincope']['tiene'] ?? false)<span class="check-yes">Sí</span> — {{ $sint['sincope']['detalle'] ?? '' }}@else<span class="check-no">No</span>@endif</td>
-                    <td><span class="lbl">Edema:</span> @if($sint['edema']['tiene'] ?? false)<span class="check-yes">Sí</span> {{ $sint['edema']['localizacion'] ?? '' }}@else<span class="check-no">No</span>@endif</td>
-                    <td>
-                        <span class="lbl">Ortopnea:</span> @if($sint['ortopnea'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif &nbsp;
-                        <span class="lbl">DPN:</span> @if($sint['dpn'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif &nbsp;
-                        <span class="lbl">Fatiga:</span> @if($sint['fatiga'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif
-                    </td>
-                </tr>
-                @if($sint['otros'] ?? '')
-                <tr><td colspan="3"><span class="lbl">Otros:</span> {{ $sint['otros'] }}</td></tr>
-                @endif
-            </table>
-        </div>
-    </div>
-
     <!-- SIGNOS VITALES -->
     <div class="section">
         <div class="section-title">Signos vitales y somatometría</div>
@@ -589,104 +566,18 @@
         </div>
     </div>
 
-    <!-- EXPLORACIÓN CARDIOVASCULAR -->
-    @php $exp = $historia->exploracion_cardiovascular ?? []; @endphp
+    <!-- EXPLORACIÓN FÍSICA -->
+    @php
+        $exploracionFisica = $historia->exploracion_fisica;
+        if (empty($exploracionFisica)) {
+            $expLegacy = $historia->exploracion_cardiovascular ?? [];
+            $exploracionFisica = $expLegacy['otros'] ?? '';
+        }
+    @endphp
     <div class="section">
-        <div class="section-title">Exploración cardiovascular</div>
+        <div class="section-title">Exploración física</div>
         <div class="section-body">
-            <table class="row-table">
-                <tr>
-                    <td width="33%"><span class="lbl">Estado general:</span> {{ $exp['estado_general'] ?? '—' }}</td>
-                    <td width="33%"><span class="lbl">Cuello / IY (cm):</span> {{ $exp['cuello'] ?? '—' }} / {{ $exp['iy_cm'] ?? '—' }}</td>
-                    <td width="33%"><span class="lbl">Tórax:</span> {{ $exp['torax'] ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <td><span class="lbl">Ápex:</span> {{ $exp['apex'] ?? '—' }}</td>
-                    <td><span class="lbl">Ritmo:</span> {{ $exp['ritmo'] ?? '—' }}</td>
-                    <td>
-                        <span class="lbl">R1:</span> {{ $exp['r1'] ?? '—' }} &nbsp;
-                        <span class="lbl">R2:</span> {{ $exp['r2'] ?? '—' }} &nbsp;
-                        <span class="lbl">R3:</span> @if($exp['r3'] ?? false)<span class="check-yes">+</span>@else —@endif &nbsp;
-                        <span class="lbl">R4:</span> @if($exp['r4'] ?? false)<span class="check-yes">+</span>@else —@endif
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <span class="lbl">Soplo:</span>
-                        @if($exp['soplo']['tiene'] ?? false)
-                            <span class="check-yes">Sí</span> — {{ $exp['soplo']['foco'] ?? '' }} Gr.{{ $exp['soplo']['grado'] ?? '' }} {{ $exp['soplo']['tipo'] ?? '' }}
-                        @else <span class="check-no">No</span> @endif
-                    </td>
-                    <td>
-                        <span class="lbl">Frote pericárdico:</span>
-                        @if($exp['frote_pericardico'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif
-                    </td>
-                    <td>
-                        <span class="lbl">A. Pulmonar:</span> {{ $exp['auscultacion_pulmonar'] ?? '—' }} &nbsp;
-                        <span class="lbl">Estertores:</span>
-                        @if($exp['estertores']['tiene'] ?? false)<span class="check-yes">Sí</span> {{ $exp['estertores']['localizacion'] ?? '' }}@else<span class="check-no">No</span>@endif
-                    </td>
-                </tr>
-                @if($exp['otros'] ?? '')
-                <tr><td colspan="3"><span class="lbl">Otros:</span> {{ $exp['otros'] }}</td></tr>
-                @endif
-            </table>
-        </div>
-    </div>
-
-    <!-- PULSOS PERIFÉRICOS -->
-    @php $pul = $historia->pulsos_perifericos ?? []; @endphp
-    <div class="section">
-        <div class="section-title">Pulsos periféricos</div>
-        <div class="section-body">
-            <table class="pulses-table">
-                <tr>
-                    <th>Zona</th>
-                    <th>Derecho</th>
-                    <th>Izquierdo</th>
-                    <th>Zona</th>
-                    <th>Derecho</th>
-                    <th>Izquierdo</th>
-                </tr>
-                <tr>
-                    <td>Carótida</td>
-                    <td>{{ $pul['carotideo_der'] ?? '—' }}</td>
-                    <td>{{ $pul['carotideo_izq'] ?? '—' }}</td>
-                    <td>Radial</td>
-                    <td>{{ $pul['radial_der'] ?? '—' }}</td>
-                    <td>{{ $pul['radial_izq'] ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <td>Femoral</td>
-                    <td>{{ $pul['femoral_der'] ?? '—' }}</td>
-                    <td>{{ $pul['femoral_izq'] ?? '—' }}</td>
-                    <td>Poplíteo</td>
-                    <td>{{ $pul['popliteo_der'] ?? '—' }}</td>
-                    <td>{{ $pul['popliteo_izq'] ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <td>Tibial</td>
-                    <td>{{ $pul['tibial_der'] ?? '—' }}</td>
-                    <td>{{ $pul['tibial_izq'] ?? '—' }}</td>
-                    <td>Pedio</td>
-                    <td>{{ $pul['pedio_der'] ?? '—' }}</td>
-                    <td>{{ $pul['pedio_izq'] ?? '—' }}</td>
-                </tr>
-            </table>
-            <table class="row-table mt-4">
-                <tr>
-                    <td width="50%">
-                        <span class="lbl">Edema MMII:</span>
-                        @if($pul['edema_mmii']['tiene'] ?? false)
-                            <span class="check-yes">Sí</span> — Grado {{ $pul['edema_mmii']['grado'] ?? '' }}
-                        @else <span class="check-no">No</span> @endif
-                    </td>
-                    <td width="50%">
-                        <span class="lbl">Várices:</span>
-                        @if($pul['varices'] ?? false)<span class="check-yes">Sí</span>@else<span class="check-no">No</span>@endif
-                    </td>
-                </tr>
-            </table>
+            <div class="text-block">{{ $exploracionFisica ?: '—' }}</div>
         </div>
     </div>
 
@@ -732,47 +623,65 @@
                     <div class="section-title">Laboratorios</div>
                     <div class="section-body">
                         <table class="row-table">
-                            @foreach([
-                                'glucosa' => 'Glucosa',
-                                'hba1c' => 'HbA1c',
-                                'creatinina' => 'Creatinina',
-                                'tfg' => 'TFG',
-                                'colesterol_total' => 'Colesterol Total',
-                                'ldl' => 'LDL',
-                                'hdl' => 'HDL',
-                                'trigliceridos' => 'Triglicéridos',
-                                'hemoglobina' => 'Hemoglobina',
-                                'bnp' => 'BNP',
-                                'troponinas' => 'Troponinas',
-                                'dimero_d' => 'Dímero D',
-                                'bun' => 'BUN',
-                                'acido_urico' => 'Ácido Úrico',
-                            ] as $key => $label)
-                            @if($lab[$key] ?? '')
+                            @php
+                                $labFilas = [
+                                    [
+                                        'hemoglobina' => 'Hemoglobina',
+                                        'leucocitos' => 'Leucocitos',
+                                        'plaquetas' => 'Plaquetas',
+                                        'hematocrito' => 'Hematocrito',
+                                    ],
+                                    [
+                                        'glucosa' => 'Glucosa',
+                                        'bun' => 'BUN',
+                                        'creatinina' => 'Creatinina',
+                                        'acido_urico' => 'Ácido Úrico',
+                                    ],
+                                    [
+                                        'colesterol_total' => 'Colesterol Total',
+                                        'ldl' => 'LDL',
+                                        'hdl' => 'HDL',
+                                        'trigliceridos' => 'Triglicéridos',
+                                    ],
+                                    ['hba1c' => 'HbA1c'],
+                                    [
+                                        'bnp' => 'BNP/NT-proBNP',
+                                        'troponinas' => 'Troponinas',
+                                        'dimero_d' => 'Dímero D',
+                                    ],
+                                ];
+                            @endphp
+                            @foreach($labFilas as $fila)
+                                @php
+                                    $valores = [];
+                                    foreach ($fila as $key => $label) {
+                                        if ($lab[$key] ?? '') {
+                                            $valores[] = $label . ': ' . $lab[$key];
+                                        }
+                                    }
+                                @endphp
+                                @if(count($valores))
+                                <tr>
+                                    <td colspan="2">{{ implode(' &nbsp;|&nbsp; ', $valores) }}</td>
+                                </tr>
+                                @endif
+                            @endforeach
+                            @php
+                                $electro = [];
+                                foreach (['cloro' => 'Cloro', 'potasio' => 'Potasio', 'magnesio' => 'Magnesio', 'calcio' => 'Calcio'] as $k => $l) {
+                                    if ($lab['electrolitos'][$k] ?? '') $electro[] = $l . ': ' . $lab['electrolitos'][$k];
+                                }
+                                foreach (['tsh' => 'TSH', 't3' => 'T3', 't4' => 'T4', 't3_libre' => 'T3 libre'] as $k => $l) {
+                                    if ($lab['perfil_tiroideo'][$k] ?? '') $electro[] = $l . ': ' . $lab['perfil_tiroideo'][$k];
+                                }
+                            @endphp
+                            @if(count($electro))
                             <tr>
-                                <td width="50%"><span class="lbl">{{ $label }}:</span></td>
-                                <td>{{ $lab[$key] }}</td>
+                                <td colspan="2">{{ implode(' &nbsp;|&nbsp; ', $electro) }}</td>
                             </tr>
                             @endif
-                            @endforeach
                             @if($lab['otros'] ?? '')
                             <tr><td><span class="lbl">Otros:</span></td><td>{{ $lab['otros'] }}</td></tr>
-                            @endif
-                            @if(!empty($lab['perfil_tiroideo'] ?? []))
-                            <tr>
-                                <td><span class="lbl">Perfil Tiroideo (TSH/T3/T4):</span></td>
-                                <td>
-                                    TSH: {{ $lab['perfil_tiroideo']['tsh'] ?? '—' }}
-                                    &nbsp;|&nbsp; T3: {{ $lab['perfil_tiroideo']['t3'] ?? '—' }}
-                                    &nbsp;|&nbsp; T4: {{ $lab['perfil_tiroideo']['t4'] ?? '—' }}
-                                </td>
-                            </tr>
-                            @endif
-                            @if(!empty($lab['electrolitos'] ?? []))
-                            <tr>
-                                <td><span class="lbl">Electrolitos:</span></td>
-                                <td>Cloro: {{ $lab['electrolitos']['cloro'] ?? '—' }} | K+: {{ $lab['electrolitos']['potasio'] ?? '—' }} | Mg: {{ $lab['electrolitos']['magnesio'] ?? '—' }}</td>
-                            </tr>
                             @endif
                         </table>
                     </div>
@@ -835,7 +744,19 @@
                     </td>
                     <td class="two-col" style="padding-top:4px;">
                         <div class="full-label">Pronóstico</div>
-                        <div class="text-block">{{ $historia->pronostico ?? '—' }}</div>
+                        <div class="text-block">
+                            @php
+                                $escalaPronostico = [
+                                    'excelente' => 'Excelente',
+                                    'bueno' => 'Bueno',
+                                    'reservado' => 'Reservado',
+                                    'malo' => 'Malo',
+                                    'grave' => 'Grave',
+                                ];
+                                $pronosticoTexto = $escalaPronostico[$historia->pronostico ?? ''] ?? ($historia->pronostico ?: '—');
+                            @endphp
+                            {{ $pronosticoTexto }}
+                        </div>
                     </td>
                 </tr>
                 <tr>

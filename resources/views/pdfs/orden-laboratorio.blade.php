@@ -45,6 +45,10 @@
         .lbl { color: #64748b; font-size: 9px; display: block; }
         .val { font-weight: 600; color: #0f172a; }
         .text-block { font-size: 10px; color: #334155; line-height: 1.6; }
+        .estudios-list { width: 100%; border-collapse: collapse; }
+        .estudios-list td { padding: 5px 8px; font-size: 10px; color: #334155; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        .estudios-list tr:last-child td { border-bottom: none; }
+        .estudios-bullet { color: {!! $clinica->color_principal ?? '#0A1628' !!}; font-weight: 700; padding-right: 8px; width: 14px; }
         .status-badge { display: inline-block; border-radius: 3px; padding: 2px 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .status-pendiente  { background: #f1f5f9; color: #475569; }
         .status-recibida   { background: #dbeafe; color: #1e40af; }
@@ -154,7 +158,21 @@
     <div class="section">
         <div class="section-title">Estudios Solicitados</div>
         <div class="section-body">
-            <div class="text-block">{{ $orden->estudios }}</div>
+            @php
+                $estudiosLista = array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $orden->estudios ?? ''))));
+            @endphp
+            @if(count($estudiosLista))
+            <table class="estudios-list">
+                @foreach($estudiosLista as $estudio)
+                <tr>
+                    <td class="estudios-bullet">•</td>
+                    <td>{{ $estudio }}</td>
+                </tr>
+                @endforeach
+            </table>
+            @else
+            <div class="text-block">—</div>
+            @endif
         </div>
     </div>
 

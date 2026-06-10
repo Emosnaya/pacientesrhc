@@ -2,35 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HistoriaClinicaCardiologia;
-use App\Models\Paciente;
+use App\Models\NotaSubsecuenteCardiologia;
 use App\Traits\ClinicaScope;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Barryvdh\DomPDF\Facade\Pdf;
 
-class HistoriaClinicaCardiologiaController extends Controller
+class NotaSubsecuenteCardiologiaController extends Controller
 {
     use ClinicaScope;
 
-    /**
-     * Listar historias clínicas cardiológicas de un paciente.
-     */
     public function index(Request $request, $pacienteId): JsonResponse
     {
         try {
             $clinicaId = $this->getClinicaIdFromRequest($request);
 
-            $historias = HistoriaClinicaCardiologia::where('paciente_id', $pacienteId)
+            $notas = NotaSubsecuenteCardiologia::where('paciente_id', $pacienteId)
                 ->where('clinica_id', $clinicaId)
                 ->with([
                     'user:id,nombre,apellidoPat,apellidoMat',
-                    'ordenLaboratorio:id,historia_clinica_id,folio,estudios,laboratorio_id,email_laboratorio,correo_enviado,indicaciones,diagnostico_clinico',
+                    'ordenLaboratorio:id,nota_subsecuente_id,folio,estudios,laboratorio_id,email_laboratorio,correo_enviado,indicaciones,diagnostico_clinico',
                     'ordenLaboratorio.laboratorio:id,nombre,email',
-                    'receta:id,historia_clinica_id,folio,fecha,diagnostico_principal,indicaciones_generales',
+                    'receta:id,nota_subsecuente_id,folio,fecha,diagnostico_principal,indicaciones_generales',
                     'receta.medicamentos',
                 ])
                 ->orderBy('fecha_consulta', 'desc')
@@ -38,20 +34,17 @@ class HistoriaClinicaCardiologiaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $historias,
+                'data' => $notas,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error listando historias cardiología: ' . $e->getMessage());
+            Log::error('Error listando notas subsecuentes cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener historias clínicas',
+                'message' => 'Error al obtener notas de subsecuente',
             ], 500);
         }
     }
 
-    /**
-     * Crear nueva historia clínica cardiológica.
-     */
     public function store(Request $request): JsonResponse
     {
         try {
@@ -59,108 +52,96 @@ class HistoriaClinicaCardiologiaController extends Controller
             $clinicaId = $this->getClinicaIdFromRequest($request);
             $sucursalId = $request->header('X-Sucursal-ID') ?? $user->sucursal_id;
 
-            $validated = $request->validate([
+            $request->validate([
                 'paciente_id' => 'required|exists:pacientes,id',
                 'fecha_consulta' => 'required|date',
                 'hora' => 'nullable|date_format:H:i',
-                'motivo_consulta' => 'nullable|string|max:2000',
-                // Resto de campos son opcionales
             ]);
 
             $data = array_merge($request->all(), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
-                'tipo_exp' => 30,
+                'tipo_exp' => 39,
             ]);
 
-            $historia = HistoriaClinicaCardiologia::create($data);
+            $nota = NotaSubsecuenteCardiologia::create($data);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Historia clínica cardiológica creada exitosamente',
-                'data' => $historia->load('user:id,nombre,apellidoPat,apellidoMat'),
+                'message' => 'Nota de subsecuente creada exitosamente',
+                'data' => $nota->load('user:id,nombre,apellidoPat,apellidoMat'),
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Error creando historia cardiología: ' . $e->getMessage());
+            Log::error('Error creando nota subsecuente cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear historia clínica: ' . $e->getMessage(),
+                'message' => 'Error al crear nota de subsecuente: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * Mostrar una historia clínica específica.
-     */
     public function show(Request $request, $id): JsonResponse
     {
         try {
             $clinicaId = $this->getClinicaIdFromRequest($request);
 
-            $historia = HistoriaClinicaCardiologia::where('id', $id)
+            $nota = NotaSubsecuenteCardiologia::where('id', $id)
                 ->where('clinica_id', $clinicaId)
                 ->with([
                     'user:id,nombre,apellidoPat,apellidoMat,cedula_especialista',
                     'paciente', 'clinica', 'sucursal',
-                    'ordenLaboratorio:id,historia_clinica_id,folio,estudios,laboratorio_id,email_laboratorio,correo_enviado,indicaciones,diagnostico_clinico',
+                    'ordenLaboratorio:id,nota_subsecuente_id,folio,estudios,laboratorio_id,email_laboratorio,correo_enviado,indicaciones,diagnostico_clinico',
                     'ordenLaboratorio.laboratorio:id,nombre,email',
-                    'receta:id,historia_clinica_id,folio,fecha,diagnostico_principal,indicaciones_generales',
+                    'receta:id,nota_subsecuente_id,folio,fecha,diagnostico_principal,indicaciones_generales',
                     'receta.medicamentos',
                 ])
                 ->firstOrFail();
 
             return response()->json([
                 'success' => true,
-                'data' => $historia,
+                'data' => $nota,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error obteniendo historia cardiología: ' . $e->getMessage());
+            Log::error('Error obteniendo nota subsecuente cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Historia clínica no encontrada',
+                'message' => 'Nota de subsecuente no encontrada',
             ], 404);
         }
     }
 
-    /**
-     * Actualizar historia clínica cardiológica.
-     */
     public function update(Request $request, $id): JsonResponse
     {
         try {
             $clinicaId = $this->getClinicaIdFromRequest($request);
 
-            $historia = HistoriaClinicaCardiologia::where('id', $id)
+            $nota = NotaSubsecuenteCardiologia::where('id', $id)
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $historia->update($request->all());
+            $nota->update($request->all());
 
             return response()->json([
                 'success' => true,
-                'message' => 'Historia clínica actualizada exitosamente',
-                'data' => $historia->fresh()->load('user:id,nombre,apellidoPat,apellidoMat'),
+                'message' => 'Nota de subsecuente actualizada exitosamente',
+                'data' => $nota->fresh()->load('user:id,nombre,apellidoPat,apellidoMat'),
             ]);
         } catch (\Exception $e) {
-            Log::error('Error actualizando historia cardiología: ' . $e->getMessage());
+            Log::error('Error actualizando nota subsecuente cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar historia clínica',
+                'message' => 'Error al actualizar nota de subsecuente',
             ], 500);
         }
     }
 
-    /**
-     * Eliminar historia clínica cardiológica.
-     */
     public function destroy(Request $request, $id): JsonResponse
     {
         try {
             $user = Auth::user();
             $clinicaId = $this->getClinicaIdFromRequest($request);
 
-            // Solo superadmin puede eliminar
             $isSuperAdmin = DB::table('user_clinicas')
                 ->where('user_id', $user->id)
                 ->where('clinica_id', $clinicaId)
@@ -174,41 +155,37 @@ class HistoriaClinicaCardiologiaController extends Controller
                 ], 403);
             }
 
-            $historia = HistoriaClinicaCardiologia::where('id', $id)
+            $nota = NotaSubsecuenteCardiologia::where('id', $id)
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $historia->delete();
+            $nota->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Historia clínica eliminada exitosamente',
+                'message' => 'Nota de subsecuente eliminada exitosamente',
             ]);
         } catch (\Exception $e) {
-            Log::error('Error eliminando historia cardiología: ' . $e->getMessage());
+            Log::error('Error eliminando nota subsecuente cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar historia clínica',
+                'message' => 'Error al eliminar nota de subsecuente',
             ], 500);
         }
     }
 
-    /**
-     * Generar PDF de la historia clínica.
-     */
     public function pdf(Request $request, $id)
     {
         try {
             $clinicaId = $this->getClinicaIdFromRequest($request);
 
-            $historia = HistoriaClinicaCardiologia::where('id', $id)
+            $nota = NotaSubsecuenteCardiologia::where('id', $id)
                 ->where('clinica_id', $clinicaId)
                 ->with(['user', 'paciente', 'clinica', 'sucursal'])
                 ->firstOrFail();
 
-            $firmaUser = $historia->user;
+            $firmaUser = $nota->user;
 
-            // Preparar firma digital si existe
             $firmaBase64 = null;
             if ($firmaUser && $firmaUser->firma_digital && file_exists(public_path('storage/' . $firmaUser->firma_digital))) {
                 $imagePath = public_path('storage/' . $firmaUser->firma_digital);
@@ -217,9 +194,8 @@ class HistoriaClinicaCardiologiaController extends Controller
                 $firmaBase64 = 'data:' . $imageType . ';base64,' . base64_encode($imageData);
             }
 
-            // Logo de la clínica
             $clinicaLogo = null;
-            $clinicaObj = $historia->clinica;
+            $clinicaObj = $nota->clinica;
             if ($clinicaObj && $clinicaObj->logo && file_exists(public_path('storage/' . $clinicaObj->logo))) {
                 $logoPath = public_path('storage/' . $clinicaObj->logo);
                 $logoData = file_get_contents($logoPath);
@@ -227,9 +203,9 @@ class HistoriaClinicaCardiologiaController extends Controller
                 $clinicaLogo = 'data:' . $logoType . ';base64,' . base64_encode($logoData);
             }
 
-            $pdf = Pdf::loadView('pdfs.historia-clinica-cardiologia', [
-                'historia' => $historia,
-                'paciente' => $historia->paciente,
+            $pdf = Pdf::loadView('pdfs.nota-subsecuente-cardiologia', [
+                'nota' => $nota,
+                'paciente' => $nota->paciente,
                 'clinica' => $clinicaObj,
                 'user' => $firmaUser,
                 'firmaBase64' => $firmaBase64,
@@ -238,7 +214,7 @@ class HistoriaClinicaCardiologiaController extends Controller
 
             $pdf->setPaper('letter', 'portrait');
 
-            $filename = "historia_cardiologia_{$historia->paciente->registro}_{$historia->fecha_consulta->format('Y-m-d')}.pdf";
+            $filename = "nota_subsecuente_{$nota->paciente->registro}_{$nota->fecha_consulta->format('Y-m-d')}.pdf";
 
             if ($request->query('download') === 'true') {
                 return $pdf->download($filename);
@@ -246,7 +222,7 @@ class HistoriaClinicaCardiologiaController extends Controller
 
             return $pdf->stream($filename);
         } catch (\Exception $e) {
-            Log::error('Error generando PDF historia cardiología: ' . $e->getMessage());
+            Log::error('Error generando PDF nota subsecuente cardiología: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al generar PDF',

@@ -22,6 +22,7 @@ use App\Models\Odontograma;
 use App\Models\NotaSeguimientoPulmonar;
 use App\Models\EstratiAacvpr;
 use App\Models\HistoriaClinicaCardiologia;
+use App\Models\NotaSubsecuenteCardiologia;
 use App\Models\Ecocardiograma;
 use App\Models\Electrocardiograma;
 use App\Models\HistoriaGinecologica;
@@ -30,6 +31,7 @@ use App\Models\ControlPrenatal;
 use App\Models\HistoriaClinicaNutricion;
 use App\Models\SeguimientoNutricional;
 use App\Models\NotaClinicaSoapNutricional;
+use App\Models\Incapacidad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -351,6 +353,36 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 40. Incapacidad
+        $incapacidades = Incapacidad::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 40,
+                    'fecha' => $item->fecha_inicio,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Incapacidad',
+                ];
+            });
+
+        // 39. Nota de Subsecuente Cardiológica
+        $notasSubsecuenteCardiologia = NotaSubsecuenteCardiologia::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 39,
+                    'fecha' => $item->fecha_consulta,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Nota de Subsecuente'
+                ];
+            });
+
         // 31. Ecocardiograma
         $ecocardiogramas = Ecocardiograma::where('paciente_id', $pacienteId)
             ->where('clinica_id', $clinicaId)
@@ -492,6 +524,7 @@ class ExpedienteUnificadoController extends Controller
             ->merge($notasSeguimientoPulmonar)
             ->merge($estratiAacvprs)
             ->merge($historiasCardiologia)
+            ->merge($notasSubsecuenteCardiologia)
             ->merge($ecocardiogramas)
             ->merge($electrocardiogramas)
             ->merge($historiasGinecologia)
@@ -499,7 +532,8 @@ class ExpedienteUnificadoController extends Controller
             ->merge($controlesPrenatales)
             ->merge($historiasNutricion)
             ->merge($seguimientosNutricion)
-            ->merge($notasSoapNutricion);
+            ->merge($notasSoapNutricion)
+            ->merge($incapacidades);
 
         // Ordenar por fecha de creación (más recientes primero)
         $expedientes = $expedientes->sortByDesc('created_at')->values();

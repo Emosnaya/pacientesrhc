@@ -15,6 +15,8 @@ class OrdenLaboratorio extends Model
         'paciente_id',
         'user_id',
         'laboratorio_id',
+        'nota_subsecuente_id',
+        'historia_clinica_id',
         'folio',
         'estudios',
         'indicaciones',
@@ -44,6 +46,9 @@ class OrdenLaboratorio extends Model
     public function paciente(): BelongsTo { return $this->belongsTo(Paciente::class); }
     public function user(): BelongsTo     { return $this->belongsTo(User::class); }
     public function laboratorio(): BelongsTo { return $this->belongsTo(Laboratorio::class); }
+    public function notaSubsecuente(): BelongsTo { return $this->belongsTo(NotaSubsecuenteCardiologia::class, 'nota_subsecuente_id'); }
+
+    public function historiaClinica(): BelongsTo { return $this->belongsTo(HistoriaClinicaCardiologia::class, 'historia_clinica_id'); }
     public function portalToken(): HasOne { return $this->hasOne(OrdenLaboratorioToken::class, 'orden_id'); }
 
     // ─── Badge legible del status ──────────────────────────────────────────────

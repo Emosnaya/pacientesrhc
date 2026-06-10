@@ -49,6 +49,8 @@ use App\Http\Controllers\PacientePortalAuthController;
 use App\Http\Controllers\PacientePortalController;
 use App\Http\Controllers\PresupuestoController;
 use App\Http\Controllers\HistoriaClinicaCardiologiaController;
+use App\Http\Controllers\NotaSubsecuenteCardiologiaController;
+use App\Http\Controllers\IncapacidadController;
 use App\Http\Controllers\EcocardiogramaController;
 use App\Http\Controllers\ElectrocardiogramaController;
 use App\Http\Controllers\HistoriaGinecologicaController;
@@ -342,6 +344,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::put('/recetas/config/pdf', [RecetaController::class, 'updatePdfConfig']);
     Route::get('/recetas/{id}', [RecetaController::class, 'show']);
     Route::post('/recetas', [RecetaController::class, 'store']);
+    Route::put('/recetas/{id}', [RecetaController::class, 'update']);
+    Route::post('/recetas/{id}/enviar-correo', [RecetaController::class, 'enviarCorreo']);
     Route::post('/recetas/{id}/firmar', [EfirmaController::class, 'firmarReceta']);
     Route::get('/recetas/{id}/verificar-firma', [EfirmaController::class, 'verificarFirma']);
 
@@ -652,6 +656,26 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::delete('/{id}', [EcocardiogramaController::class, 'destroy']);
         Route::get('/{id}/pdf', [EcocardiogramaController::class, 'pdf']);
         Route::get('/compare/{id1}/{id2}', [EcocardiogramaController::class, 'compare']);
+    });
+
+    // Incapacidad (todos los consultorios y clínicas)
+    Route::prefix('incapacidades')->group(function () {
+        Route::get('/paciente/{pacienteId}', [IncapacidadController::class, 'index']);
+        Route::post('/', [IncapacidadController::class, 'store']);
+        Route::get('/{id}', [IncapacidadController::class, 'show']);
+        Route::put('/{id}', [IncapacidadController::class, 'update']);
+        Route::delete('/{id}', [IncapacidadController::class, 'destroy']);
+        Route::get('/{id}/pdf', [IncapacidadController::class, 'pdf']);
+    });
+
+    // Nota de Subsecuente Cardiológica
+    Route::prefix('cardiologia/nota-subsecuente')->group(function () {
+        Route::get('/paciente/{pacienteId}', [NotaSubsecuenteCardiologiaController::class, 'index']);
+        Route::post('/', [NotaSubsecuenteCardiologiaController::class, 'store']);
+        Route::get('/{id}', [NotaSubsecuenteCardiologiaController::class, 'show']);
+        Route::put('/{id}', [NotaSubsecuenteCardiologiaController::class, 'update']);
+        Route::delete('/{id}', [NotaSubsecuenteCardiologiaController::class, 'destroy']);
+        Route::get('/{id}/pdf', [NotaSubsecuenteCardiologiaController::class, 'pdf']);
     });
 
     // Electrocardiograma

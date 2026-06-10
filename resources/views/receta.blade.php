@@ -485,6 +485,7 @@
                 <tr>
                     <th class="med-num">#</th>
                     <th>Medicamento</th>
+                    <th>Vía</th>
                     <th>Presentación / Dosis</th>
                     <th>Frecuencia</th>
                     <th>Duración</th>
@@ -495,6 +496,7 @@
                 <tr>
                     <td class="med-num">{{ $idx + 1 }}</td>
                     <td class="med-nombre">{{ $m->medicamento }}</td>
+                    <td>{{ $m->via ?? '—' }}</td>
                     <td>{{ $m->presentacion ?? '—' }} @if($m->dosis) · {{ $m->dosis }} @endif</td>
                     <td>{{ $m->frecuencia ?? '—' }}</td>
                     <td>{{ $m->duracion ?? '—' }}</td>
@@ -502,11 +504,11 @@
                 @if(!empty($m->indicaciones_especificas))
                 <tr>
                     <td class="med-num"></td>
-                    <td colspan="4" style="font-size: 8px; color: #64748b; padding-top: 0;">Indicaciones: {{ $m->indicaciones_especificas }}</td>
+                    <td colspan="5" style="font-size: 8px; color: #64748b; padding-top: 0;">Indicaciones: {{ $m->indicaciones_especificas }}</td>
                 </tr>
                 @endif
                 @empty
-                <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Sin medicamentos registrados</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Sin medicamentos registrados</td></tr>
                 @endforelse
             </tbody>
         </table>

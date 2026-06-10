@@ -6,6 +6,7 @@ use App\Models\Clinica;
 use App\Models\Receta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class RecetaController extends Controller
@@ -152,12 +153,15 @@ class RecetaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'paciente_id' => 'required|exists:pacientes,id',
+            'nota_subsecuente_id' => 'nullable|exists:nota_subsecuente_cardiologias,id',
+            'historia_clinica_id' => 'nullable|exists:historia_clinica_cardiologias,id',
             'fecha' => 'required|date',
             'diagnostico_principal' => 'nullable|string|max:500',
             'indicaciones_generales' => 'nullable|string',
             'medicamentos' => 'nullable|array',
             'medicamentos.*.medicamento' => 'required_with:medicamentos|string|max:255',
             'medicamentos.*.presentacion' => 'nullable|string|max:255',
+            'medicamentos.*.via' => 'nullable|string|max:100',
             'medicamentos.*.dosis' => 'nullable|string|max:255',
             'medicamentos.*.frecuencia' => 'nullable|string|max:255',
             'medicamentos.*.duracion' => 'nullable|string|max:255',
@@ -181,6 +185,8 @@ class RecetaController extends Controller
         $receta = Receta::create([
             'folio' => $folio,
             'paciente_id' => $request->paciente_id,
+            'nota_subsecuente_id' => $request->nota_subsecuente_id,
+            'historia_clinica_id' => $request->historia_clinica_id,
             'user_id' => $user->id,
             'sucursal_id' => $sucursalId,
             'clinica_id' => $clinicaId,
@@ -189,21 +195,7 @@ class RecetaController extends Controller
             'indicaciones_generales' => $request->indicaciones_generales,
         ]);
 
-        $medicamentos = $request->medicamentos ?? [];
-        foreach ($medicamentos as $orden => $item) {
-            if (empty($item['medicamento'])) {
-                continue;
-            }
-            $receta->medicamentos()->create([
-                'medicamento' => $item['medicamento'],
-                'presentacion' => $item['presentacion'] ?? null,
-                'dosis' => $item['dosis'] ?? null,
-                'frecuencia' => $item['frecuencia'] ?? null,
-                'duracion' => $item['duracion'] ?? null,
-                'indicaciones_especificas' => $item['indicaciones_especificas'] ?? null,
-                'orden' => $orden,
-            ]);
-        }
+        $this->syncMedicamentos($receta, $request->medicamentos ?? []);
 
         $receta->load(['paciente', 'user', 'medicamentos']);
         return response()->json([
@@ -211,6 +203,125 @@ class RecetaController extends Controller
             'message' => 'Receta guardada correctamente',
             'data' => $receta
         ], 201);
+    }
+
+    /**
+     * Actualizar receta vinculada a nota de subsecuente.
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden actualizar recetas médicas'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'fecha' => 'sometimes|required|date',
+            'diagnostico_principal' => 'nullable|string|max:500',
+            'indicaciones_generales' => 'nullable|string',
+            'medicamentos' => 'nullable|array',
+            'medicamentos.*.medicamento' => 'required_with:medicamentos|string|max:255',
+            'medicamentos.*.presentacion' => 'nullable|string|max:255',
+            'medicamentos.*.via' => 'nullable|string|max:100',
+            'medicamentos.*.dosis' => 'nullable|string|max:255',
+            'medicamentos.*.frecuencia' => 'nullable|string|max:255',
+            'medicamentos.*.duracion' => 'nullable|string|max:255',
+            'medicamentos.*.indicaciones_especificas' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $receta = Receta::where('clinica_id', $user->clinica_efectiva_id)
+            ->where('user_id', $user->id)
+            ->findOrFail($id);
+
+        $receta->update($request->only([
+            'fecha',
+            'diagnostico_principal',
+            'indicaciones_generales',
+        ]));
+
+        if ($request->has('medicamentos')) {
+            $this->syncMedicamentos($receta, $request->medicamentos ?? []);
+        }
+
+        $receta->load(['paciente', 'user', 'medicamentos']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Receta actualizada correctamente',
+            'data' => $receta
+        ]);
+    }
+
+    private function syncMedicamentos(Receta $receta, array $medicamentos): void
+    {
+        $receta->medicamentos()->delete();
+        foreach ($medicamentos as $orden => $item) {
+            if (empty($item['medicamento'])) {
+                continue;
+            }
+            $receta->medicamentos()->create([
+                'medicamento' => $item['medicamento'],
+                'presentacion' => $item['presentacion'] ?? null,
+                'via' => $item['via'] ?? null,
+                'dosis' => $item['dosis'] ?? null,
+                'frecuencia' => $item['frecuencia'] ?? null,
+                'duracion' => $item['duracion'] ?? null,
+                'indicaciones_especificas' => $item['indicaciones_especificas'] ?? null,
+                'orden' => $orden,
+            ]);
+        }
+    }
+
+    /**
+     * Enviar receta por correo con PDF adjunto.
+     */
+    public function enviarCorreo(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if (!$this->canAccessRecetas($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los doctores pueden enviar recetas'
+            ], 403);
+        }
+
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $receta = Receta::where('clinica_id', $user->clinica_efectiva_id)
+            ->where('user_id', $user->id)
+            ->with('paciente')
+            ->findOrFail($id);
+
+        $pdfBinary = app(PDFController::class)->recetaPdfBinary($request, $id);
+        $paciente = $receta->paciente;
+        $nombre = trim(($paciente->nombre ?? '') . ' ' . ($paciente->apellidoPat ?? ''));
+
+        Mail::send([], [], function ($msg) use ($data, $receta, $pdfBinary, $nombre) {
+            $msg->to($data['email'])
+                ->subject("Receta médica #{$receta->folio} — {$nombre}")
+                ->html('<p>Adjunto encontrará la receta médica solicitada.</p>')
+                ->attachData($pdfBinary, "receta-{$receta->folio}.pdf", [
+                    'mime' => 'application/pdf',
+                ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Receta enviada por correo correctamente',
+        ]);
     }
 
     /**

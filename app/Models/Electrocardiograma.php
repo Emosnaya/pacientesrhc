@@ -20,11 +20,11 @@ class Electrocardiograma extends Model
         'tipo_exp',
         'fecha_estudio',
         'hora',
+        'tipo_ecg',
         'indicacion',
         'contexto_clinico',
         'velocidad_papel',
         'calibracion',
-        // JSON fields
         'ritmo_frecuencia',
         'intervalos',
         'eje_electrico',
@@ -34,15 +34,17 @@ class Electrocardiograma extends Model
         'onda_t',
         'arritmias',
         'marcapasos',
-        // Others
         'imagen_path',
         'interpretacion',
+        'comparacion_previo',
+        'diagnostico_electrocardiografico',
         'conclusiones',
         'recomendaciones',
         'urgente',
         'comparado_previo',
         'cambios_vs_previo',
         'medico_interpreta',
+        'medico_realiza',
         'cedula_medico',
     ];
 
@@ -81,22 +83,21 @@ class Electrocardiograma extends Model
         return $this->belongsTo(Sucursal::class);
     }
 
-    /**
-     * Estructura vacía de ritmo y frecuencia
-     */
+    public function getImagenStoragePathAttribute(): ?string
+    {
+        return $this->imagen_path ?: ($this->attributes['imagen_ecg'] ?? null);
+    }
+
     public static function getEmptyRitmoFrecuencia(): array
     {
         return [
-            'ritmo' => '',
-            'fc' => '',
-            'regularidad' => '',
+            'tipo_ritmo' => '',
+            'frecuencia_cardiaca' => '',
             'origen' => '',
+            'conduccion_av' => '',
         ];
     }
 
-    /**
-     * Estructura vacía de intervalos
-     */
     public static function getEmptyIntervalos(): array
     {
         return [
@@ -104,106 +105,91 @@ class Electrocardiograma extends Model
             'qrs' => '',
             'qt' => '',
             'qtc' => '',
-            'formula_qtc' => 'Bazett',
+            'formula_qtc' => 'bazett',
         ];
     }
 
-    /**
-     * Estructura vacía de eje eléctrico
-     */
     public static function getEmptyEje(): array
     {
         return [
-            'eje_qrs' => '',
-            'eje_p' => '',
-            'eje_t' => '',
+            'aqrs' => '',
+            'ap' => '',
+            'at' => '',
+            'desviacion' => '',
         ];
     }
 
-    /**
-     * Estructura vacía de onda P
-     */
     public static function getEmptyOndaP(): array
     {
         return [
             'morfologia' => '',
             'duracion' => '',
             'amplitud' => '',
-            'crecimiento_ai' => false,
-            'crecimiento_ad' => false,
+            'p_mitrale' => false,
+            'p_pulmonale' => false,
         ];
     }
 
-    /**
-     * Estructura vacía de complejo QRS
-     */
     public static function getEmptyQRS(): array
     {
         return [
-            'morfologia' => '',
             'duracion' => '',
+            'morfologia' => '',
             'amplitud_max' => '',
+            'transicion' => '',
+            'ondas_q' => ['tiene' => false, 'localizacion' => ''],
             'bajo_voltaje' => false,
-            'bloqueo_rama' => ['tiene' => false, 'tipo' => ''],
-            'hemibloqueo' => ['tiene' => false, 'tipo' => ''],
-            'hipertrofia_vi' => ['tiene' => false, 'criterios' => ''],
-            'hipertrofia_vd' => ['tiene' => false, 'criterios' => ''],
-            'ondas_q' => ['tiene' => false, 'localizacion' => '', 'patologicas' => false],
+            'alto_voltaje_vi' => false,
+            'alto_voltaje_vd' => false,
+            'bloqueo_rama' => ['tiene' => false, 'tipo' => '', 'grado' => ''],
+            'bloqueo_rama_izquierda' => ['tiene' => false, 'grado' => ''],
+            'bloqueo_fasciculo_anterior' => false,
+            'bloqueo_fasciculo_posterior' => false,
+            'bloqueo_bifascicular' => false,
+            'bloqueo_trifascicular' => false,
         ];
     }
 
-    /**
-     * Estructura vacía de segmento ST
-     */
     public static function getEmptyST(): array
     {
         return [
             'normal' => true,
             'elevacion' => ['tiene' => false, 'derivaciones' => '', 'magnitud' => ''],
-            'depresion' => ['tiene' => false, 'derivaciones' => '', 'magnitud' => '', 'tipo' => ''],
+            'depresion' => ['tiene' => false, 'derivaciones' => '', 'magnitud' => ''],
         ];
     }
 
-    /**
-     * Estructura vacía de onda T
-     */
     public static function getEmptyOndaT(): array
     {
         return [
             'morfologia' => '',
-            'inversiones' => ['tiene' => false, 'derivaciones' => ''],
-            'aplanamiento' => false,
-            'picudas' => false,
+            'inversion' => ['tiene' => false, 'derivaciones' => ''],
+            'aplanamiento' => ['tiene' => false, 'derivaciones' => ''],
+            'hiperagudas' => false,
         ];
     }
 
-    /**
-     * Estructura vacía de arritmias
-     */
     public static function getEmptyArritmias(): array
     {
         return [
-            'extrasistoles_sv' => false,
-            'extrasistoles_v' => false,
-            'fa' => false,
-            'flutter' => false,
-            'taquicardia_sv' => false,
-            'taquicardia_v' => false,
-            'bradicardia' => false,
-            'bloqueo_av' => ['tiene' => false, 'grado' => ''],
-            'pausa_sinusal' => false,
+            'extrasistoles_supraventriculares' => ['tiene' => false, 'frecuencia' => ''],
+            'extrasistoles_ventriculares' => ['tiene' => false, 'frecuencia' => ''],
+            'taquicardia_supraventricular' => ['tiene' => false, 'ciclo_fc' => ''],
+            'taquicardia_auricular_ectopica' => false,
+            'taquicardia_ventricular' => ['tiene' => false, 'tipo' => ''],
+            'fibrilacion_ventricular' => false,
+            'fibrilacion_auricular' => false,
+            'flutter_auricular' => ['tiene' => false, 'conduccion' => ''],
+            'otras' => '',
         ];
     }
 
-    /**
-     * Estructura vacía de marcapasos
-     */
     public static function getEmptyMarcapasos(): array
     {
         return [
-            'presente' => false,
-            'tipo_estimulacion' => '',
-            'espigas_visibles' => false,
+            'tiene' => false,
+            'tipo' => '',
+            'modo' => '',
             'captura' => '',
             'sensado' => '',
         ];

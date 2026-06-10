@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class HistoriaClinicaCardiologia extends Model
 {
@@ -27,6 +28,7 @@ class HistoriaClinicaCardiologia extends Model
         'factores_riesgo',
         'antecedentes_familiares',
         'antecedentes_gineco_obstetricos',
+        'antecedentes_no_patologicos',
         // Medicación
         'medicacion_cardiovascular',
         'medicacion_otros',
@@ -44,6 +46,7 @@ class HistoriaClinicaCardiologia extends Model
         'talla',
         'imc',
         'perimetro_abdominal',
+        'exploracion_fisica',
         // Exploración JSON
         'exploracion_cardiovascular',
         'pulsos_perifericos',
@@ -64,6 +67,8 @@ class HistoriaClinicaCardiologia extends Model
         'pronostico',
         'proxima_cita',
         'notas_adicionales',
+        'medicamentos_receta',
+        'indicaciones_receta',
     ];
 
     protected $casts = [
@@ -73,11 +78,13 @@ class HistoriaClinicaCardiologia extends Model
         'factores_riesgo' => 'array',
         'antecedentes_familiares' => 'array',
         'antecedentes_gineco_obstetricos' => 'array',
+        'antecedentes_no_patologicos' => 'array',
         'sintomas' => 'array',
         'exploracion_cardiovascular' => 'array',
         'pulsos_perifericos' => 'array',
         'estudios_previos' => 'array',
         'laboratorios' => 'array',
+        'medicamentos_receta' => 'array',
     ];
 
     /**
@@ -112,6 +119,16 @@ class HistoriaClinicaCardiologia extends Model
         return $this->belongsTo(Sucursal::class);
     }
 
+    public function ordenLaboratorio(): HasOne
+    {
+        return $this->hasOne(OrdenLaboratorio::class, 'historia_clinica_id');
+    }
+
+    public function receta(): HasOne
+    {
+        return $this->hasOne(Receta::class, 'historia_clinica_id');
+    }
+
     /**
      * Obtener estructura vacía de antecedentes cardiovasculares
      */
@@ -134,6 +151,7 @@ class HistoriaClinicaCardiologia extends Model
             'traumatismos_accidentes' => ['tiene' => false, 'detalle' => ''],
             'cateterismo' => ['tiene' => false, 'detalle' => ''],
             'angioplastia' => ['tiene' => false, 'detalle' => ''],
+            'obesidad' => false,
             'otros' => '',
         ];
     }
@@ -153,6 +171,22 @@ class HistoriaClinicaCardiologia extends Model
             'estres' => false,
             'apnea' => false,
             'erc' => ['tiene' => false, 'estadio' => ''],
+            'otros' => '',
+        ];
+    }
+
+    /**
+     * Obtener estructura vacía de antecedentes personales no patológicos
+     */
+    public static function getEmptyAntecedentesNoPatologicos(): array
+    {
+        return [
+            'tabaquismo' => ['tiene' => false, 'estado' => '', 'cigarros_dia' => '', 'anios' => ''],
+            'actividad_fisica' => ['tiene' => false, 'detalle' => ''],
+            'alcoholismo' => ['tiene' => false, 'detalle' => ''],
+            'consumo_drogas' => ['tiene' => false, 'detalle' => ''],
+            'sedentarismo' => false,
+            'estres' => false,
             'otros' => '',
         ];
     }
@@ -270,23 +304,25 @@ class HistoriaClinicaCardiologia extends Model
     public static function getEmptyLaboratorios(): array
     {
         return [
+            'hemoglobina' => '',
+            'leucocitos' => '',
+            'plaquetas' => '',
+            'hematocrito' => '',
             'glucosa' => '',
-            'hba1c' => '',
+            'bun' => '',
             'creatinina' => '',
-            'tfg' => '',
+            'acido_urico' => '',
             'colesterol_total' => '',
             'ldl' => '',
             'hdl' => '',
             'trigliceridos' => '',
-            'hemoglobina' => '',
+            'hba1c' => '',
             'bnp' => '',
             'troponinas' => '',
             'dimero_d' => '',
+            'electrolitos' => ['cloro' => '', 'potasio' => '', 'magnesio' => '', 'calcio' => ''],
+            'perfil_tiroideo' => ['tsh' => '', 't3' => '', 't4' => '', 't3_libre' => ''],
             'otros' => '',
-            'bun' => '',
-            'acido_urico' => '',
-            'perfil_tiroideo' => ['tsh' => '', 't3' => '', 't4' => ''],
-            'electrolitos' => ['cloro' => '', 'potasio' => '', 'magnesio' => ''],
         ];
     }
 
