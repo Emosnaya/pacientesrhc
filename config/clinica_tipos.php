@@ -124,7 +124,7 @@ return [
         'cardiologia' => [
             'nombre'      => 'Cardiología',
             'descripcion' => 'Expedientes cardiológicos, ECG y ecocardiograma',
-            'expedientes' => ['historia_cardiologia', 'ecocardiograma', 'electrocardiograma'],
+            'expedientes' => ['historia_cardiologia', 'nota_subsecuente_cardiologia', 'ecocardiograma', 'electrocardiograma'],
             'color'       => '#EF4444',
             'icon'        => 'heart',
             'addon'       => true,

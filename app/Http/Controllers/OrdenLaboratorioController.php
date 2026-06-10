@@ -94,6 +94,8 @@ class OrdenLaboratorioController extends Controller
         $clinicaId = $this->clinicaId();
         $ordenes = OrdenLaboratorio::where('clinica_id', $clinicaId)
             ->when($request->paciente_id, fn($q) => $q->where('paciente_id', $request->paciente_id))
+            ->when($request->nota_subsecuente_id, fn($q) => $q->where('nota_subsecuente_id', $request->nota_subsecuente_id))
+            ->when($request->historia_clinica_id, fn($q) => $q->where('historia_clinica_id', $request->historia_clinica_id))
             ->with(['laboratorio:id,nombre,email', 'user:id,nombre,apellidoPat', 'portalToken:id,orden_id,token'])
             ->orderByDesc('folio')
             ->get()
@@ -116,6 +118,8 @@ class OrdenLaboratorioController extends Controller
             'diagnostico_clinico' => 'nullable|string',
             'notas_laboratorio'   => 'nullable|string',
             'email_laboratorio'   => 'nullable|email|max:255',
+            'nota_subsecuente_id' => 'nullable|exists:nota_subsecuente_cardiologias,id',
+            'historia_clinica_id' => 'nullable|exists:historia_clinica_cardiologias,id',
         ]);
 
         $orden = DB::transaction(function () use ($data, $clinicaId) {
@@ -190,6 +194,8 @@ class OrdenLaboratorioController extends Controller
             'diagnostico_clinico' => 'nullable|string',
             'notas_laboratorio'   => 'nullable|string',
             'email_laboratorio'   => 'nullable|email|max:255',
+            'nota_subsecuente_id' => 'nullable|exists:nota_subsecuente_cardiologias,id',
+            'historia_clinica_id' => 'nullable|exists:historia_clinica_cardiologias,id',
             'status'              => 'sometimes|in:pendiente,recibida,en_proceso,lista,entregada,cancelada',
             'fecha_recoleccion'        => 'nullable|date',
             'fecha_entrega_estimada'   => 'nullable|date',

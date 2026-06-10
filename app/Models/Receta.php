@@ -13,6 +13,8 @@ class Receta extends Model
     protected $fillable = [
         'folio',
         'paciente_id',
+        'nota_subsecuente_id',
+        'historia_clinica_id',
         'user_id',
         'sucursal_id',
         'clinica_id',
@@ -56,5 +58,15 @@ class Receta extends Model
     public function medicamentos()
     {
         return $this->hasMany(RecetaMedicamento::class)->orderBy('orden');
+    }
+
+    public function notaSubsecuente()
+    {
+        return $this->belongsTo(NotaSubsecuenteCardiologia::class, 'nota_subsecuente_id');
+    }
+
+    public function historiaClinica()
+    {
+        return $this->belongsTo(HistoriaClinicaCardiologia::class, 'historia_clinica_id');
     }
 }

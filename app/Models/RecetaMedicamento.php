@@ -13,6 +13,7 @@ class RecetaMedicamento extends Model
         'receta_id',
         'medicamento',
         'presentacion',
+        'via',
         'dosis',
         'frecuencia',
         'duracion',

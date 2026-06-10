@@ -706,29 +706,37 @@ class PDFController extends Controller
      */
     public function recetaPdf(Request $request, $id)
     {
+        return $this->buildRecetaPdf($request, $id)->stream('Receta_Medica.pdf');
+    }
+
+    /** Genera el PDF de receta como binario (para envío por correo). */
+    public function recetaPdfBinary(Request $request, $id): string
+    {
+        return $this->buildRecetaPdf($request, $id)->output();
+    }
+
+    private function buildRecetaPdf(Request $request, $id)
+    {
         $data = Receta::with('medicamentos')->find($id);
         if (!$data) {
             abort(404, 'Receta no encontrada');
         }
-        
-        // Validar que solo el autor puede imprimir la receta
+
         $usuarioActual = Auth::user();
         if (!$usuarioActual || $usuarioActual->id !== $data->user_id) {
             abort(403, 'Solo el autor de la receta puede imprimirla');
         }
-        
+
         $paciente = Paciente::find($data->paciente_id);
         if (!$paciente) {
             abort(404, 'Paciente no encontrado');
         }
-        
-        // Usar la misma lógica que los expedientes: usuario actual para firma y datos
+
         [$user, $userFirma, $autor, $esAutor] = $this->resolveUsuarioPdf($request, $data->user_id);
         if (!$user) {
             abort(404, 'No se pudo determinar el médico');
         }
-        
-        // Asegurar que la relación sucursal esté cargada
+
         if (!$user->relationLoaded('sucursal') && $user->sucursal_id) {
             $user->load('sucursal');
         }
@@ -736,34 +744,26 @@ class PDFController extends Controller
         $clinica = $this->getClinicaInfo($user);
         $clinicaLogo = $this->getClinicaLogoBase64($user);
         $universidadLogo = $this->getUniversidadLogoBase64($user, 44);
-        
-        // Obtener sucursal del usuario
         $sucursal = $user->sucursal;
-
         $firmaBase64 = $this->getFirmaBase64($userFirma);
-        
-        // Datos de e.firma si la receta está firmada electrónicamente
+
         $efirmaData = null;
         if ($data->firma_digital && $data->firmada_at) {
-            // Obtener datos de la e.firma del usuario que firmó
             $efirma = \App\Models\Efirma::where('user_id', $data->user_id)
                 ->where('tipo', 'personal')
                 ->first();
-            
+
             $efirmaData = [
                 'firmada_at' => $data->firmada_at,
                 'numero_serie' => $data->numero_serie_certificado,
                 'rfc' => $efirma->rfc ?? null,
                 'nombre_titular' => $efirma->nombre_titular ?? $user->nombre_completo,
-                // Sello digital completo (requerido por COFEPRIS)
                 'sello_digital' => $data->firma_digital,
-                // Cadena original completa (requerido por COFEPRIS)
                 'cadena_original' => $data->cadena_original,
             ];
         }
 
-        $pdf = Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica', 'universidadLogo', 'sucursal', 'efirmaData', 'autor', 'esAutor'));
-        return $pdf->stream('Receta_Medica.pdf');
+        return Pdf::loadView('receta', compact('data', 'paciente', 'user', 'firmaBase64', 'clinicaLogo', 'clinica', 'universidadLogo', 'sucursal', 'efirmaData', 'autor', 'esAutor'));
     }
 
     public function odontogramaPdf(Request $request)

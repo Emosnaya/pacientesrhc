@@ -69,8 +69,10 @@ class ElectrocardiogramaController extends Controller
             // Subir imagen del ECG si existe
             if ($request->hasFile('imagen_ecg')) {
                 $path = $request->file('imagen_ecg')->store("clinicas/{$clinicaId}/ecg", 'public');
-                $data['imagen_ecg'] = $path;
+                $data['imagen_path'] = $path;
             }
+
+            unset($data['imagen_ecg']);
 
             $ecg = Electrocardiograma::create($data);
 
@@ -130,13 +132,15 @@ class ElectrocardiogramaController extends Controller
 
             // Actualizar imagen si se proporciona una nueva
             if ($request->hasFile('imagen_ecg')) {
-                // Eliminar imagen anterior
-                if ($ecg->imagen_ecg) {
-                    Storage::disk('public')->delete($ecg->imagen_ecg);
+                $imagenAnterior = $ecg->imagen_storage_path;
+                if ($imagenAnterior) {
+                    Storage::disk('public')->delete($imagenAnterior);
                 }
                 $path = $request->file('imagen_ecg')->store("clinicas/{$clinicaId}/ecg", 'public');
-                $data['imagen_ecg'] = $path;
+                $data['imagen_path'] = $path;
             }
+
+            unset($data['imagen_ecg']);
 
             $ecg->update($data);
 
@@ -181,8 +185,8 @@ class ElectrocardiogramaController extends Controller
                 ->firstOrFail();
 
             // Eliminar imagen si existe
-            if ($ecg->imagen_ecg) {
-                Storage::disk('public')->delete($ecg->imagen_ecg);
+            if ($ecg->imagen_storage_path) {
+                Storage::disk('public')->delete($ecg->imagen_storage_path);
             }
 
             $ecg->delete();
@@ -238,9 +242,13 @@ class ElectrocardiogramaController extends Controller
                 'user' => $firmaUser,
                 'firmaBase64' => $firmaBase64,
                 'clinicaLogo' => $clinicaLogo,
+                'maps' => \App\Support\ElectrocardiogramaPdfHelper::maps(),
+                'imagenEcg' => \App\Support\ElectrocardiogramaPdfHelper::imagenPath($ecg),
             ]);
 
             $pdf->setPaper('letter', 'portrait');
+            $pdf->setOption('defaultFont', 'DejaVu Sans');
+            $pdf->setOption('isHtml5ParserEnabled', true);
 
             $filename = "ecg_{$ecg->paciente->registro}_{$ecg->fecha_estudio->format('Y-m-d')}.pdf";
 
