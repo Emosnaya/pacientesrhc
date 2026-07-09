@@ -94,8 +94,8 @@ class ExpedientePulmonarController extends Controller
         }
 
         $data = $request->all();
-        // Asignar el user_id del dueño del paciente
-        $data['user_id'] = $paciente->user_id;
+        // Asignar el user_id del usuario que crea el expediente
+        $data['user_id'] = $user->id;
         $data['clinica_id'] = $user->clinica_efectiva_id;
         $data['sucursal_id'] = $user->sucursal_id;
 

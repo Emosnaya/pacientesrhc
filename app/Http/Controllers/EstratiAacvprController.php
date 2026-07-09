@@ -190,10 +190,10 @@ class EstratiAacvprController extends Controller
 
         $this->assignAacvprSheet($estratificacion, $data);
 
-        // Asignar el user_id del dueño del paciente y clinica_id
-        $estratificacion->user_id = $nuevoPaciente->user_id;
+        // Asignar el user_id del usuario que crea el expediente y la clínica activa
+        $estratificacion->user_id = $user->id;
         $estratificacion->paciente_id = $nuevoPaciente->id;
-        $estratificacion->clinica_id = $nuevoPaciente->clinica_id;
+        $estratificacion->clinica_id = $user->clinica_efectiva_id;
 
         $estratificacion->save();
 

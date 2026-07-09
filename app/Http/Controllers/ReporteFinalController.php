@@ -83,8 +83,8 @@ class ReporteFinalController extends Controller
         $reporteFinal->score_ang = $data['scoreAngina'];
         $reporteFinal->tipo_exp = 4;
 
-        // Asignar el user_id del dueño del paciente
-        $reporteFinal->user_id = $paciente->user_id;
+        // Asignar el user_id del usuario que crea el reporte
+        $reporteFinal->user_id = $user->id;
         $reporteFinal->paciente_id = $esfuerzo->paciente_id;
         $reporteFinal->clinica_id = $user->clinica_efectiva_id;
         $reporteFinal->sucursal_id = $paciente->sucursal_id;
