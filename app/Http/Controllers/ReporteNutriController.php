@@ -77,8 +77,8 @@ class ReporteNutriController extends Controller
         $reporteNutri->controlPresion= $data['controlPresion'] === 'true' ? true : false;;
         $reporteNutri->tipo_exp = 6;
         
-        // Asignar el user_id del dueño del paciente
-        $reporteNutri->user_id = $paciente->user_id;
+        // Asignar el user_id del usuario que crea el reporte
+        $reporteNutri->user_id = $user->id;
         $reporteNutri->clinica_id = $user->clinica_efectiva_id;
         $reporteNutri->sucursal_id = $paciente->sucursal_id;
         $reporteNutri->nutriologo = $data['nutriologo'];

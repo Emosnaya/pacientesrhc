@@ -95,8 +95,8 @@ class ClinicoController extends Controller
         $this->fillFromFormDatos($clinico, $data);
         $clinico->tipo_exp = 3;
 
-        // Asignar el user_id del dueño del paciente
-        $clinico->user_id = $nuevoPaciente->user_id;
+        // Asignar el user_id del usuario que crea el expediente
+        $clinico->user_id = $user->id;
         $clinico->paciente_id = $nuevoPaciente->id;
         $clinico->clinica_id = $user->clinica_efectiva_id;
         $clinico->sucursal_id = $nuevoPaciente->sucursal_id;

@@ -193,8 +193,8 @@ class EstratificacionController extends Controller
         $estratificacion->comentarios = $data['comentarios'];
         $estratificacion->tipo_exp = 2;
         
-        // Asignar el user_id del dueño del paciente
-        $estratificacion->user_id = $nuevoPaciente->user_id;
+        // Asignar el user_id del usuario que crea el expediente
+        $estratificacion->user_id = $user->id;
         $estratificacion->paciente_id = $nuevoPaciente->id;
         $estratificacion->clinica_id = $user->clinica_efectiva_id;
         $estratificacion->sucursal_id = $nuevoPaciente->sucursal_id;

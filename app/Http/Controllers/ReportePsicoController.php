@@ -82,8 +82,8 @@ class ReportePsicoController extends Controller
         $reportePsico->tabaco_consumo = $data['tabaco_consumo']=== 'true' ? true : false;
         $reportePsico->tipo_exp = 5;
         
-        // Asignar el user_id del dueño del paciente
-        $reportePsico->user_id = $paciente->user_id;
+        // Asignar el user_id del usuario que crea el reporte
+        $reportePsico->user_id = $user->id;
         $reportePsico->clinica_id = $user->clinica_efectiva_id;
         $reportePsico->sucursal_id = $paciente->sucursal_id;
         $reportePsico->psicologo = $data['psicologo'];

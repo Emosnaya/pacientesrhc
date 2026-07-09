@@ -408,8 +408,8 @@ class EsfuerzoController extends Controller
         $pesfuerzo->fecha =  $data['fecha'];
         $pesfuerzo->recup_tas = $this->safeDivide($tas3ermin, $tas1ermin, 0);
 
-        // Asignar el user_id del dueño del paciente
-        $pesfuerzo->user_id = $nuevoPaciente->user_id;
+        // Asignar el user_id del usuario que crea el expediente
+        $pesfuerzo->user_id = $user->id;
         $pesfuerzo->tipo_exp = 1;
         $pesfuerzo->clinica_id = $user->clinica_efectiva_id;
         $pesfuerzo->sucursal_id = $nuevoPaciente->sucursal_id;
