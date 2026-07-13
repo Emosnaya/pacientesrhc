@@ -319,6 +319,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/estratificacion',EstratificacionController::class);
     Route::apiResource('/estrati-aacvpr',EstratiAacvprController::class);
     Route::apiResource('/clinico',ClinicoController::class);
+    // Imprimir ANTES del apiResource para que /reporte/imprimir/{id} no choque con /reporte/{reporte}
+    Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::apiResource('/reporte',ReporteFinalController::class);
     Route::apiResource('/psico',ReportePsicoController::class);
     Route::apiResource('/nutri',ReporteNutriController::class);
@@ -482,7 +484,6 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/estratificacion/imprimir/{id}',[PDFController::class,'estratificacionPdf']);
     Route::get('/estrati-aacvpr/imprimir/{id}',[PDFController::class,'estratiAacvprPdf']);
     Route::get('/clinico/imprimir/{id}',[PDFController::class,'clinicoPdf']);
-    Route::get('/reporte/imprimir/{id}',[PDFController::class,'reportePdf']);
     Route::get('/psico/imprimir/{id}',[PDFController::class,'psicoPdf']);
     Route::get('/nutri/imprimir/{id}',[PDFController::class,'nutriPdf']);
     Route::get('/fisioterapia/historia/imprimir/{id}',[PDFController::class,'historiaFisioterapiaPdf']);

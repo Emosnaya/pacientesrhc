@@ -16,11 +16,32 @@ class ReporteFinal extends Model
         'clinica_id',
         'sucursal_id',
         'fecha',
-        'contenido'
-    ];
-
-    protected $casts = [
-        'contenido' => 'encrypted',
+        'fecha_inicio',
+        'fecha_final',
+        'fc_basal',
+        'doble_pr_bas',
+        'fc_maxima',
+        'doble_pr_max',
+        'fc_borg12',
+        'doble_pr_b12',
+        'carga_max',
+        'mets_por',
+        'tiempo_ejer',
+        'recup_fc',
+        'umbral_isq',
+        'umbral_isq_fc',
+        'max_des_st',
+        'indice_ta_es',
+        'recup_tas',
+        'resp_crono',
+        'iem',
+        'pod_car_eje',
+        'duke',
+        'veteranos',
+        'score_ang',
+        'pe_1',
+        'pe_2',
+        'tipo_exp',
     ];
 
     /**
