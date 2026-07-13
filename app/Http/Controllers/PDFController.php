@@ -546,10 +546,44 @@ class PDFController extends Controller
     }
     public function reportePdf(Request $request)
     {
+        $authUser = Auth::user();
         $data = ReporteFinal::find($request->id);
+
+        if (! $data) {
+            return response()->json(['error' => 'Reporte final no encontrado'], 404);
+        }
+
+        $clinicaId = (int) ($authUser?->clinica_efectiva_id);
+        $paciente = Paciente::find($data->paciente_id);
+
+        $tieneAcceso = $clinicaId
+            && (
+                (int) $data->clinica_id === $clinicaId
+                || ($paciente && $paciente->belongsToClinicaWorkspace($clinicaId))
+            );
+
+        // Cuentas del portal del paciente: solo el dueño del expediente
+        if ($authUser && $authUser->paciente_id) {
+            $tieneAcceso = (int) $authUser->paciente_id === (int) $data->paciente_id;
+        }
+
+        if (! $tieneAcceso) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        }
+
+        if (! $paciente) {
+            return response()->json(['error' => 'Paciente no encontrado para este reporte'], 404);
+        }
+
         $esfuerzoUno = Esfuerzo::find($data->pe_1);
         $esfuerzoDos = Esfuerzo::find($data->pe_2);
-        $paciente =  Paciente::find($data->paciente_id);
+
+        if (! $esfuerzoUno || ! $esfuerzoDos) {
+            return response()->json([
+                'error' => 'El reporte final no tiene las pruebas de esfuerzo vinculadas. Vuelve a generarlo desde Comparar.',
+            ], 422);
+        }
+
         [$user, $userFirma, $autor, $esAutor] = $this->resolveUsuarioPdf($request, $data->user_id);
         $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
 

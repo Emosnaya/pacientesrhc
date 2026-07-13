@@ -102,15 +102,37 @@ class ReporteFinalController extends Controller
      */
     public function show(ReporteFinal $reporteFinal)
     {
-        $user = Auth::user();
-        
-        // Verificar que el expediente pertenece a la misma clínica
-        $paciente = $reporteFinal->paciente;
-        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
-            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        if ($denied = $this->denyUnlessCanAccess($reporteFinal)) {
+            return $denied;
         }
 
         return response()->json($reporteFinal->load('paciente'));
+    }
+
+    /**
+     * Acceso alineado con el listado unificado: clinica_id del reporte o vínculo
+     * del paciente en clinica_paciente para el workspace activo.
+     */
+    private function denyUnlessCanAccess(ReporteFinal $reporteFinal)
+    {
+        $user = Auth::user();
+        $clinicaId = (int) $user->clinica_efectiva_id;
+
+        if (! $clinicaId) {
+            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        }
+
+        // Mismo criterio que ExpedienteUnificadoController (filtra por clinica_id)
+        if ((int) $reporteFinal->clinica_id === $clinicaId) {
+            return null;
+        }
+
+        $paciente = $reporteFinal->paciente ?? Paciente::find($reporteFinal->paciente_id);
+        if ($paciente && $paciente->belongsToClinicaWorkspace($clinicaId)) {
+            return null;
+        }
+
+        return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
     }
 
     /**
@@ -123,11 +145,9 @@ class ReporteFinalController extends Controller
     public function update(Request $request, ReporteFinal $reporteFinal)
     {
         $user = Auth::user();
-        
-        // Verificar que el expediente pertenece a la misma clínica
-        $paciente = $reporteFinal->paciente;
-        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
-            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+
+        if ($denied = $this->denyUnlessCanAccess($reporteFinal)) {
+            return $denied;
         }
         $reporteFinal->clinica_id = $user->clinica_efectiva_id;
 
@@ -150,12 +170,10 @@ class ReporteFinalController extends Controller
             return response()->json(['error' => 'Solo los administradores pueden eliminar expedientes'], 403);
         }
         
-        // Verificar que el expediente pertenece a la misma clínica
-        $paciente = $reporteFinal->paciente;
-        if (!$paciente || ! $paciente->belongsToClinicaWorkspace((int) $user->clinica_efectiva_id)) {
-            return response()->json(['error' => 'No tienes acceso a este expediente'], 403);
+        if ($denied = $this->denyUnlessCanAccess($reporteFinal)) {
+            return $denied;
         }
-        
+
         $reporteFinal->delete();
         return response()->json(['message' => 'Expediente eliminado exitosamente'], 204);
     }
