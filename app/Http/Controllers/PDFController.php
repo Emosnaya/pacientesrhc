@@ -585,7 +585,7 @@ class PDFController extends Controller
         }
 
         [$user, $userFirma, $autor, $esAutor] = $this->resolveUsuarioPdf($request, $data->user_id);
-        $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
+        $numSesiones = $this->resolveNumSesionesReporteFinal((int) $paciente->id);
 
         // Obtener información de la clínica
         $clinica = $this->getClinicaInfo($user);
@@ -593,8 +593,26 @@ class PDFController extends Controller
 
         $firmaBase64 = $this->getFirmaBase64($userFirma);
 
-        $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica', 'autor', 'esAutor'));
+        $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'numSesiones', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica', 'autor', 'esAutor'));
         return $pdf->stream('Reporte_Final.pdf'); 
+    }
+
+    /**
+     * Sesiones del programa: estratificación clásica o, si no existe, AACVPR/EAPC.
+     */
+    private function resolveNumSesionesReporteFinal(int $pacienteId): ?int
+    {
+        $estrati = Estratificacion::where('paciente_id', $pacienteId)->latest('id')->first();
+        if ($estrati && $estrati->sesiones !== null && $estrati->sesiones !== '') {
+            return (int) $estrati->sesiones;
+        }
+
+        $aacvpr = EstratiAacvpr::where('paciente_id', $pacienteId)->latest('id')->first();
+        if ($aacvpr && $aacvpr->sesiones !== null && $aacvpr->sesiones !== '') {
+            return (int) $aacvpr->sesiones;
+        }
+
+        return null;
     }
     public function psicoPdf(Request $request)
     {
@@ -1014,9 +1032,9 @@ class PDFController extends Controller
                 case 'reporte_final':
                     $esfuerzoUno = Esfuerzo::find($data->pe_1);
                     $esfuerzoDos = Esfuerzo::find($data->pe_2);
-                    $estrati = Estratificacion::where('paciente_id', $paciente->id)->get();
+                    $numSesiones = $this->resolveNumSesionesReporteFinal((int) $paciente->id);
 
-                    $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'estrati', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
+                    $pdf = Pdf::loadView('cardiaca.reporte', compact('data', 'paciente', 'user', 'numSesiones', 'esfuerzoUno', 'esfuerzoDos', 'firmaBase64', 'clinicaLogo', 'clinica'));
                     break;
                 case 'reporte_psico':
                     $pdf = Pdf::loadView('psico', compact('data', 'paciente', 'user', 'clinicaLogo', 'clinica'));
