@@ -635,7 +635,7 @@
                 <td><span class="patient-label">Fecha de Egreso:</span> <span class="patient-value">{{ date('d/m/Y', strtotime($data->fecha_final)) }}</span></td>
             </tr>
             <tr>
-                <td colspan="2"><span class="patient-label">Núm. de Sesiones:</span> <span class="patient-value">{{ $estrati[0]->sesiones }}</span></td>
+                <td colspan="2"><span class="patient-label">Núm. de Sesiones:</span> <span class="patient-value">{{ $numSesiones ?? 'N/D' }}</span></td>
             </tr>
         </table>
         @if($paciente->diagnostico)
@@ -1099,7 +1099,7 @@
           <td colspan="2"><strong>Diagnóstico:</strong> {{ $paciente->diagnostico }}</td>
         </tr>
         <tr>
-          <td colspan="2"><strong>Núm. de Sesiones:</strong> {{ $estrati[0]->sesiones }}</td>
+          <td colspan="2"><strong>Núm. de Sesiones:</strong> {{ $numSesiones ?? 'N/D' }}</td>
         </tr>
       </table>
     </div>
