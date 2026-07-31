@@ -92,8 +92,12 @@ class PricingService
         'consultorio'  => [],
     ];
 
+    /** Meses cobrados al pagar el plan anual (1 mes de descuento). */
+    public const MESES_ANUALES_COBRADOS = 11;
+
     /**
      * Calcula el precio total aditivo para una clínica.
+     * El plan anual cobra 11 meses (1 mes gratis) sobre el total mensual.
      *
      * @param  string   $tipoPrimario     tipo_clinica (especialidad base)
      * @param  array    $modulosHabilitados  array de claves de módulos activos
@@ -112,7 +116,8 @@ class PricingService
         $baseTable  = $useLaunchPrices ? self::$BASE_LAUNCH  : self::$BASE_NORMAL;
         $tipoKey    = $tipoPrimario ?: 'general';
         $basePrices = $baseTable[$tipoKey] ?? $baseTable['general'];
-        $base       = $basePrices[$billingCycle];
+        $baseMensual = (int) ($basePrices['mensual'] ?? 0);
+        $esAnual = $billingCycle === 'anual';
 
         // Módulos que ya están incluidos en el precio base
         $included = array_merge(
@@ -120,25 +125,33 @@ class PricingService
             [$tipoKey]
         );
 
-        // Filtrar addons: solo los que NO están incluidos en el base
+        // Filtrar addons: solo los que NO están incluidos en el base (precios mensuales)
         $addonItems = [];
+        $addonTotalMensual = 0;
         foreach ($modulosHabilitados as $modulo) {
             if (in_array($modulo, $included, true)) continue;
             if (!isset(self::$ADDON_PRICES[$modulo]))  continue;
 
-            $precio = self::$ADDON_PRICES[$modulo][$billingCycle];
+            $precioMes = (int) self::$ADDON_PRICES[$modulo]['mensual'];
+            $addonTotalMensual += $precioMes;
             $addonItems[] = [
                 'key'    => $modulo,
-                'precio' => $precio,
+                'precio' => $esAnual ? $precioMes * self::MESES_ANUALES_COBRADOS : $precioMes,
             ];
         }
 
-        $addonTotal = array_sum(array_column($addonItems, 'precio'));
-        $total      = $base + $addonTotal;
+        $totalMensual = $baseMensual + $addonTotalMensual;
+        $ahorroAnual = $totalMensual; // 1 mes gratis
 
-        // Ahorro al pagar anual (solo relevante en mensual display)
-        $baseMensual    = $baseTable[$tipoKey]['mensual'] ?? $base;
-        $ahorroAnual    = ($baseMensual * 12) - ($baseTable[$tipoKey]['anual'] ?? $base * 12);
+        if ($esAnual) {
+            $base = $baseMensual * self::MESES_ANUALES_COBRADOS;
+            $addonTotal = $addonTotalMensual * self::MESES_ANUALES_COBRADOS;
+            $total = $totalMensual * self::MESES_ANUALES_COBRADOS;
+        } else {
+            $base = $baseMensual;
+            $addonTotal = $addonTotalMensual;
+            $total = $totalMensual;
+        }
 
         return [
             'base'         => $base,
@@ -146,6 +159,8 @@ class PricingService
             'total'        => $total,
             'items'        => $addonItems,
             'ahorro_anual' => max(0, $ahorroAnual),
+            'meses_gratis' => 1,
+            'precio_sin_descuento' => $totalMensual * 12,
         ];
     }
 
@@ -172,7 +187,7 @@ class PricingService
     {
         $base = self::$BASE_LAUNCH[$tipoPrimario] ?? self::$BASE_LAUNCH['general'];
         $mes = (int) round($base['mensual'] * 0.5);
-        $anio = (int) round($base['anual'] * 0.5);
+        $anio = $mes * self::MESES_ANUALES_COBRADOS;
 
         return $billingCycle === 'anual' ? $anio : $mes;
     }
