@@ -8,6 +8,7 @@ use App\Models\Paciente;
 use App\Models\PortalExpedienteCompartido;
 use App\Services\ClinicalAuditService;
 use App\Services\PacienteConsentimientoService;
+use App\Services\PhoneHashService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,88 @@ class PacienteController extends Controller
         $cid = $user->clinica_efectiva_id ?? null;
 
         return $paciente->belongsToClinicaWorkspace($cid ? (int) $cid : null);
+    }
+
+    /**
+     * Localiza un paciente antes de abrir el formulario de alta.
+     * El QR usa un UUID no secuencial; correo y teléfono se normalizan.
+     */
+    public function buscarParaVinculacion(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'nullable|email|required_without_all:telefono,uuid_publico',
+            'telefono' => 'nullable|string|max:30|required_without_all:email,uuid_publico',
+            'uuid_publico' => 'nullable|uuid|required_without_all:email,telefono',
+        ]);
+
+        $pacientes = collect();
+        $coincidencias = [];
+
+        if (! empty($validated['email'])) {
+            $email = strtolower(trim($validated['email']));
+            if ($paciente = Paciente::where('email', $email)->first()) {
+                $pacientes->put($paciente->id, $paciente);
+                $coincidencias[] = 'correo';
+            }
+        }
+
+        if (! empty($validated['telefono'])) {
+            $hash = app(PhoneHashService::class)->hash($validated['telefono']);
+            if ($hash && ($paciente = Paciente::where('telefono_search_hash', $hash)->first())) {
+                $pacientes->put($paciente->id, $paciente);
+                $coincidencias[] = 'telefono';
+            }
+        }
+
+        if (! empty($validated['uuid_publico'])) {
+            if ($paciente = Paciente::where('uuid_publico', $validated['uuid_publico'])->first()) {
+                $pacientes->put($paciente->id, $paciente);
+                $coincidencias[] = 'qr';
+            }
+        }
+
+        if ($pacientes->count() > 1) {
+            return response()->json([
+                'message' => 'Los identificadores ingresados pertenecen a pacientes distintos.',
+            ], 422);
+        }
+
+        /** @var Paciente|null $paciente */
+        $paciente = $pacientes->first();
+        if (! $paciente) {
+            return response()->json([
+                'message' => 'No encontramos un paciente con esos datos.',
+            ], 404);
+        }
+
+        $clinicaId = Auth::user()?->clinica_efectiva_id;
+        if ($clinicaId && $paciente->belongsToClinicaWorkspace((int) $clinicaId)) {
+            return response()->json([
+                'message' => 'Este paciente ya está vinculado a tu clínica o consultorio.',
+                'already_linked' => true,
+                'paciente_id' => $paciente->id,
+            ], 409);
+        }
+
+        $g = (int) (bool) $paciente->genero;
+        $coincidencia = count($coincidencias) > 1 ? implode('_y_', $coincidencias) : $coincidencias[0];
+
+        return response()->json([
+            'success' => true,
+            'paciente_existente' => [
+                'id' => $paciente->id,
+                'nombre' => $paciente->nombre,
+                'apellidoPat' => $paciente->apellidoPat,
+                'apellidoMat' => $paciente->apellidoMat,
+                'email' => $paciente->email,
+                'telefono' => $paciente->telefono,
+                'fechaNacimiento' => $paciente->fechaNacimiento?->format('Y-m-d'),
+                'genero' => $g,
+                'genero_label' => $g === 1 ? 'Masculino' : 'Femenino',
+                'domicilio_formateado' => $paciente->domicilio_formateado,
+                'coincidencia' => $coincidencia,
+            ],
+        ]);
     }
 
     /**
@@ -66,38 +149,55 @@ class PacienteController extends Controller
      * Store a newly created resource in storage.
      * - Si es admin: se asigna a sí mismo
      * - Si no es admin: debe enviar user_id del doctor a asignar
-     * - Si el email ya existe, responde con error indicando que debe usar verificación OTP
+     * - Si el correo o teléfono ya existe, ofrece vincular al paciente sin duplicarlo
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
-        // Verificar si el email ya existe (si se proporcionó)
-        if ($request->email) {
-            $email = strtolower(trim($request->email));
-            $existingPaciente = Paciente::where('email', $email)->first();
-            
-            if ($existingPaciente) {
-                $g = (int) (bool) $existingPaciente->genero;
+        // Evitar duplicados globales: buscar por correo y por hash normalizado del teléfono.
+        $email = $request->filled('email') ? strtolower(trim((string) $request->email)) : null;
+        $telefonoHash = $request->filled('telefono')
+            ? app(PhoneHashService::class)->hash((string) $request->telefono)
+            : null;
+        $pacientePorEmail = $email ? Paciente::where('email', $email)->first() : null;
+        $pacientePorTelefono = $telefonoHash
+            ? Paciente::where('telefono_search_hash', $telefonoHash)->first()
+            : null;
 
-                return response()->json([
-                    'message' => 'Ya existe un paciente con este correo. Puedes vincularlo a tu clínica o consultorio.',
-                    'error' => 'Este email ya está registrado en el sistema',
-                    'paciente_existente' => [
-                        'id' => $existingPaciente->id,
-                        'nombre' => $existingPaciente->nombre,
-                        'apellidoPat' => $existingPaciente->apellidoPat,
-                        'apellidoMat' => $existingPaciente->apellidoMat,
-                        'email' => $existingPaciente->email,
-                        'telefono' => $existingPaciente->telefono,
-                        'fechaNacimiento' => $existingPaciente->fechaNacimiento?->format('Y-m-d'),
-                        'genero' => $g,
-                        'genero_label' => $g === 1 ? 'Masculino' : 'Femenino',
-                        'domicilio_formateado' => $existingPaciente->domicilio_formateado,
-                    ],
-                ], 409);
-            }
+        if ($pacientePorEmail && $pacientePorTelefono && $pacientePorEmail->id !== $pacientePorTelefono->id) {
+            return response()->json([
+                'message' => 'El correo y el teléfono pertenecen a pacientes distintos. Verifica los datos antes de continuar.',
+                'error' => 'Los datos de contacto no corresponden a la misma persona.',
+            ], 422);
+        }
+
+        $existingPaciente = $pacientePorEmail ?: $pacientePorTelefono;
+        if ($existingPaciente) {
+            $g = (int) (bool) $existingPaciente->genero;
+            $coincidencia = $pacientePorEmail && $pacientePorTelefono
+                ? 'correo_y_telefono'
+                : ($pacientePorEmail ? 'correo' : 'telefono');
+
+            return response()->json([
+                'message' => 'Este paciente ya existe. Puedes vincularlo a tu clínica o consultorio sin crear un duplicado.',
+                'error' => 'Paciente ya registrado en el sistema',
+                'coincidencia' => $coincidencia,
+                'paciente_existente' => [
+                    'id' => $existingPaciente->id,
+                    'nombre' => $existingPaciente->nombre,
+                    'apellidoPat' => $existingPaciente->apellidoPat,
+                    'apellidoMat' => $existingPaciente->apellidoMat,
+                    'email' => $existingPaciente->email,
+                    'telefono' => $existingPaciente->telefono,
+                    'fechaNacimiento' => $existingPaciente->fechaNacimiento?->format('Y-m-d'),
+                    'genero' => $g,
+                    'genero_label' => $g === 1 ? 'Masculino' : 'Femenino',
+                    'domicilio_formateado' => $existingPaciente->domicilio_formateado,
+                    'coincidencia' => $coincidencia,
+                ],
+            ], 409);
         }
 
         $paciente = new Paciente;
@@ -138,25 +238,22 @@ class PacienteController extends Controller
             $sucursalId = $this->resolveEffectiveSucursalId($user, $request, $clinicaId);
         }
 
-        // Calcular el siguiente registro según la clínica
-        if ($clinicaId == 1) {
-            // Clínica original: mantener comportamiento actual (recibe registro del request)
-            $paciente->registro = $request->registro;
+        // Si no se captura un registro, generar el consecutivo desde 1.
+        // Esto aplica también a la clínica original.
+        if ($request->filled('registro')) {
+            $paciente->registro = trim((string) $request->registro);
         } else {
-            // Otras clínicas: registro secuencial por sucursal
-            if (!$request->registro) {
-                $ultimoRegistro = Paciente::forClinicaWorkspace((int) $clinicaId, $sucursalId ?: null)
-                    ->max('registro');
-                $paciente->registro = $ultimoRegistro ? ((int)$ultimoRegistro + 1) : 1;
-            } else {
-                $paciente->registro = $request->registro;
-            }
+            $paciente->registro = Paciente::siguienteRegistroParaClinica(
+                (int) $clinicaId,
+                $sucursalId ? (int) $sucursalId : null
+            );
         }
         
         $paciente->nombre = $request->nombre;
         $paciente->apellidoPat = $request->apellidoPat;
         $paciente->apellidoMat = $request->apellidoMat ?? null;
         $paciente->telefono = $request->telefono;
+        $paciente->whatsapp_notificaciones = (bool) $request->boolean('whatsapp_notificaciones');
         $paciente->domicilio = $request->domicilio ?? null;
         $paciente->calle = $request->calle ?? null;
         $paciente->num_ext = $request->num_ext ?? null;
@@ -177,7 +274,7 @@ class PacienteController extends Controller
         $paciente->fechaNacimiento = $fechaNacimiento;
         $paciente->edad = $edad;
         $paciente->imc = $imc;
-        $paciente->email = $request->email;
+        $paciente->email = $email;
         $paciente->tipo_paciente = $request->tipo_paciente ?? 'cardiaca';
         $paciente->categoria_pago = $request->categoria_pago ?? null;
         $paciente->aseguradora = $request->categoria_pago === 'aseguradora' ? ($request->aseguradora ?? null) : null;
@@ -239,8 +336,8 @@ class PacienteController extends Controller
     }
 
     /**
-     * Vincula un paciente existente (mismo correo) al workspace activo en clinica_paciente.
-     * Requiere el correo para evitar vincular por ID arbitrario.
+     * Vincula un paciente existente al workspace activo.
+     * Requiere que el correo o el teléfono coincidan para evitar vincular por ID arbitrario.
      */
     public function vincularClinica(Request $request, Paciente $paciente)
     {
@@ -251,14 +348,33 @@ class PacienteController extends Controller
         }
 
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email' => 'nullable|email|required_without_all:telefono,uuid_publico',
+            'telefono' => 'nullable|string|max:30|required_without_all:email,uuid_publico',
+            'uuid_publico' => 'nullable|uuid|required_without_all:email,telefono',
             'sucursal_id' => 'nullable|integer|exists:sucursales,id',
             'tipo_paciente' => 'nullable|string|max:255',
         ]);
 
-        $email = strtolower(trim($validated['email']));
-        if (strtolower(trim((string) ($paciente->email ?? ''))) !== $email) {
-            return response()->json(['message' => 'El correo no coincide con este paciente.'], 422);
+        $emailCoincide = false;
+        if (! empty($validated['email'])) {
+            $email = strtolower(trim($validated['email']));
+            $emailCoincide = strtolower(trim((string) ($paciente->email ?? ''))) === $email;
+        }
+
+        $telefonoCoincide = false;
+        if (! empty($validated['telefono'])) {
+            $hashEnviado = app(PhoneHashService::class)->hash($validated['telefono']);
+            $telefonoCoincide = $hashEnviado
+                && hash_equals((string) $paciente->telefono_search_hash, $hashEnviado);
+        }
+
+        $uuidCoincide = ! empty($validated['uuid_publico'])
+            && hash_equals((string) $paciente->uuid_publico, (string) $validated['uuid_publico']);
+
+        if (! $emailCoincide && ! $telefonoCoincide && ! $uuidCoincide) {
+            return response()->json([
+                'message' => 'El correo o teléfono no coincide con este paciente.',
+            ], 422);
         }
 
         if ($paciente->clinicas()->where('clinicas.id', $clinicaId)->exists()) {
@@ -383,6 +499,9 @@ class PacienteController extends Controller
             'apellidoPat' => $request->apellidoPat,
             'apellidoMat' => $request->apellidoMat,
             'telefono' => $request->telefono,
+            'whatsapp_notificaciones' => $request->has('whatsapp_notificaciones')
+                ? $request->boolean('whatsapp_notificaciones')
+                : $paciente->whatsapp_notificaciones,
             'domicilio' => $request->domicilio,
             'calle' => $request->calle,
             'num_ext' => $request->num_ext,

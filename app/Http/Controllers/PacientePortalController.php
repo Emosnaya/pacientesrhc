@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendCitaWhatsAppNotification;
 use App\Models\Cita;
 use App\Models\ChatConversacion;
 use App\Models\ChatMensaje;
@@ -12,6 +13,7 @@ use App\Models\Paciente;
 use App\Models\PortalExpedienteCompartido;
 use App\Models\Sucursal;
 use App\Models\User;
+use App\Services\CitaAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -537,7 +539,9 @@ class PacientePortalController extends Controller
             'sucursal_id' => $pivot?->sucursal_id,
             'fecha' => $validated['fecha'],
             'hora' => $validated['hora'],
-            'estado' => 'pendiente',
+            'estado' => $requiereConfirmacionClinica
+                ? 'pendiente'
+                : app(CitaAvailabilityService::class)->estadoInicial($clinica),
             'primera_vez' => false,
             'notas' => $this->agendaBuildNotas(
                 $validated['notas'] ?? null,
@@ -554,6 +558,8 @@ class PacientePortalController extends Controller
             (string) $validated['hora'],
             $especialidad
         );
+
+        SendCitaWhatsAppNotification::dispatch($cita->id, 'confirmacion');
 
         return response()->json([
             'message' => $requiereConfirmacionClinica
@@ -611,6 +617,7 @@ class PacientePortalController extends Controller
             $cita->cancelada_por_regla = true;
             $cita->motivo_cancelacion = 'Límite de reagendas alcanzado';
             $cita->save();
+            SendCitaWhatsAppNotification::dispatch($cita->id, 'cancelacion');
 
             $paciente->clinicas()->updateExistingPivot($clinica->id, [
                 'portal_agenda_bloqueado' => true,
@@ -670,6 +677,7 @@ class PacientePortalController extends Controller
         $cita->estado = 'cancelada';
         $cita->motivo_cancelacion = 'Reagendada por paciente';
         $cita->save();
+        SendCitaWhatsAppNotification::dispatch($nueva->id, 'reagendada');
 
         return response()->json([
             'message' => 'Cita reagendada correctamente',
@@ -695,12 +703,10 @@ class PacientePortalController extends Controller
         ?string $especialidad = null
     ): array
     {
-        if (Carbon::parse($fecha)->startOfDay()->lt(now()->startOfDay())) {
-            return ['ok' => false, 'message' => 'No puedes agendar en fechas pasadas'];
-        }
+        $availability = app(CitaAvailabilityService::class);
 
-        if ($fecha === now()->toDateString() && $hora <= now()->format('H:i')) {
-            return ['ok' => false, 'message' => 'Ese horario ya pasó'];
+        if ($availability->isPastSlot($fecha, $hora)) {
+            return ['ok' => false, 'message' => 'Ese horario ya no está disponible'];
         }
 
         $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
@@ -718,70 +724,14 @@ class PacientePortalController extends Controller
         $sucursalId = $pivot?->sucursal_id
             ?? Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
 
-        if ($sucursalId) {
-            $bloqueos = Evento::query()
-                ->where('tipo', 'bloqueo')
-                ->where('clinica_id', $clinica->id)
-                ->where('sucursal_id', $sucursalId)
-                ->whereDate('fecha', $fecha)
-                ->get();
-
-            foreach ($bloqueos as $bloqueo) {
-                if ($bloqueo->todo_el_dia) {
-                    return ['ok' => false, 'message' => 'No hay disponibilidad ese día'];
-                }
-
-                $hInicio = $bloqueo->hora ? substr((string) $bloqueo->hora, 0, 5) : null;
-                $hFin = $bloqueo->hora_fin ? substr((string) $bloqueo->hora_fin, 0, 5) : null;
-                if ($hInicio && $hFin && $hora >= $hInicio && $hora < $hFin) {
-                    return ['ok' => false, 'message' => 'Este horario está bloqueado'];
-                }
-                if ($hInicio && ! $hFin && $hora === $hInicio) {
-                    return ['ok' => false, 'message' => 'Este horario está bloqueado'];
-                }
-            }
-        }
-
-        // Un paciente no puede tener dos citas activas en el mismo horario.
-        $duplicadaPaciente = Cita::query()
-            ->where('paciente_id', $paciente->id)
-            ->whereDate('fecha', $fecha)
-            ->where('hora', $hora)
-            ->whereIn('estado', ['pendiente', 'confirmada'])
-            ->exists();
-        if ($duplicadaPaciente) {
-            return ['ok' => false, 'message' => 'Ya tienes una cita en ese horario'];
-        }
-
-        // Si la clínica no permite múltiples citas en el mismo horario, solo un cupo global.
-        if (! (bool) ($clinica->portal_permite_multiples_citas_mismo_horario ?? true)) {
-            $ocupadas = Cita::query()
-                ->where('clinica_id', $clinica->id)
-                ->whereDate('fecha', $fecha)
-                ->where('hora', $hora)
-                ->whereIn('estado', ['pendiente', 'confirmada'])
-                ->count();
-            if ($ocupadas > 0) {
-                return ['ok' => false, 'message' => 'Ese horario ya no está disponible'];
-            }
-        }
-
-        // Si se eligió doctor, el doctor sí maneja un cupo por horario.
-        if ($doctorId) {
-            $doctorOcupado = Cita::query()
-                ->where('clinica_id', $clinica->id)
-                ->where('user_id', $doctorId)
-                ->whereDate('fecha', $fecha)
-                ->where('hora', $hora)
-                ->whereIn('estado', ['pendiente', 'confirmada'])
-                ->exists();
-
-            if ($doctorOcupado) {
-                return ['ok' => false, 'message' => 'El doctor seleccionado no está disponible en ese horario'];
-            }
-        }
-
-        return ['ok' => true, 'message' => null];
+        return $availability->canBook(
+            $clinica,
+            $fecha,
+            $hora,
+            $sucursalId ? (int) $sucursalId : null,
+            $doctorId,
+            $paciente->id
+        );
     }
 
     private function agendaBuildNotas(?string $notas, ?string $especialidad): ?string
@@ -967,7 +917,9 @@ class PacientePortalController extends Controller
                 ? Carbon::parse($pivot->portal_agenda_bloqueado_hasta)->format('Y-m-d')
                 : null,
             'agenda_bloqueo_motivo' => $vinculada ? ($pivot?->portal_agenda_bloqueo_motivo ?? null) : null,
-            'permite_multiples_citas_mismo_horario' => (bool) ($clinica->portal_permite_multiples_citas_mismo_horario ?? true),
+            'permite_multiples_citas_mismo_horario' => app(CitaAvailabilityService::class)->modoSolapamiento($clinica) === CitaAvailabilityService::MODO_PERMITIR,
+            'cita_estado_inicial' => app(CitaAvailabilityService::class)->estadoInicial($clinica),
+            'citas_solapamiento_modo' => app(CitaAvailabilityService::class)->modoSolapamiento($clinica),
             'especialidades' => $especialidades,
             'doctores' => $doctores,
         ];

@@ -502,7 +502,7 @@
 
         .page-footer .clinic-name {
             font-weight: 700;
-            color: #3b82f6;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .page-footer .clinic-contact {

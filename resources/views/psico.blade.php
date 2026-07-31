@@ -451,7 +451,7 @@
         .clinic-name {
             font-size: 12px;
             font-weight: 700;
-            color: #3b82f6;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .clinic-contact {
@@ -500,7 +500,7 @@
 
         .page-footer .clinic-name {
             font-weight: 700;
-            color: #8b5cf6;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
 
         .page-footer .clinic-contact {

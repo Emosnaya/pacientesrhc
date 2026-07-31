@@ -38,6 +38,9 @@ class Paciente extends Model
         'apellidoPat',
         'apellidoMat',
         'telefono',
+        'whatsapp_notificaciones',
+        'whatsapp_autorizado_at',
+        'telefono_search_hash',
         'email',
         'email_invalido',
         'email_invalido_at',
@@ -89,6 +92,7 @@ class Paciente extends Model
     protected $hidden = [
         'consentimiento_token_hash',
         'consentimiento_invitacion_contexto',
+        'telefono_search_hash',
     ];
 
     /**
@@ -112,11 +116,31 @@ class Paciente extends Model
         'aviso_privacidad_aceptado_at' => 'datetime',
         'consentimiento_token_expires_at' => 'datetime',
         'consentimiento_email_enviado_at' => 'datetime',
+        'whatsapp_notificaciones' => 'boolean',
+        'whatsapp_autorizado_at' => 'datetime',
         'email_invalido'       => 'boolean',
         'email_invalido_at'    => 'datetime',
         'archivo_muerto' => 'boolean',
         'archivo_muerto_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Paciente $paciente) {
+            if ($paciente->isDirty('telefono') || ($paciente->telefono && ! $paciente->telefono_search_hash)) {
+                $hashService = app(\App\Services\PhoneHashService::class);
+                $paciente->telefono_search_hash = $hashService->hash($paciente->telefono);
+            }
+
+            if ($paciente->isDirty('whatsapp_notificaciones') && $paciente->whatsapp_notificaciones) {
+                $paciente->whatsapp_autorizado_at = $paciente->whatsapp_autorizado_at ?? now();
+            }
+
+            if ($paciente->isDirty('whatsapp_notificaciones') && ! $paciente->whatsapp_notificaciones) {
+                $paciente->whatsapp_autorizado_at = null;
+            }
+        });
+    }
 
     /**
      * Dirección formateada: usa campos nuevos si existen, sino cae al domicilio legacy.
@@ -231,6 +255,23 @@ class Paciente extends Model
         }
 
         return $this->clinicas()->where('clinicas.id', $clinicaId)->exists();
+    }
+
+    /**
+     * Obtiene el siguiente número de registro para una clínica/sucursal.
+     * Los valores no numéricos legacy no participan en la secuencia.
+     */
+    public static function siguienteRegistroParaClinica(int $clinicaId, ?int $sucursalId = null): string
+    {
+        $ultimoRegistro = static::query()
+            ->forClinicaWorkspace($clinicaId, $sucursalId)
+            ->whereNotNull('registro')
+            ->where('registro', '!=', '')
+            ->whereRaw("registro REGEXP '^[0-9]+$'")
+            ->orderByRaw('CAST(registro AS UNSIGNED) DESC')
+            ->value('registro');
+
+        return (string) (((int) $ultimoRegistro) + 1);
     }
 
     /**

@@ -63,6 +63,17 @@ return [
         'auth_token' => env('TWILIO_AUTH_TOKEN'),
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'), // Formato: whatsapp:+14155238886
         'enabled' => env('WHATSAPP_ENABLED', false),
+        // Alias legacy usado por comandos antiguos
+        'whatsapp_enabled' => env('WHATSAPP_ENABLED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Blind indexes / búsqueda sobre campos cifrados
+    |--------------------------------------------------------------------------
+    */
+    'search' => [
+        'index_key' => env('SEARCH_INDEX_KEY', env('APP_KEY')),
     ],
 
 ];

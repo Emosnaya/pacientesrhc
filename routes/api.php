@@ -147,6 +147,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Sucursales — comprar cupos adicionales
     Route::get('/subscription/sucursal-quota', [\App\Http\Controllers\SubscriptionController::class, 'getSucursalQuota']);
     Route::post('/subscription/sucursal-slot', [\App\Http\Controllers\SubscriptionController::class, 'createSucursalSlotCheckout']);
+
+    // Exportación de pacientes/expedientes (disponible con suscripción vencida; solo propietario)
+    Route::post('/clinica/exports', [\App\Http\Controllers\ClinicaExportController::class, 'store']);
+    Route::get('/clinica/exports/latest', [\App\Http\Controllers\ClinicaExportController::class, 'latest']);
+    Route::get('/clinica/exports/{id}', [\App\Http\Controllers\ClinicaExportController::class, 'show']);
+    Route::get('/clinica/exports/{id}/download', [\App\Http\Controllers\ClinicaExportController::class, 'download']);
+
+    // Soporte staff disponible aunque la suscripción esté vencida
+    Route::post('/soporte/ticket', [\App\Http\Controllers\SoporteController::class, 'crearTicket']);
+    Route::get('/soporte/mis-tickets', [\App\Http\Controllers\SoporteController::class, 'misTickets']);
+    Route::get('/soporte/ticket/{id}', [\App\Http\Controllers\SoporteController::class, 'show']);
+    Route::get('/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'getMensajes']);
+    Route::post('/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'enviarMensaje']);
+    Route::get('/soporte/mensajes/no-leidos', [\App\Http\Controllers\Api\SoporteTicketController::class, 'mensajesNoLeidos']);
 });
 
 // Portal del paciente: datos propios (requiere contraseña ya configurada)
@@ -290,6 +304,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'portalExpedientesCompartidos']);
     Route::put('/pacientes/{paciente}/portal-expedientes-compartidos', [PacienteController::class, 'syncPortalExpedientesCompartidos']);
     Route::apiResource('/pacientes', PacienteController::class);
+    Route::post('/pacientes/buscar-vinculacion', [PacienteController::class, 'buscarParaVinculacion']);
     Route::post('/pacientes/express', [PacienteController::class, 'createExpress']); // Flujo urgencias
     Route::post('/pacientes/{paciente}/vincular-clinica', [PacienteController::class, 'vincularClinica']);
 

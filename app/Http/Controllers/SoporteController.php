@@ -18,7 +18,7 @@ class SoporteController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'categoria' => 'required|string|in:duda,error,sugerencia,otro',
-            'mensaje' => 'required|string|min:10|max:5000',
+            'mensaje' => 'required|string|max:5000',
             'asunto' => 'nullable|string|max:255',
             'clinica_id' => 'nullable|integer|exists:clinicas,id',
         ]);

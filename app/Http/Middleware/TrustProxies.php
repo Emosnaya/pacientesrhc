@@ -12,7 +12,10 @@ class TrustProxies extends Middleware
      *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    // La API opera detrás de túneles/reverse proxies HTTPS (Cloudflare en
+    // desarrollo y el proxy del hosting en producción). Esto permite que
+    // Laravel reconstruya la URL pública exacta usada para firmar webhooks.
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.

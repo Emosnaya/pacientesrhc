@@ -10,6 +10,8 @@ use App\Models\Clinica;
 use App\Models\Paciente;
 use App\Models\User;
 use App\Models\Evento;
+use App\Jobs\SendCitaWhatsAppNotification;
+use App\Services\CitaAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -126,11 +128,12 @@ class CitaController extends Controller
                     'nuevo_paciente.nombre' => 'required|string|max:255',
                     'nuevo_paciente.apellidoPat' => 'required|string|max:255',
                     'nuevo_paciente.apellidoMat' => 'required|string|max:255',
-                    'nuevo_paciente.telefono' => 'required|string|max:20',
+                    'nuevo_paciente.telefono' => 'nullable|string|max:20',
+                    'nuevo_paciente.whatsapp_notificaciones' => 'sometimes|boolean',
                     'nuevo_paciente.email' => 'nullable|email|max:255',
                     'nuevo_paciente.fechaNacimiento' => 'required|date',
                     'nuevo_paciente.genero' => 'required|in:masculino,femenino',
-                    'nuevo_paciente.registro' => 'required|string|max:50|unique:pacientes,registro',
+                    'nuevo_paciente.registro' => 'nullable|string|max:50',
                     'nuevo_paciente.tipo_paciente' => 'nullable|string|max:255',
                     'nuevo_paciente.user_id' => 'nullable|exists:users,id',
                     'user_id' => 'nullable|exists:users,id',
@@ -163,11 +166,18 @@ class CitaController extends Controller
                 $edad = Carbon::parse($fechaNacimiento)->age;
 
                 $nuevoPaciente = new Paciente();
-                $nuevoPaciente->registro = $pacienteData['registro'];
+                $registroSolicitado = trim((string) ($pacienteData['registro'] ?? ''));
+                $nuevoPaciente->registro = $registroSolicitado !== ''
+                    ? $registroSolicitado
+                    : Paciente::siguienteRegistroParaClinica(
+                        (int) $clinicaId,
+                        $sucursalIdPaciente ? (int) $sucursalIdPaciente : null
+                    );
                 $nuevoPaciente->nombre = $pacienteData['nombre'];
                 $nuevoPaciente->apellidoPat = $pacienteData['apellidoPat'];
                 $nuevoPaciente->apellidoMat = $pacienteData['apellidoMat'];
-                $nuevoPaciente->telefono = $pacienteData['telefono'];
+                $nuevoPaciente->telefono = $pacienteData['telefono'] ?? null;
+                $nuevoPaciente->whatsapp_notificaciones = (bool) ($pacienteData['whatsapp_notificaciones'] ?? false);
                 $nuevoPaciente->email = $pacienteData['email'] ?? null;
                 $nuevoPaciente->domicilio = $pacienteData['domicilio'] ?? null;
                 $nuevoPaciente->profesion = $pacienteData['profesion'] ?? null;
@@ -248,49 +258,35 @@ class CitaController extends Controller
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
-            // Verificar si hay bloqueos para esta fecha/hora
-            $fechaCita = $request->fecha;
-            $horaCita = $request->hora;
-            
-            $bloqueos = Evento::where('tipo', 'bloqueo')
-                ->where('clinica_id', $user->clinica_efectiva_id)
-                ->where('sucursal_id', $sucursalId)
-                ->whereDate('fecha', $fechaCita)
-                ->get();
-            
-            foreach ($bloqueos as $bloqueo) {
-                // Si es bloqueo de todo el día, no permitir ninguna cita
-                if ($bloqueo->todo_el_dia) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No se pueden agendar citas en esta fecha. Motivo: ' . $bloqueo->titulo
-                    ], 422);
-                }
-                
-                // Si es bloqueo por horario, verificar si la hora de la cita está dentro del rango
-                if ($bloqueo->hora && $bloqueo->hora_fin) {
-                    $horaBloqueoInicio = substr($bloqueo->hora, 0, 5);
-                    $horaBloqueoFin = substr($bloqueo->hora_fin, 0, 5);
-                    
-                    if ($horaCita >= $horaBloqueoInicio && $horaCita < $horaBloqueoFin) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Este horario está bloqueado (' . $horaBloqueoInicio . ' - ' . $horaBloqueoFin . '). Motivo: ' . $bloqueo->titulo
-                        ], 422);
-                    }
-                } elseif ($bloqueo->hora) {
-                    // Si solo tiene hora de inicio, bloquear esa hora específica
-                    $horaBloqueo = substr($bloqueo->hora, 0, 5);
-                    if ($horaCita === $horaBloqueo) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Este horario está bloqueado. Motivo: ' . $bloqueo->titulo
-                        ], 422);
-                    }
-                }
+            $clinica = Clinica::find($user->clinica_efectiva_id);
+            if (! $clinica) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Clínica no encontrada'
+                ], 404);
             }
 
-            // Crear la cita (se permiten múltiples citas al mismo tiempo en la misma sucursal)
+            $availability = app(CitaAvailabilityService::class);
+            $check = $availability->canBook(
+                $clinica,
+                $request->fecha,
+                $request->hora,
+                $sucursalId ? (int) $sucursalId : null,
+                $userId ? (int) $userId : null,
+                $paciente->id
+            );
+
+            if (! $check['ok']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $check['message'] ?? 'Horario no disponible'
+                ], 422);
+            }
+
+            $estadoInicial = $request->estado
+                ?? $availability->estadoInicial($clinica);
+
+            // Crear la cita respetando estado y solapamiento configurados
             $cita = Cita::create([
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
@@ -299,7 +295,7 @@ class CitaController extends Controller
                 'sucursal_id' => $sucursalId,
                 'fecha' => $request->fecha,
                 'hora' => $request->hora,
-                'estado' => $request->estado ?? 'pendiente',
+                'estado' => $estadoInicial,
                 'primera_vez' => $request->primera_vez ?? true,
                 'notas' => $request->notas,
                 'custom_email' => $request->custom_email ?? null
@@ -307,9 +303,9 @@ class CitaController extends Controller
 
             $cita->load(['paciente', 'admin', 'user.clinica']);
 
-            // Un solo envío al paciente (ICS + plantilla) y al doctor/correo personalizado si aplica.
-            // Antes también se llamaba sendCitaNotificationEmails y el paciente recibía correo duplicado.
+            // Correo siempre (fallback / respaldo). WhatsApp en cola si aplica.
             $this->sendCalendarInvitation($cita, 'create');
+            SendCitaWhatsAppNotification::dispatch($cita->id, 'confirmacion');
 
             $response = [
                 'success' => true,
@@ -405,12 +401,54 @@ class CitaController extends Controller
                 ], 403);
             }
 
+            $fechaNueva = $request->input('fecha', optional($cita->fecha)->format('Y-m-d') ?? $cita->fecha);
+            $horaNueva = $request->input('hora', $cita->hora instanceof \DateTimeInterface
+                ? $cita->hora->format('H:i')
+                : substr((string) $cita->hora, 0, 5));
+            $doctorId = $request->has('user_id') ? $request->user_id : $cita->user_id;
+            $fechaCambio = $request->has('fecha')
+                && (string) $fechaNueva !== optional($cita->fecha)->format('Y-m-d');
+            $horaActual = $cita->hora instanceof \DateTimeInterface
+                ? $cita->hora->format('H:i')
+                : substr((string) $cita->hora, 0, 5);
+            $horaCambio = $request->has('hora') && (string) $horaNueva !== $horaActual;
+            $doctorCambio = $request->has('user_id') && (int) $doctorId !== (int) $cita->user_id;
+            $estadoAnterior = $cita->estado;
+
+            if ($request->has('fecha') || $request->has('hora') || $request->has('user_id')) {
+                $clinica = Clinica::find($cita->clinica_id);
+                $availability = app(CitaAvailabilityService::class);
+                $check = $availability->canBook(
+                    $clinica,
+                    (string) $fechaNueva,
+                    (string) $horaNueva,
+                    $cita->sucursal_id ? (int) $cita->sucursal_id : null,
+                    $doctorId ? (int) $doctorId : null,
+                    $cita->paciente_id,
+                    $cita->id
+                );
+
+                if (! $check['ok']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $check['message'] ?? 'Horario no disponible'
+                    ], 422);
+                }
+            }
+
             $cita->update($request->only(['user_id', 'custom_email', 'fecha', 'hora', 'estado', 'primera_vez', 'notas']));
-            $cita->load(['paciente', 'admin']);
+            $cita->load(['paciente', 'admin', 'user', 'clinica']);
+            $estadoCambio = $request->has('estado') && $cita->estado !== $estadoAnterior;
 
             // Enviar actualización de calendario si cambió fecha u hora
-            if ($request->has('fecha') || $request->has('hora')) {
+            if ($fechaCambio || $horaCambio) {
                 $this->sendCalendarInvitation($cita, 'update');
+                SendCitaWhatsAppNotification::dispatch($cita->id, 'reagendada');
+            } elseif ($estadoCambio) {
+                $tipo = $cita->estado === 'cancelada' ? 'cancelacion' : 'estado';
+                SendCitaWhatsAppNotification::dispatch($cita->id, $tipo);
+            } elseif ($doctorCambio) {
+                SendCitaWhatsAppNotification::dispatch($cita->id, 'doctor_asignado');
             }
 
             return response()->json([
@@ -454,6 +492,7 @@ class CitaController extends Controller
 
             // Enviar notificación de cancelación
             $this->sendCalendarInvitation($cita, 'cancel');
+            SendCitaWhatsAppNotification::dispatch($cita->id, 'cancelacion');
 
             return response()->json([
                 'success' => true,
@@ -603,8 +642,14 @@ class CitaController extends Controller
                 ], 403);
             }
 
+            $estadoAnterior = $cita->estado;
             $cita->update(['estado' => $request->estado]);
-            $cita->load(['paciente', 'admin']);
+            $cita->load(['paciente', 'admin', 'user', 'clinica']);
+
+            if ($cita->estado !== $estadoAnterior) {
+                $tipo = $cita->estado === 'cancelada' ? 'cancelacion' : 'estado';
+                SendCitaWhatsAppNotification::dispatch($cita->id, $tipo);
+            }
 
             // Log después de actualizar
             \Log::info('Estado de cita actualizado', [
@@ -757,20 +802,43 @@ class CitaController extends Controller
             // Determinar sucursal_id: priorizar request (para super admins) o usar del usuario
             $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
 
+            $clinica = Clinica::find($user->clinica_efectiva_id);
+            $availability = app(CitaAvailabilityService::class);
+            $estadoDefault = $availability->estadoInicial($clinica);
+
             $citasCreadas = [];
             $citasSkipped = [];
             $primeraVez = true; // Solo la primera cita es "primera vez"
 
             foreach ($request->citas as $citaData) {
-                // Crear cita (se permiten múltiples citas al mismo tiempo)
+                $doctorId = $citaData['user_id'] ?? $paciente->user_id ?? null;
+                $check = $availability->canBook(
+                    $clinica,
+                    $citaData['fecha'],
+                    $citaData['hora'],
+                    $sucursalId ? (int) $sucursalId : null,
+                    $doctorId ? (int) $doctorId : null,
+                    $paciente->id
+                );
+
+                if (! $check['ok']) {
+                    $citasSkipped[] = [
+                        'fecha' => $citaData['fecha'],
+                        'hora' => $citaData['hora'],
+                        'motivo' => $check['message'] ?? 'Horario no disponible',
+                    ];
+                    continue;
+                }
+
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,
+                    'user_id' => $doctorId,
                     'clinica_id' => $user->clinica_efectiva_id,
                     'sucursal_id' => $sucursalId,
                     'fecha' => $citaData['fecha'],
                     'hora' => $citaData['hora'],
-                    'estado' => $citaData['estado'] ?? 'confirmada',
+                    'estado' => $citaData['estado'] ?? $estadoDefault,
                     'primera_vez' => $primeraVez,
                     'notas' => $citaData['notas'] ?? null
                 ]);
@@ -781,13 +849,14 @@ class CitaController extends Controller
             }
 
             // Enviar correo de notificación (una sola vez con todas las citas)
+            // Las series NO envían WhatsApp por cada cita; usarán recordatorios diarios.
             if (!empty($citasCreadas)) {
                 $this->sendMultipleCitasNotificationEmail($citasCreadas, $paciente, $user);
             }
 
             $message = count($citasCreadas) . ' cita(s) creada(s) exitosamente';
             if (!empty($citasSkipped)) {
-                $message .= '. ' . count($citasSkipped) . ' cita(s) omitida(s) por duplicado';
+                $message .= '. ' . count($citasSkipped) . ' cita(s) omitida(s)';
             }
 
             return response()->json([
@@ -795,7 +864,8 @@ class CitaController extends Controller
                 'message' => $message,
                 'data' => $citasCreadas,
                 'total' => count($citasCreadas),
-                'skipped' => count($citasSkipped)
+                'skipped' => count($citasSkipped),
+                'skipped_details' => $citasSkipped,
             ], 201);
 
         } catch (\Exception $e) {
