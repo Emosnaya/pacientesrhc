@@ -175,7 +175,14 @@ class SubscriptionStatusService
 
         return [
             'mensual' => ['precio' => $mes['total'], 'ciclo' => 'mensual', 'etiqueta' => 'Precio de lanzamiento'],
-            'anual' => ['precio' => $anio['total'], 'ciclo' => 'anual', 'ahorro' => $anio['ahorro'] ?? 0, 'etiqueta' => 'Precio de lanzamiento'],
+            'anual' => [
+                'precio' => $anio['total'],
+                'ciclo' => 'anual',
+                'ahorro' => $anio['ahorro_anual'] ?? 0,
+                'meses_gratis' => $anio['meses_gratis'] ?? 1,
+                'precio_sin_descuento' => $anio['precio_sin_descuento'] ?? (($mes['total'] ?? 0) * 12),
+                'etiqueta' => '1 mes gratis',
+            ],
         ];
     }
 
