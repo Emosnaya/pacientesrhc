@@ -31,7 +31,8 @@ class EnviarRecordatoriosCitas extends Command
      */
     public function handle()
     {
-        if (!config('services.twilio.whatsapp_enabled')) {
+        $enabled = config('services.twilio.enabled') || config('services.twilio.whatsapp_enabled');
+        if (! $enabled) {
             $this->warn('⚠️  WhatsApp está DESHABILITADO en la configuración');
             $this->info('   Para habilitar, configura WHATSAPP_ENABLED=true en .env');
             return self::FAILURE;
@@ -52,12 +53,18 @@ class EnviarRecordatoriosCitas extends Command
         }
         $this->newLine();
         
-        // Construir query
+        // Construir query — solo clínicas con WhatsApp activo
         $query = Cita::where('fecha', $fechaObjetivo)
             ->whereIn('estado', ['pendiente', 'confirmada'])
             ->where(function($q) {
                 $q->where('recordatorio_enviado', false)
                   ->orWhereNull('recordatorio_enviado');
+            })
+            ->whereHas('clinica', function ($q) {
+                $q->where('whatsapp_notificaciones_activas', true);
+            })
+            ->whereHas('paciente', function ($q) {
+                $q->where('whatsapp_notificaciones', true);
             })
             ->with(['paciente', 'user', 'clinica', 'sucursal']);
             

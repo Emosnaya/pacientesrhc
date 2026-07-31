@@ -19,7 +19,7 @@
             font-size: 7.5px;
         }
         .pf-table { width: 100%; border-collapse: collapse; }
-        .pf-clinic { font-weight: 700; color: #ef4444; }
+        .pf-clinic { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .pf-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 26px; }
         .header {

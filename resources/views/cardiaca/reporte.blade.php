@@ -258,7 +258,7 @@
         }
         .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
-        .page-footer .clinic-name { font-weight: 700; color: #ef4444; }
+        .page-footer .clinic-name { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .page-footer .clinic-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 35px; }
 

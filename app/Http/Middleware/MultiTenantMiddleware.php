@@ -54,6 +54,8 @@ class MultiTenantMiddleware
             $exemptSubscription = str_starts_with($path, 'api/subscription')
                 || str_starts_with($path, 'api/clinica-contacto-comercial')
                 || str_starts_with($path, 'api/suscripcion-consultorio')
+                || str_starts_with($path, 'api/clinica/exports')
+                || str_starts_with($path, 'api/soporte/')
                 || $path === 'api/user'
                 || $path === 'api/logout'
                 || str_starts_with($path, 'api/consultorio/mis-clinicas')

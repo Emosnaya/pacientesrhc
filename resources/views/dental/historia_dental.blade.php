@@ -148,7 +148,7 @@
         }
         .page-footer-table { width: 100%; }
         .page-footer-table td { border: none; padding: 0; }
-        .clinic-name { font-weight: 700; color: #ef4444; }
+        .clinic-name { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .clinic-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 40px; }
 

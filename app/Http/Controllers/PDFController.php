@@ -427,52 +427,59 @@ class PDFController extends Controller
      */
     public function getClinicaInfo($user)
     {
+        $defaults = (object) [
+            'nombre' => 'Clínica Médica',
+            'telefono' => '',
+            'email' => '',
+            'direccion' => '',
+            'logo' => null,
+            'logo_url' => null,
+            'color_principal' => '#0A1628',
+            'receta_pdf_config' => null,
+        ];
+
         // Validar que el usuario exista
         if (!$user) {
-            return (object)[
-                'nombre' => 'Clínica Médica',
-                'telefono' => '',
-                'email' => '',
-                'direccion' => '',
-                'logo' => null,
-                'logo_url' => null,
-            ];
+            return $defaults;
         }
 
         $user->loadMissing(['clinicaActiva', 'clinica', 'sucursal']);
         $clinica = $user->clinicaActiva ?? $user->clinica;
-        
+
         if (!$clinica) {
-            // Datos por defecto si no hay clínica
-            return (object)[
-                'nombre' => 'Clínica Médica',
-                'telefono' => '',
-                'email' => '',
-                'direccion' => '',
-                'logo' => null,
-                'logo_url' => null,
-            ];
+            return $defaults;
         }
-        
+
+        $colorPrincipal = !empty($clinica->color_principal)
+            ? $clinica->color_principal
+            : '#0A1628';
+
         // Si el usuario tiene una sucursal asignada, usar los datos de la sucursal
+        // (pero el branding — color y logo — siempre vienen de la clínica)
         if ($user->sucursal_id && $user->sucursal) {
             $sucursal = $user->sucursal;
-            
-            return (object)[
+
+            return (object) [
                 'nombre' => $clinica->nombre,
                 'telefono' => $sucursal->telefono ?? $clinica->telefono,
                 'email' => $sucursal->email ?? $clinica->email,
                 'direccion' => $sucursal->direccion ?? $clinica->direccion,
                 'logo' => $clinica->logo,
                 'logo_url' => $clinica->logo ? asset('storage/' . $clinica->logo) : null,
+                'color_principal' => $colorPrincipal,
+                'receta_pdf_config' => $clinica->receta_pdf_config ?? null,
             ];
         }
-        
+
         // Agregar logo_url al objeto clínica (solo si hay logo; sin imagen por defecto)
         $clinica->logo_url = $clinica->logo
             ? asset('storage/' . $clinica->logo)
             : null;
-        
+
+        if (empty($clinica->color_principal)) {
+            $clinica->color_principal = '#0A1628';
+        }
+
         return $clinica;
     }
 

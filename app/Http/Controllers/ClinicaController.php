@@ -406,14 +406,18 @@ class ClinicaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'nombre'                    => 'required|string|max:255',
-            'email'                     => 'required|email|unique:clinicas,email,' . $clinica->id,
+            'nombre'                    => 'sometimes|required|string|max:255',
+            'email'                     => 'sometimes|required|email|unique:clinicas,email,' . $clinica->id,
             'telefono'                  => 'nullable|string|max:20',
             'direccion'                 => 'nullable|string|max:500',
             'plan'                      => 'nullable|in:mensual,trimestral,anual',
             'color_principal'           => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'facturacion_iva_incluido'  => 'nullable|boolean',
             'facturacion_tasa_iva'      => 'nullable|numeric|min:0|max:100',
+            'cita_estado_inicial'       => 'nullable|in:pendiente,confirmada',
+            'citas_solapamiento_modo'   => 'nullable|in:permitir,profesional,clinica',
+            'whatsapp_notificaciones_activas' => 'nullable|boolean',
+            'portal_permite_multiples_citas_mismo_horario' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -442,6 +446,24 @@ class ClinicaController extends Controller
             }
             if ($request->has('facturacion_tasa_iva')) {
                 $data['facturacion_tasa_iva'] = (float) $request->facturacion_tasa_iva;
+            }
+
+            // Agenda y notificaciones
+            if ($request->has('cita_estado_inicial')) {
+                $data['cita_estado_inicial'] = $request->cita_estado_inicial;
+            }
+            if ($request->has('citas_solapamiento_modo')) {
+                $data['citas_solapamiento_modo'] = $request->citas_solapamiento_modo;
+                // Mantener flag legacy sincronizado
+                $data['portal_permite_multiples_citas_mismo_horario'] =
+                    $request->citas_solapamiento_modo === 'permitir';
+            } elseif ($request->has('portal_permite_multiples_citas_mismo_horario')) {
+                $permite = (bool) $request->portal_permite_multiples_citas_mismo_horario;
+                $data['portal_permite_multiples_citas_mismo_horario'] = $permite;
+                $data['citas_solapamiento_modo'] = $permite ? 'permitir' : 'clinica';
+            }
+            if ($request->has('whatsapp_notificaciones_activas')) {
+                $data['whatsapp_notificaciones_activas'] = (bool) $request->whatsapp_notificaciones_activas;
             }
 
             $clinica->update($data);

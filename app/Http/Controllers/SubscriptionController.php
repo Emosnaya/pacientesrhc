@@ -1049,6 +1049,8 @@ class SubscriptionController extends Controller
         $status = \App\Services\SubscriptionStatusService::getStatus($clinica, $user);
         $vencida = ! $status['active'];
         $fechaVencimiento = $clinica->fecha_vencimiento;
+        $diasRestantes = $status['dias_restantes'];
+        $diasVencido = $status['dias_vencido'] ?? null;
 
         return response()->json([
             'success' => true,
@@ -1059,14 +1061,16 @@ class SubscriptionController extends Controller
                 'plan' => $clinica->plan,
                 'activa' => ! $vencida,
                 'vencida' => $vencida,
+                'en_gracia' => (bool) ($status['en_gracia'] ?? false),
                 'fecha_vencimiento' => $fechaVencimiento?->format('Y-m-d'),
-                'dias_restantes' => $vencida ? null : $status['dias_restantes'],
-                'dias_vencida' => $vencida ? ($status['dias_vencido'] ?? 0) : null,
+                // Incluye 0 (vence hoy) y negativos (ya venció, aún en gracia)
+                'dias_restantes' => $diasRestantes,
+                'dias_vencida' => $diasVencido,
+                'dias_vencido' => $diasVencido,
                 'puede_renovar_online' => $status['puede_renovar_online'],
                 'tipo_renovacion' => 'stripe',
                 'renovacion_automatica' => (bool) $clinica->stripe_subscription_id,
                 'stripe_subscription_id' => $clinica->stripe_subscription_id,
-                'puede_renovar_online' => $status['puede_renovar_online'],
                 'mensaje' => $status['message'],
             ],
             'planes_disponibles' => \App\Services\SubscriptionStatusService::planesDisponibles($clinica),

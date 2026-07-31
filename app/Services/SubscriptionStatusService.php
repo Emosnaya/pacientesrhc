@@ -9,7 +9,13 @@ use Carbon\Carbon;
 class SubscriptionStatusService
 {
     /**
-     * La fecha de vencimiento an cubre hoy? (vlido hasta el da anterior al vencimiento).
+     * Días calendario tras la fecha de vencimiento en los que aún hay acceso (sin 402).
+     * Día 0 = día de vencimiento; día 1 = un día después. El bloqueo empieza en GRACE_DAYS.
+     */
+    public const GRACE_DAYS = 2;
+
+    /**
+     * ¿La fecha de vencimiento aún cubre hoy? (válido hasta el día anterior al vencimiento).
      * Si vence el 15-jun, el 14 tiene acceso; el 15 ya vence.
      */
     public static function fechaVencimientoVigente(?Carbon $fechaVencimiento): bool
@@ -19,6 +25,18 @@ class SubscriptionStatusService
         }
 
         return now()->startOfDay()->lessThan($fechaVencimiento->copy()->startOfDay());
+    }
+
+    /**
+     * Días enteros respecto a la fecha de vencimiento (0 = vence hoy, negativo = ya pasó).
+     */
+    public static function diasRespectoVencimiento(?Carbon $fechaVencimiento): ?int
+    {
+        if (! $fechaVencimiento) {
+            return null;
+        }
+
+        return (int) now()->copy()->startOfDay()->diffInDays($fechaVencimiento->copy()->startOfDay(), false);
     }
 
     public static function getStatus(Clinica $clinica, ?User $user = null): array
@@ -35,7 +53,7 @@ class SubscriptionStatusService
 
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningn pago para esta cuenta.',
+                'No se ha registrado ningún pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -45,18 +63,30 @@ class SubscriptionStatusService
             return self::activePayload('perpetuo', null, $esConsultorio);
         }
 
-        $diasRestantes = $fechaVencimiento
-            ? (int) $now->copy()->startOfDay()->diffInDays($fechaVencimiento->copy()->startOfDay(), false)
-            : null;
+        $diasRestantes = self::diasRespectoVencimiento($fechaVencimiento);
 
         if ($fechaVencimiento && ! self::fechaVencimientoVigente($fechaVencimiento)) {
             $diasVencido = abs($diasRestantes ?? 0);
 
+            // Período de gracia: acceso completo los primeros GRACE_DAYS días (0 y 1).
+            // Banner de vencida en frontend desde día 1; modal/402 desde día GRACE_DAYS (2).
+            if ($diasVencido < self::GRACE_DAYS) {
+                return self::activePayload(
+                    $esConsultorio ? 'consultorio_gracia' : 'clinica_gracia',
+                    $diasRestantes,
+                    $esConsultorio,
+                    [
+                        'dias_vencido' => $diasVencido,
+                        'en_gracia' => true,
+                    ]
+                );
+            }
+
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_vencido' : 'clinica_vencida',
                 $esConsultorio
-                    ? "Tu suscripcin venci hace {$diasVencido} das. Renueva para continuar usando el sistema."
-                    : 'La suscripcin de tu clnica ha vencido. Renueva para continuar.',
+                    ? "Tu suscripción venció hace {$diasVencido} días. Renueva para continuar usando el sistema."
+                    : 'La suscripción de tu clínica ha vencido. Renueva para continuar.',
                 $esConsultorio,
                 $diasVencido
             );
@@ -69,7 +99,7 @@ class SubscriptionStatusService
             if ($esPropietario && ! $user->tieneSuscripcionConsultorioActiva() && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'Tu suscripcin de consultorio ha vencido. Renueva para continuar.',
+                    'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
                     true,
                     0
                 );
@@ -78,7 +108,7 @@ class SubscriptionStatusService
             if (! $esPropietario && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'El consultorio no tiene suscripcin activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
+                    'El consultorio no tiene suscripción activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
                     true,
                     0
                 );
@@ -88,7 +118,7 @@ class SubscriptionStatusService
         if (! $clinica->activa) {
             return self::inactivePayload(
                 'clinica_inactiva',
-                'Tu espacio de trabajo est desactivado. Contacta al administrador.',
+                'Tu espacio de trabajo está desactivado. Contacta al administrador.',
                 $esConsultorio,
                 null
             );
@@ -98,7 +128,7 @@ class SubscriptionStatusService
             && ! ($fechaVencimiento && self::fechaVencimientoVigente($fechaVencimiento))) {
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningn pago para esta cuenta.',
+                'No se ha registrado ningún pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -120,6 +150,7 @@ class SubscriptionStatusService
             'es_consultorio' => (bool) $clinica->es_consultorio_privado,
             'fecha_vencimiento' => $clinica->fecha_vencimiento?->format('Y-m-d'),
             'dias_vencido' => $status['dias_vencido'],
+            'en_gracia' => (bool) ($status['en_gracia'] ?? false),
             'puede_renovar_online' => $status['puede_renovar_online'],
             'contacto_comercial_url' => $status['contacto_url'],
             'renovacion_url' => $status['renovacion_url'],
@@ -148,18 +179,19 @@ class SubscriptionStatusService
         ];
     }
 
-    private static function activePayload(string $tipo, ?int $diasRestantes, bool $esConsultorio): array
+    private static function activePayload(string $tipo, ?int $diasRestantes, bool $esConsultorio, array $extra = []): array
     {
-        return [
+        return array_merge([
             'active' => true,
             'tipo' => $tipo,
             'message' => null,
             'dias_vencido' => null,
             'dias_restantes' => $diasRestantes,
+            'en_gracia' => false,
             'puede_renovar_online' => true,
             'contacto_url' => null,
             'renovacion_url' => $esConsultorio ? '/suscripcion' : null,
-        ];
+        ], $extra);
     }
 
     private static function inactivePayload(
@@ -173,7 +205,8 @@ class SubscriptionStatusService
             'tipo' => $tipo,
             'message' => $message,
             'dias_vencido' => $diasVencido,
-            'dias_restantes' => null,
+            'dias_restantes' => $diasVencido !== null ? -1 * abs($diasVencido) : null,
+            'en_gracia' => false,
             'puede_renovar_online' => $esConsultorio || in_array($tipo, [
                 'clinica_vencida',
                 'clinica_sin_pago',

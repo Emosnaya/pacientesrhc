@@ -53,7 +53,7 @@
         .urgente-badge { display: inline-block; background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; }
         .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 4px 10mm; background: white; border-top: 1px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 8px; }
         .page-footer-table { width: 100%; }
-        .clinic-name { font-weight: 700; color: #ef4444; }
+        .clinic-name { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .clinic-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 0; }
         .signature-block { margin-top: 8px; padding-top: 4px; text-align: center; }

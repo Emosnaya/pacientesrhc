@@ -45,7 +45,7 @@
         .two-col { width: 50%; vertical-align: top; padding: 0 4px; }
         .page-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 20px; background: white; border-top: 2px solid {!! $clinica->color_principal ?? '#0A1628' !!}; font-size: 9px; }
         .page-footer-table { width: 100%; }
-        .clinic-name { font-weight: 700; color: #ef4444; }
+        .clinic-name { font-weight: 700; color: {!! $clinica->color_principal ?? '#0A1628' !!}; }
         .clinic-contact { text-align: right; color: #64748b; }
         .content-wrapper { padding-bottom: 40px; }
     </style>

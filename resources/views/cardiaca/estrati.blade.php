@@ -325,7 +325,7 @@
         }
         .page-footer .clinic-name {
             font-weight: 700;
-            color: #ef4444;
+            color: {!! $clinica->color_principal ?? '#0A1628' !!};
         }
         .page-footer .clinic-contact {
             text-align: right;

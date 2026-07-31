@@ -52,6 +52,9 @@ class Clinica extends Model
         'portal_permite_multiples_citas_mismo_horario',
         'portal_max_reagendas_paciente',
         'portal_bloqueo_dias_post_cancelacion',
+        'cita_estado_inicial',
+        'citas_solapamiento_modo',
+        'whatsapp_notificaciones_activas',
     ];
 
     protected $casts = [
@@ -66,6 +69,7 @@ class Clinica extends Model
         'portal_permite_multiples_citas_mismo_horario' => 'boolean',
         'portal_max_reagendas_paciente' => 'integer',
         'portal_bloqueo_dias_post_cancelacion' => 'integer',
+        'whatsapp_notificaciones_activas' => 'boolean',
         'fecha_vencimiento' => 'date',
         'trial_ends_at' => 'datetime',
         'modulos_habilitados' => 'array',
