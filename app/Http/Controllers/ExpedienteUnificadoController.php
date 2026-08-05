@@ -19,6 +19,9 @@ use App\Models\ReporteFinalPulmonar;
 use App\Models\PruebaEsfuerzoPulmonar;
 use App\Models\HistoriaClinicaDental;
 use App\Models\Odontograma;
+use App\Models\Periodontograma;
+use App\Models\FichaEndodoncia;
+use App\Models\FichaOrtodoncia;
 use App\Models\NotaSeguimientoPulmonar;
 use App\Models\EstratiAacvpr;
 use App\Models\HistoriaClinicaCardiologia;
@@ -308,6 +311,52 @@ class ExpedienteUnificadoController extends Controller
                 ];
             });
 
+        // 21. Periodontogramas
+        $periodontogramas = Periodontograma::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 21,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Periodontograma',
+                ];
+            });
+
+        // 22. Fichas de endodoncia
+        $fichasEndodoncia = FichaEndodoncia::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function ($item) {
+                $pieza = $item->pieza ? " · Pieza {$item->pieza}" : '';
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 22,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Ficha Endodoncia'.$pieza,
+                ];
+            });
+
+        // 23. Fichas de ortodoncia
+        $fichasOrtodoncia = FichaOrtodoncia::where('paciente_id', $pacienteId)
+            ->where('clinica_id', $clinicaId)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'tipo_exp' => 23,
+                    'fecha' => $item->fecha,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                    'tipo_nombre' => 'Ficha Ortodoncia',
+                ];
+            });
+
         // 19. Notas de Seguimiento Pulmonar
         $notasSeguimientoPulmonar = NotaSeguimientoPulmonar::where('paciente_id', $pacienteId)
             ->where('clinica_id', $clinicaId)
@@ -521,6 +570,9 @@ class ExpedienteUnificadoController extends Controller
             ->merge($pruebasEsfuerzoPulmonar)
             ->merge($historiasDentales)
             ->merge($odontogramas)
+            ->merge($periodontogramas)
+            ->merge($fichasEndodoncia)
+            ->merge($fichasOrtodoncia)
             ->merge($notasSeguimientoPulmonar)
             ->merge($estratiAacvprs)
             ->merge($historiasCardiologia)

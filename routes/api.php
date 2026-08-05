@@ -30,10 +30,12 @@ use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
+use App\Http\Controllers\SillonController;
 use App\Http\Controllers\RadiografiaDentalController;
 use App\Http\Controllers\NotaSeguimientoPulmonarController;
 use App\Http\Controllers\ConsultorioController;
 use App\Http\Controllers\FinanzasController;
+use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\OrdenLaboratorioController;
 use App\Http\Controllers\RecetaController;
@@ -47,6 +49,7 @@ use App\Http\Controllers\InternalConsultorioProvisionController;
 use App\Http\Controllers\PacienteConsentimientoController;
 use App\Http\Controllers\PacientePortalAuthController;
 use App\Http\Controllers\PacientePortalController;
+use App\Http\Controllers\PacientePortalDirectorioController;
 use App\Http\Controllers\PresupuestoController;
 use App\Http\Controllers\HistoriaClinicaCardiologiaController;
 use App\Http\Controllers\NotaSubsecuenteCardiologiaController;
@@ -172,12 +175,17 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/agenda/disponibilidad', [PacientePortalController::class, 'agendaDisponibilidad']);
     Route::post('/paciente-portal/agenda/citas', [PacientePortalController::class, 'agendaCrearCita']);
     Route::post('/paciente-portal/agenda/citas/{id}/reagendar', [PacientePortalController::class, 'agendaReagendarCita']);
+    Route::get('/paciente-portal/directorio', [PacientePortalDirectorioController::class, 'index']);
+    Route::get('/paciente-portal/directorio/disponibilidad', [PacientePortalDirectorioController::class, 'disponibilidad']);
+    Route::get('/paciente-portal/directorio/{sucursalId}', [PacientePortalDirectorioController::class, 'show']);
     Route::get('/paciente-portal/perfil', [PacientePortalController::class, 'perfil']);
     Route::put('/paciente-portal/perfil', [PacientePortalController::class, 'updatePerfil']);
     Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
     Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
     Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
     Route::get('/paciente-portal/mi-qr', [PacientePortalController::class, 'miQr']);
+    Route::get('/paciente-portal/pagos', [PacientePortalController::class, 'pagos']);
+    Route::get('/paciente-portal/pagos/{id}/recibo', [PacientePortalController::class, 'pagoReciboPdf']);
     Route::get('/paciente-portal/presupuestos', [PresupuestoController::class, 'portalIndex']);
     Route::get('/paciente-portal/clinicas/{clinicaId}/presupuestos', [PresupuestoController::class, 'portalIndexByClinica']);
     Route::get('/paciente-portal/presupuestos/{id}', [PresupuestoController::class, 'portalShow']);
@@ -291,6 +299,15 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     // Archivos por paciente (staff)
     Route::get('/pacientes/{pacienteId}/archivos', [\App\Http\Controllers\PacienteArchivoController::class, 'index']);
     Route::post('/pacientes/{pacienteId}/archivos', [\App\Http\Controllers\PacienteArchivoController::class, 'store']);
+    Route::get('/consentimientos-dentales/plantillas', [\App\Http\Controllers\ConsentimientoDentalController::class, 'plantillas']);
+    Route::post('/pacientes/{pacienteId}/consentimientos-dentales', [\App\Http\Controllers\ConsentimientoDentalController::class, 'store']);
+    Route::get('/pacientes/{pacienteId}/planes-tratamiento', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'index']);
+    Route::post('/pacientes/{pacienteId}/planes-tratamiento', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'store']);
+    Route::post('/pacientes/{pacienteId}/planes-tratamiento/desde-odontograma', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'desdeOdontograma']);
+    Route::put('/pacientes/{pacienteId}/planes-tratamiento/{id}', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'update']);
+    Route::post('/pacientes/{pacienteId}/planes-tratamiento/{id}/presupuesto', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'generarPresupuesto']);
+    Route::patch('/pacientes/{pacienteId}/planes-tratamiento/{id}/items/{itemId}', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'updateItemEstado']);
+    Route::delete('/pacientes/{pacienteId}/planes-tratamiento/{id}', [\App\Http\Controllers\PlanTratamientoDentalController::class, 'destroy']);
     Route::patch('/pacientes/{pacienteId}/archivos/{id}/portal', [\App\Http\Controllers\PacienteArchivoController::class, 'togglePortal']);
     Route::delete('/pacientes/{pacienteId}/archivos/{id}', [\App\Http\Controllers\PacienteArchivoController::class, 'destroy']);
     Route::get('/pacientes/{pacienteId}/archivos/{id}/ver', [\App\Http\Controllers\PacienteArchivoController::class, 'view']);
@@ -326,6 +343,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::post('/citas/multiple', [CitaController::class, 'storeMultiple']);
     Route::delete('/citas/{id}/force', [CitaController::class, 'forceDelete']);
 
+    // Sillones (agenda multi-sillón, clínicas dentales)
+    Route::get('/sillones', [SillonController::class, 'index']);
+    Route::post('/sillones', [SillonController::class, 'store']);
+    Route::put('/sillones/{id}', [SillonController::class, 'update']);
+    Route::delete('/sillones/{id}', [SillonController::class, 'destroy']);
+
     // Rutas para eventos/recordatorios/tareas
     Route::apiResource('/eventos', EventoController::class);
     Route::get('/eventos/calendar/data', [EventoController::class, 'getCalendarData']);
@@ -346,6 +369,12 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::apiResource('/odontogramas', OdontogramaController::class);
     Route::get('/odontogramas/paciente/{pacienteId}', [OdontogramaController::class, 'getByPaciente']);
     Route::get('/odontogramas/paciente/{pacienteId}/latest', [OdontogramaController::class, 'getLatestByPaciente']);
+    Route::get('/periodontogramas/paciente/{pacienteId}', [\App\Http\Controllers\PeriodontogramaController::class, 'getByPaciente']);
+    Route::apiResource('/periodontogramas', \App\Http\Controllers\PeriodontogramaController::class);
+    Route::get('/fichas-endodoncia/paciente/{pacienteId}', [\App\Http\Controllers\FichaEndodonciaController::class, 'getByPaciente']);
+    Route::apiResource('/fichas-endodoncia', \App\Http\Controllers\FichaEndodonciaController::class);
+    Route::get('/fichas-ortodoncia/paciente/{pacienteId}', [\App\Http\Controllers\FichaOrtodonciaController::class, 'getByPaciente']);
+    Route::apiResource('/fichas-ortodoncia', \App\Http\Controllers\FichaOrtodonciaController::class);
 
     // Rutas de Radiografías Dentales
     Route::get('/radiografias-dentales/paciente/{pacienteId}', [RadiografiaDentalController::class, 'getByPaciente']);
@@ -464,6 +493,21 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::get('/estadisticas', [FinanzasController::class, 'estadisticas']);
     });
 
+    // Liquidaciones / comisiones (MVP dental)
+    Route::prefix('liquidaciones')->group(function () {
+        Route::get('/perfiles', [\App\Http\Controllers\LiquidacionController::class, 'indexProfiles']);
+        Route::post('/perfiles', [\App\Http\Controllers\LiquidacionController::class, 'storeProfile']);
+        Route::put('/perfiles/{id}', [\App\Http\Controllers\LiquidacionController::class, 'updateProfile']);
+        Route::delete('/perfiles/{id}', [\App\Http\Controllers\LiquidacionController::class, 'destroyProfile']);
+        Route::get('/preview', [\App\Http\Controllers\LiquidacionController::class, 'preview']);
+        Route::get('/', [\App\Http\Controllers\LiquidacionController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\LiquidacionController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\LiquidacionController::class, 'show']);
+        Route::post('/{id}/recalcular', [\App\Http\Controllers\LiquidacionController::class, 'recalcular']);
+        Route::post('/{id}/pagar', [\App\Http\Controllers\LiquidacionController::class, 'marcarPagada']);
+        Route::post('/{id}/cancelar', [\App\Http\Controllers\LiquidacionController::class, 'cancelar']);
+    });
+
     // ==========================================
     // INVENTARIO
     // ==========================================
@@ -506,6 +550,9 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     Route::get('/fisioterapia/alta/imprimir/{id}',[PDFController::class,'notaAltaFisioterapiaPdf']);
     Route::get('/historia-dental/imprimir/{id}',[PDFController::class,'historiaDentalPdf']);
     Route::get('/odontogramas/imprimir/{id}',[PDFController::class,'odontogramaPdf']);
+    Route::get('/periodontogramas/imprimir/{id}',[PDFController::class,'periodontogramaPdf']);
+    Route::get('/fichas-endodoncia/imprimir/{id}',[PDFController::class,'fichaEndodonciaPdf']);
+    Route::get('/fichas-ortodoncia/imprimir/{id}',[PDFController::class,'fichaOrtodonciaPdf']);
     Route::get('/nota-seguimiento-pulmonar/imprimir/{id}', [PDFController::class, 'notaSeguimientoPulmonarPdf']);
     Route::post('/expediente/send-email', [PDFController::class, 'sendExpedienteByEmail']);
     

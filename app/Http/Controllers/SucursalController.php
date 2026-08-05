@@ -115,12 +115,17 @@ class SucursalController extends Controller
             'codigo_postal'      => 'nullable|string',
             'es_principal'       => 'nullable|boolean',
             'activa'             => 'nullable|boolean',
+            'visible_directorio' => 'nullable|boolean',
+            'horarios_atencion'  => 'nullable|array',
             'notas'              => 'nullable|string',
             'tipo_clinica'       => 'nullable|string|max:100',
             'modulos_habilitados'=> 'nullable|array',
         ]);
         
         $validated['clinica_id'] = $user->clinica_efectiva_id;
+        if (! array_key_exists('visible_directorio', $validated)) {
+            $validated['visible_directorio'] = true;
+        }
         
         $clinica = Clinica::findOrFail($validated['clinica_id']);
         if (!$clinica->puedeCrearMasSucursales()) {
@@ -180,6 +185,8 @@ class SucursalController extends Controller
             'codigo_postal'      => 'nullable|string',
             'es_principal'       => 'nullable|boolean',
             'activa'             => 'nullable|boolean',
+            'visible_directorio' => 'nullable|boolean',
+            'horarios_atencion'  => 'nullable|array',
             'notas'              => 'nullable|string',
             'tipo_clinica'       => 'nullable|string|max:100',
             'modulos_habilitados'=> 'nullable|array',

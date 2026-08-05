@@ -122,12 +122,19 @@ class WhatsAppService
             ->update(['accionable' => false]);
 
         try {
+            $payload = [
+                'from' => $this->from,
+                'body' => $mensaje,
+            ];
+
+            $statusCallback = config('services.twilio.status_callback');
+            if (! empty($statusCallback) && str_starts_with((string) $statusCallback, 'http')) {
+                $payload['statusCallback'] = $statusCallback;
+            }
+
             $message = $this->client->messages->create(
                 "whatsapp:{$telefonoTwilio}",
-                [
-                    'from' => $this->from,
-                    'body' => $mensaje,
-                ]
+                $payload
             );
 
             $log->update([

@@ -854,6 +854,69 @@ class PDFController extends Controller
         return $pdf->stream('Odontograma_' . ($paciente->nombre ?? 'Paciente') . '_' . ($paciente->apellidoPat ?? '') . '.pdf');
     }
 
+    public function periodontogramaPdf(Request $request)
+    {
+        $data = \App\Models\Periodontograma::find($request->id);
+        if (!$data) {
+            abort(404, 'Periodontograma no encontrado');
+        }
+        $paciente = Paciente::find($data->paciente_id);
+        if (!$paciente) {
+            abort(404, 'Paciente no encontrado');
+        }
+
+        $user = Auth::user() ?: User::find($data->user_id);
+        $clinica = $this->getClinicaInfo($user);
+        $pacienteNombre = trim(($paciente->nombre ?? '').' '.($paciente->apellidoPat ?? '').' '.($paciente->apellidoMat ?? ''));
+
+        $pdf = Pdf::loadView('dental.periodontograma', compact('data', 'paciente', 'clinica', 'pacienteNombre'))
+            ->setPaper('letter', 'landscape');
+
+        return $pdf->stream('Periodontograma_'.$pacienteNombre.'.pdf');
+    }
+
+    public function fichaEndodonciaPdf(Request $request)
+    {
+        $data = \App\Models\FichaEndodoncia::find($request->id);
+        if (!$data) {
+            abort(404, 'Ficha de endodoncia no encontrada');
+        }
+        $paciente = Paciente::find($data->paciente_id);
+        if (!$paciente) {
+            abort(404, 'Paciente no encontrado');
+        }
+
+        $user = Auth::user() ?: User::find($data->user_id);
+        $clinica = $this->getClinicaInfo($user);
+        $pacienteNombre = trim(($paciente->nombre ?? '').' '.($paciente->apellidoPat ?? '').' '.($paciente->apellidoMat ?? ''));
+
+        $pdf = Pdf::loadView('dental.ficha_endodoncia', compact('data', 'paciente', 'clinica', 'pacienteNombre'))
+            ->setPaper('letter', 'portrait');
+
+        return $pdf->stream('FichaEndodoncia_'.$pacienteNombre.'.pdf');
+    }
+
+    public function fichaOrtodonciaPdf(Request $request)
+    {
+        $data = \App\Models\FichaOrtodoncia::find($request->id);
+        if (!$data) {
+            abort(404, 'Ficha de ortodoncia no encontrada');
+        }
+        $paciente = Paciente::find($data->paciente_id);
+        if (!$paciente) {
+            abort(404, 'Paciente no encontrado');
+        }
+
+        $user = Auth::user() ?: User::find($data->user_id);
+        $clinica = $this->getClinicaInfo($user);
+        $pacienteNombre = trim(($paciente->nombre ?? '').' '.($paciente->apellidoPat ?? '').' '.($paciente->apellidoMat ?? ''));
+
+        $pdf = Pdf::loadView('dental.ficha_ortodoncia', compact('data', 'paciente', 'clinica', 'pacienteNombre'))
+            ->setPaper('letter', 'portrait');
+
+        return $pdf->stream('FichaOrtodoncia_'.$pacienteNombre.'.pdf');
+    }
+
     /**
      * Enviar expediente por correo
      */

@@ -44,8 +44,10 @@ class FinanzasController extends Controller
             'notas' => 'nullable|string',
             'firma_paciente' => ['nullable', 'string'],
             'cita_id' => 'nullable|exists:citas,id',
+            'presupuesto_id' => 'nullable|exists:presupuestos,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'fecha_pago' => 'nullable|date|before_or_equal:today',
+            'atribuido_a_user_id' => 'nullable|exists:users,id',
         ]);
 
         $paciente = null;
@@ -57,6 +59,15 @@ class FinanzasController extends Controller
                     'message' => 'No tienes permiso para registrar pagos de este paciente'
                 ], 403);
             }
+        }
+
+        $presupuestoId = $this->resolverPresupuestoDePago(
+            $request->input('presupuesto_id'),
+            $paciente?->id,
+            (int) $user->clinica_efectiva_id
+        );
+        if ($presupuestoId instanceof \Illuminate\Http\JsonResponse) {
+            return $presupuestoId;
         }
 
         // Si es pago sin paciente, no se requiere firma
@@ -82,13 +93,27 @@ class FinanzasController extends Controller
             ? $paciente->sucursal_id
             : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $user->sucursal_id);
 
+        $atribuidoA = null;
+        if ($request->filled('atribuido_a_user_id')) {
+            $atribuidoA = (int) $request->atribuido_a_user_id;
+        } elseif ($request->filled('cita_id')) {
+            $cita = \App\Models\Cita::find($request->cita_id);
+            if ($cita && $cita->user_id) {
+                $atribuidoA = (int) $cita->user_id;
+            }
+        } elseif ($paciente?->user_id) {
+            $atribuidoA = (int) $paciente->user_id;
+        }
+
         // Crear el pago
         $pago = Pago::create([
             'paciente_id' => $paciente?->id,
             'clinica_id' => $clinicaId,
             'sucursal_id' => $sucursalId,
             'user_id' => $user->id,
+            'atribuido_a_user_id' => $atribuidoA,
             'cita_id' => $request->cita_id,
+            'presupuesto_id' => $presupuestoId,
             'monto' => $request->monto,
             'metodo_pago' => $request->metodo_pago,
             'referencia' => $request->referencia,
@@ -99,12 +124,37 @@ class FinanzasController extends Controller
         ]);
 
         // Cargar relaciones
-        $pago->load(['paciente', 'usuario', 'cita']);
+        $pago->load(['paciente', 'usuario', 'cita', 'atribuidoA', 'presupuesto:id,titulo,monto_total,estado']);
 
         return response()->json([
             'message' => 'Pago registrado exitosamente',
             'pago' => $pago
         ], 201);
+    }
+
+    /**
+     * Valida que el presupuesto elegido para un pago sea del mismo paciente y clínica.
+     *
+     * @return int|null|\Illuminate\Http\JsonResponse
+     */
+    private function resolverPresupuestoDePago($presupuestoId, ?int $pacienteId, int $clinicaId)
+    {
+        if ($presupuestoId === null || $presupuestoId === '') {
+            return null;
+        }
+
+        $presupuesto = \App\Models\Presupuesto::find((int) $presupuestoId);
+        if (! $presupuesto) {
+            return null;
+        }
+
+        if ((int) $presupuesto->clinica_id !== $clinicaId || ! $pacienteId || (int) $presupuesto->paciente_id !== $pacienteId) {
+            return response()->json([
+                'errors' => ['presupuesto_id' => ['El presupuesto no corresponde a este paciente.']]
+            ], 422);
+        }
+
+        return (int) $presupuesto->id;
     }
 
     /**
@@ -141,8 +191,10 @@ class FinanzasController extends Controller
             'notas' => 'nullable|string',
             'firma_paciente' => ['nullable', 'string'],
             'cita_id' => 'nullable|exists:citas,id',
+            'presupuesto_id' => 'nullable|exists:presupuestos,id',
             'sucursal_id' => 'nullable|exists:sucursales,id',
             'fecha_pago' => 'nullable|date|before_or_equal:today',
+            'atribuido_a_user_id' => 'nullable|exists:users,id',
         ]);
 
         $paciente = null;
@@ -152,6 +204,18 @@ class FinanzasController extends Controller
                 return response()->json([
                     'message' => 'No tienes permiso para asignar pagos a este paciente'
                 ], 403);
+            }
+        }
+
+        $presupuestoId = $pago->presupuesto_id;
+        if ($request->has('presupuesto_id')) {
+            $presupuestoId = $this->resolverPresupuestoDePago(
+                $request->input('presupuesto_id'),
+                $paciente?->id,
+                (int) $user->clinica_efectiva_id
+            );
+            if ($presupuestoId instanceof \Illuminate\Http\JsonResponse) {
+                return $presupuestoId;
             }
         }
 
@@ -177,12 +241,21 @@ class FinanzasController extends Controller
             ? $paciente->sucursal_id
             : ($user->isSuperAdmin() && $request->filled('sucursal_id') ? $request->sucursal_id : $pago->sucursal_id);
 
+        $atribuidoA = $pago->atribuido_a_user_id;
+        if ($request->has('atribuido_a_user_id')) {
+            $atribuidoA = $request->atribuido_a_user_id === '' || $request->atribuido_a_user_id === null
+                ? null
+                : (int) $request->atribuido_a_user_id;
+        }
+
         // Actualizar el pago
         $pago->update([
             'paciente_id' => $paciente?->id,
             'clinica_id' => $clinicaId,
             'sucursal_id' => $sucursalId,
             'cita_id' => $request->cita_id,
+            'presupuesto_id' => $presupuestoId,
+            'atribuido_a_user_id' => $atribuidoA,
             'monto' => $request->monto,
             'metodo_pago' => $request->metodo_pago,
             'referencia' => $request->referencia,
@@ -193,7 +266,7 @@ class FinanzasController extends Controller
         ]);
 
         // Cargar relaciones
-        $pago->load(['paciente', 'usuario', 'cita']);
+        $pago->load(['paciente', 'usuario', 'cita', 'atribuidoA', 'presupuesto:id,titulo,monto_total,estado']);
 
         return response()->json([
             'message' => 'Pago actualizado exitosamente',
@@ -379,7 +452,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
-        $query = Pago::with(['paciente', 'usuario', 'cita'])
+        $query = Pago::with(['paciente', 'usuario', 'atribuidoA', 'cita', 'presupuesto:id,titulo,monto_total,estado'])
             ->where('clinica_id', $user->clinica_efectiva_id);
 
         // Filtros
@@ -425,7 +498,7 @@ class FinanzasController extends Controller
         $user = Auth::user();
         $clinicaId = $user->clinica_activa_id ?? $user->clinica_id;
 
-        $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal'])
+        $pago = Pago::with(['paciente', 'usuario', 'cita', 'sucursal', 'presupuesto:id,titulo,monto_total,estado'])
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->findOrFail($id);
 
@@ -743,7 +816,7 @@ class FinanzasController extends Controller
         $paciente = Paciente::forClinicaWorkspace((int) $user->clinica_efectiva_id)
             ->findOrFail($pacienteId);
 
-        $pagosQuery = Pago::with(['usuario', 'cita', 'clinica', 'sucursal'])
+        $pagosQuery = Pago::with(['usuario', 'cita', 'clinica', 'sucursal', 'presupuesto:id,titulo,monto_total,estado'])
             ->where('paciente_id', $pacienteId)
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->orderBy('created_at', 'desc');

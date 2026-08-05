@@ -39,7 +39,9 @@ class Pago extends Model
         'clinica_id',
         'sucursal_id',
         'user_id',
+        'atribuido_a_user_id',
         'cita_id',
+        'presupuesto_id',
         'monto',
         'metodo_pago',
         'referencia',
@@ -95,11 +97,27 @@ class Pago extends Model
     }
 
     /**
+     * Profesional al que se atribuye el cobro (comisiones)
+     */
+    public function atribuidoA()
+    {
+        return $this->belongsTo(User::class, 'atribuido_a_user_id');
+    }
+
+    /**
      * Relación con la cita asociada
      */
     public function cita()
     {
         return $this->belongsTo(Cita::class);
+    }
+
+    /**
+     * Presupuesto al que se aplica el pago. Nulo cuando es un cobro suelto de la clínica.
+     */
+    public function presupuesto()
+    {
+        return $this->belongsTo(Presupuesto::class);
     }
 
     public function solicitudesFactura()

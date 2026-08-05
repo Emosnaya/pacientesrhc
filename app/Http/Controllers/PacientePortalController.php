@@ -10,10 +10,12 @@ use App\Models\ChatParticipante;
 use App\Models\Clinica;
 use App\Models\Evento;
 use App\Models\Paciente;
+use App\Models\Pago;
 use App\Models\PortalExpedienteCompartido;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\CitaAvailabilityService;
+use App\Services\SucursalHorarioService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -325,16 +327,31 @@ class PacientePortalController extends Controller
             ->where('paciente_id', $paciente->id)
             ->whereIn('clinica_id', $clinicaIds)
             ->whereBetween('fecha', [$from, $to])
-            ->with(['sucursal', 'clinica'])
+            ->with(['sucursal', 'clinica', 'user:id,nombre,apellidoPat,apellidoMat,rol'])
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get()
             ->map(function (Cita $c) {
+                $maxReagendas = max(0, (int) ($c->clinica->portal_max_reagendas_paciente ?? 2));
+                $intentos = (int) ($c->reagenda_intentos ?? 0);
+                $cancelableEstado = ! in_array($c->estado, ['cancelada', 'completada'], true);
+
+                $doctorNombre = $c->user
+                    ? trim(($c->user->nombre ?? '').' '.($c->user->apellidoPat ?? '').' '.($c->user->apellidoMat ?? ''))
+                    : null;
+
                 return [
                     'id' => $c->id,
                     'fecha' => $c->fecha?->format('Y-m-d'),
                     'hora' => $c->hora ? Carbon::parse($c->hora)->format('H:i') : null,
                     'estado' => $c->estado,
+                    'notas' => $c->notas,
+                    'especialidad' => $this->agendaEspecialidadDesdeNotas($c->notas),
+                    'doctor' => $doctorNombre ? [
+                        'id' => $c->user->id,
+                        'nombre' => $doctorNombre,
+                        'rol' => $c->user->rol,
+                    ] : null,
                     'clinica' => $c->clinica ? [
                         'id' => $c->clinica->id,
                         'nombre' => $c->clinica->nombre,
@@ -343,6 +360,9 @@ class PacientePortalController extends Controller
                         'id' => $c->sucursal->id,
                         'nombre' => $c->sucursal->nombre,
                     ] : null,
+                    'reagenda_intentos' => $intentos,
+                    'reagendas_restantes' => max(0, $maxReagendas - $intentos),
+                    'puede_reagendar' => $cancelableEstado && $c->esFutura(),
                 ];
             });
 
@@ -411,6 +431,7 @@ class PacientePortalController extends Controller
 
         $validated = $request->validate([
             'clinica_id' => 'required|integer|exists:clinicas,id',
+            'sucursal_id' => 'nullable|integer|exists:sucursales,id',
             'fecha' => 'required|date_format:Y-m-d',
             'doctor_id' => 'nullable|integer|exists:users,id',
             'especialidad' => 'nullable|string|max:120',
@@ -434,8 +455,19 @@ class PacientePortalController extends Controller
             }
         }
 
-        $slots = collect(self::AGENDA_SLOTS)->map(function (string $slot) use ($clinica, $paciente, $fecha, $doctorId, $especialidad) {
-            $check = $this->agendaCanBook($clinica, $paciente, $fecha, $slot, $doctorId, $especialidad);
+        $sucursal = $this->agendaResolveSucursal($clinica, $validated['sucursal_id'] ?? null, $paciente);
+        if ($sucursal instanceof JsonResponse) {
+            return $sucursal;
+        }
+
+        $candidateSlots = app(SucursalHorarioService::class)->slotsParaFecha($sucursal, $fecha);
+        if (empty($candidateSlots)) {
+            // Fallback a slots legacy si la sucursal aún no tiene horario configurado.
+            $candidateSlots = self::AGENDA_SLOTS;
+        }
+
+        $slots = collect($candidateSlots)->map(function (string $slot) use ($clinica, $paciente, $fecha, $doctorId, $especialidad, $sucursal) {
+            $check = $this->agendaCanBook($clinica, $paciente, $fecha, $slot, $doctorId, $especialidad, $sucursal->id);
             return [
                 'hora' => $slot,
                 'disponible' => $check['ok'],
@@ -443,7 +475,13 @@ class PacientePortalController extends Controller
             ];
         })->values();
 
-        return response()->json(['data' => $slots]);
+        return response()->json([
+            'data' => $slots,
+            'meta' => [
+                'sucursal_id' => $sucursal->id,
+                'clinica_id' => $clinica->id,
+            ],
+        ]);
     }
 
     /**
@@ -458,6 +496,7 @@ class PacientePortalController extends Controller
 
         $validated = $request->validate([
             'clinica_id' => 'required|integer|exists:clinicas,id',
+            'sucursal_id' => 'nullable|integer|exists:sucursales,id',
             'fecha' => 'required|date_format:Y-m-d',
             'hora' => 'required|date_format:H:i',
             'doctor_id' => 'nullable|integer|exists:users,id',
@@ -488,13 +527,19 @@ class PacientePortalController extends Controller
             return response()->json(['message' => 'Debes indicar la especialidad si no seleccionas doctor'], 422);
         }
 
+        $sucursal = $this->agendaResolveSucursal($clinica, $validated['sucursal_id'] ?? null, $paciente);
+        if ($sucursal instanceof JsonResponse) {
+            return $sucursal;
+        }
+
         $check = $this->agendaCanBook(
             $clinica,
             $paciente,
             (string) $validated['fecha'],
             (string) $validated['hora'],
             $doctorId,
-            $especialidad
+            $especialidad,
+            $sucursal->id
         );
         if (! $check['ok']) {
             return response()->json(['message' => $check['message']], 422);
@@ -504,10 +549,9 @@ class PacientePortalController extends Controller
 
         $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
         if (! $pivot) {
-            $sucursalPrincipal = Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
             $paciente->clinicas()->syncWithoutDetaching([
                 $clinica->id => [
-                    'sucursal_id' => $sucursalPrincipal,
+                    'sucursal_id' => $sucursal->id,
                     'user_id' => null,
                     'vinculado_at' => now(),
                     'portal_visible_citas' => true,
@@ -515,6 +559,11 @@ class PacientePortalController extends Controller
                     'portal_visible_expediente_resumen' => false,
                     'portal_agenda_bloqueado' => false,
                 ],
+            ]);
+            $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
+        } elseif (empty($pivot->sucursal_id)) {
+            $paciente->clinicas()->updateExistingPivot($clinica->id, [
+                'sucursal_id' => $sucursal->id,
             ]);
             $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
         }
@@ -536,7 +585,7 @@ class PacientePortalController extends Controller
             'admin_id' => (int) $adminId,
             'user_id' => $doctorId,
             'clinica_id' => $clinica->id,
-            'sucursal_id' => $pivot?->sucursal_id,
+            'sucursal_id' => $sucursal->id,
             'fecha' => $validated['fecha'],
             'hora' => $validated['hora'],
             'estado' => $requiereConfirmacionClinica
@@ -571,6 +620,7 @@ class PacientePortalController extends Controller
                 'hora' => Carbon::parse($cita->hora)->format('H:i'),
                 'estado' => $cita->estado,
                 'clinica' => ['id' => $clinica->id, 'nombre' => $clinica->nombre],
+                'sucursal_id' => $sucursal->id,
                 'doctor_id' => $doctorId,
                 'especialidad' => $especialidad,
                 'chat_conversacion_id' => $chatConversacion?->id,
@@ -692,6 +742,46 @@ class PacientePortalController extends Controller
     }
 
     /**
+     * @return Sucursal|\Illuminate\Http\JsonResponse
+     */
+    private function agendaResolveSucursal(Clinica $clinica, $sucursalId, Paciente $paciente)
+    {
+        if ($sucursalId) {
+            $sucursal = Sucursal::query()
+                ->where('id', (int) $sucursalId)
+                ->where('clinica_id', $clinica->id)
+                ->first();
+
+            if (! $sucursal || ! $sucursal->activa) {
+                return response()->json(['message' => 'La sucursal no pertenece a esta clínica o no está activa'], 422);
+            }
+
+            return $sucursal;
+        }
+
+        $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
+        if ($pivot?->sucursal_id) {
+            $fromPivot = Sucursal::query()->find($pivot->sucursal_id);
+            if ($fromPivot && $fromPivot->clinica_id === $clinica->id) {
+                return $fromPivot;
+            }
+        }
+
+        $principal = Sucursal::query()
+            ->where('clinica_id', $clinica->id)
+            ->where('activa', true)
+            ->orderByDesc('es_principal')
+            ->orderBy('id')
+            ->first();
+
+        if (! $principal) {
+            return response()->json(['message' => 'Esta clínica no tiene sucursales activas'], 422);
+        }
+
+        return $principal;
+    }
+
+    /**
      * @return array{ok:bool,message:?string}
      */
     private function agendaCanBook(
@@ -700,7 +790,8 @@ class PacientePortalController extends Controller
         string $fecha,
         string $hora,
         ?int $doctorId = null,
-        ?string $especialidad = null
+        ?string $especialidad = null,
+        ?int $sucursalId = null
     ): array
     {
         $availability = app(CitaAvailabilityService::class);
@@ -721,8 +812,10 @@ class PacientePortalController extends Controller
             }
         }
 
-        $sucursalId = $pivot?->sucursal_id
-            ?? Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
+        if (! $sucursalId) {
+            $sucursalId = $pivot?->sucursal_id
+                ?? Sucursal::query()->where('clinica_id', $clinica->id)->where('es_principal', true)->value('id');
+        }
 
         return $availability->canBook(
             $clinica,
@@ -732,6 +825,23 @@ class PacientePortalController extends Controller
             $doctorId,
             $paciente->id
         );
+    }
+
+    /**
+     * Extrae la especialidad que el paciente pidió al agendar, guardada como prefijo en las notas.
+     */
+    private function agendaEspecialidadDesdeNotas(?string $notas): ?string
+    {
+        if (! $notas) {
+            return null;
+        }
+
+        if (preg_match('/^\[Especialidad solicitada:\s*(.*?)\]/u', trim($notas), $matches)) {
+            $valor = trim($matches[1] ?? '');
+            return $valor !== '' ? $valor : null;
+        }
+
+        return null;
     }
 
     private function agendaBuildNotas(?string $notas, ?string $especialidad): ?string
@@ -987,23 +1097,192 @@ class PacientePortalController extends Controller
 
         $tipo = (int) $row->tipo_exp;
         $eid = (int) $row->expediente_id;
+        $pacienteId = (int) $paciente->id;
 
-        if ($tipo === 6) {
-            $nutri = \App\Models\ReporteNutri::query()->find($eid);
-            if (! $nutri || (int) $nutri->paciente_id !== (int) $paciente->id) {
-                return response()->json(['message' => 'Documento no encontrado'], 404);
-            }
+        $modelMap = [
+            1 => \App\Models\Esfuerzo::class,
+            2 => \App\Models\Estratificacion::class,
+            3 => \App\Models\Clinico::class,
+            4 => \App\Models\ReporteFinal::class,
+            5 => \App\Models\ReportePsico::class,
+            6 => \App\Models\ReporteNutri::class,
+            8 => \App\Models\ExpedientePulmonar::class,
+            11 => \App\Models\HistoriaClinicaFisioterapia::class,
+            12 => \App\Models\NotaEvolucionFisioterapia::class,
+            13 => \App\Models\NotaAltaFisioterapia::class,
+            18 => \App\Models\Odontograma::class,
+            19 => \App\Models\NotaSeguimientoPulmonar::class,
+            20 => \App\Models\EstratiAacvpr::class,
+            21 => \App\Models\Periodontograma::class,
+            22 => \App\Models\FichaEndodoncia::class,
+            23 => \App\Models\FichaOrtodoncia::class,
+        ];
+
+        if (! isset($modelMap[$tipo])) {
+            return response()->json([
+                'message' => 'La vista en PDF para este tipo de expediente aún no está habilitada en el portal.',
+            ], 501);
+        }
+
+        $model = $modelMap[$tipo]::query()->find($eid);
+        if (! $model || (int) $model->paciente_id !== $pacienteId) {
+            return response()->json(['message' => 'Documento no encontrado'], 404);
         }
 
         $sub = Request::create($request->url(), 'GET', ['id' => $eid]);
         $sub->merge(['id' => $eid]);
+        $pdf = app(PDFController::class);
 
         return match ($tipo) {
-            6 => app(PDFController::class)->nutriPdf($sub),
+            1 => $pdf->esfuerzoPdf($sub),
+            2 => $pdf->estratificacionPdf($sub),
+            3 => $pdf->clinicoPdf($sub),
+            4 => $pdf->reportePdf($sub),
+            5 => $pdf->psicoPdf($sub),
+            6 => $pdf->nutriPdf($sub),
+            8 => $pdf->pulmonarPdf($sub),
+            11 => $pdf->historiaFisioterapiaPdf($sub),
+            12 => $pdf->notaEvolucionFisioterapiaPdf($sub),
+            13 => $pdf->notaAltaFisioterapiaPdf($sub),
+            18 => $pdf->odontogramaPdf($sub),
+            19 => $pdf->notaSeguimientoPulmonarPdf($sub),
+            20 => $pdf->estratiAacvprPdf($sub),
+            21 => $pdf->periodontogramaPdf($sub),
+            22 => $pdf->fichaEndodonciaPdf($sub),
+            23 => $pdf->fichaOrtodonciaPdf($sub),
             default => response()->json([
                 'message' => 'La vista en PDF para este tipo de expediente aún no está habilitada en el portal.',
             ], 501),
         };
+    }
+
+    /**
+     * Historial de pagos del paciente en las clínicas donde está vinculado (paginado).
+     */
+    public function pagos(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $perPage = min(50, max(5, (int) $request->input('per_page', 10)));
+        $clinicaIds = $paciente->clinicas()->pluck('clinicas.id');
+
+        $query = Pago::query()
+            ->with(['clinica:id,nombre', 'sucursal:id,nombre', 'presupuesto:id,titulo'])
+            ->where('paciente_id', $paciente->id)
+            ->whereIn('clinica_id', $clinicaIds);
+
+        if ($request->filled('clinica_id')) {
+            $query->where('clinica_id', (int) $request->input('clinica_id'));
+        }
+
+        $paginator = $query
+            ->orderByDesc('fecha_pago')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        $data = collect($paginator->items())->map(fn (Pago $pago) => [
+            'id' => $pago->id,
+            'monto' => (float) $pago->monto,
+            'concepto' => $pago->concepto,
+            'referencia' => $pago->referencia,
+            'metodo_pago' => $pago->metodo_pago,
+            'metodo_pago_label' => Pago::etiquetaMetodo($pago->metodo_pago),
+            'fecha_pago' => $pago->fecha_pago?->toDateString() ?? $pago->created_at?->toDateString(),
+            'clinica' => $pago->clinica ? ['id' => $pago->clinica->id, 'nombre' => $pago->clinica->nombre] : null,
+            'sucursal' => $pago->sucursal ? ['id' => $pago->sucursal->id, 'nombre' => $pago->sucursal->nombre] : null,
+            'presupuesto' => $pago->presupuesto ? [
+                'id' => $pago->presupuesto->id,
+                'titulo' => $pago->presupuesto->titulo,
+            ] : null,
+        ])->values();
+
+        // El monto está cifrado en base de datos: se agrega en PHP, no en SQL.
+        $todosLosPagos = Pago::query()
+            ->with('clinica:id,nombre')
+            ->where('paciente_id', $paciente->id)
+            ->whereIn('clinica_id', $clinicaIds)
+            ->get();
+
+        $totalPagadoGlobal = (float) $todosLosPagos->sum(fn (Pago $pago) => (float) $pago->monto);
+
+        $porClinica = $todosLosPagos
+            ->groupBy('clinica_id')
+            ->map(fn ($pagos, $clinicaId) => [
+                'clinica_id' => (int) $clinicaId,
+                'clinica_nombre' => $pagos->first()?->clinica?->nombre,
+                'total_pagado' => round((float) $pagos->sum(fn (Pago $pago) => (float) $pago->monto), 2),
+                'pagos_count' => $pagos->count(),
+                'ultimo_pago' => $pagos
+                    ->map(fn (Pago $pago) => $pago->fecha_pago?->toDateString() ?? $pago->created_at?->toDateString())
+                    ->filter()
+                    ->sort()
+                    ->last(),
+            ])
+            ->sortByDesc('total_pagado')
+            ->values();
+
+        $clinicaFiltrada = $request->filled('clinica_id') ? (int) $request->input('clinica_id') : null;
+        $totalPagado = $clinicaFiltrada
+            ? (float) ($porClinica->firstWhere('clinica_id', $clinicaFiltrada)['total_pagado'] ?? 0)
+            : $totalPagadoGlobal;
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'total_pagado' => round($totalPagado, 2),
+                'total_pagado_global' => round($totalPagadoGlobal, 2),
+                'por_clinica' => $porClinica,
+            ],
+        ]);
+    }
+
+    /**
+     * Recibo en PDF de un pago propio del paciente.
+     */
+    public function pagoReciboPdf(int $id)
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $clinicaIds = $paciente->clinicas()->pluck('clinicas.id');
+
+        $pago = Pago::query()
+            ->with(['paciente', 'usuario', 'sucursal', 'clinica'])
+            ->where('paciente_id', $paciente->id)
+            ->whereIn('clinica_id', $clinicaIds)
+            ->find($id);
+
+        if (! $pago) {
+            return response()->json(['message' => 'Recibo no encontrado'], 404);
+        }
+
+        $clinica = $pago->clinica;
+        $sucursal = $pago->sucursal;
+        $clinicaLogo = null;
+
+        if ($clinica?->logo) {
+            $logoPath = storage_path('app/public/' . $clinica->logo);
+            if (file_exists($logoPath)) {
+                $clinicaLogo = 'data:' . (mime_content_type($logoPath) ?: 'image/png')
+                    . ';base64,' . base64_encode(file_get_contents($logoPath));
+            }
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+            'finanzas.recibo',
+            compact('pago', 'clinica', 'sucursal', 'clinicaLogo')
+        );
+
+        return $pdf->stream('Recibo_' . str_pad((string) $pago->id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 
     /**

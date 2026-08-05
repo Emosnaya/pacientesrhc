@@ -61,10 +61,15 @@ return [
     'twilio' => [
         'sid' => env('TWILIO_SID'),
         'auth_token' => env('TWILIO_AUTH_TOKEN'),
-        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'), // Formato: whatsapp:+14155238886
+        // Formato: whatsapp:+52XXXXXXXXXX (prod) o whatsapp:+14155238886 (sandbox)
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
         'enabled' => env('WHATSAPP_ENABLED', false),
         // Alias legacy usado por comandos antiguos
         'whatsapp_enabled' => env('WHATSAPP_ENABLED', false),
+        // Callback de entrega (Twilio POSTea a esta URL). Vacío → APP_URL/api/whatsapp/status
+        'status_callback' => (($cb = env('TWILIO_STATUS_CALLBACK')) && $cb !== '')
+            ? $cb
+            : (rtrim((string) env('APP_URL', ''), '/') . '/api/whatsapp/status'),
     ],
 
     /*
@@ -74,6 +79,18 @@ return [
     */
     'search' => [
         'index_key' => env('SEARCH_INDEX_KEY', env('APP_KEY')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google Maps
+    |--------------------------------------------------------------------------
+    | geocoding_key: restringida por IP (backend).
+    | maps_key: para clientes móviles (bundle/package), se expone vía config Expo.
+    */
+    'google_maps' => [
+        'geocoding_key' => env('GOOGLE_MAPS_GEOCODING_KEY', env('GOOGLE_MAPS_API_KEY')),
+        'maps_key' => env('GOOGLE_MAPS_MOBILE_KEY', env('GOOGLE_MAPS_API_KEY')),
     ],
 
 ];
