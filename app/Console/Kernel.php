@@ -29,7 +29,10 @@ class Kernel extends ConsoleKernel
             ->dailyAt('10:00')
             ->timezone('America/Mexico_City')
             ->when(function () {
-                return config('services.twilio.enabled', false);
+                return (bool) (
+                    config('services.twilio.enabled', false)
+                    || config('services.twilio.whatsapp_enabled', false)
+                );
             });
     }
 

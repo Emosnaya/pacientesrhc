@@ -19,6 +19,7 @@ class Cita extends Model
         'paciente_id',
         'admin_id',
         'user_id',
+        'sillon_id',
         'clinica_id',
         'sucursal_id',
         'fecha',
@@ -80,6 +81,14 @@ class Cita extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Relación con el sillón (clínicas dentales)
+     */
+    public function sillon()
+    {
+        return $this->belongsTo(Sillon::class, 'sillon_id');
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\ChatMensaje;
 use App\Models\ChatParticipante;
 use App\Models\Clinica;
 use App\Models\Paciente;
+use App\Models\Sillon;
 use App\Models\User;
 use App\Models\Evento;
 use App\Jobs\SendCitaWhatsAppNotification;
@@ -30,7 +31,7 @@ class CitaController extends Controller
     {
         try {
             $user = Auth::user();
-            $query = Cita::with(['paciente', 'admin']);
+            $query = Cita::with(['paciente', 'admin', 'sillon']);
 
             // Filtrar por clínica del usuario autenticado
             $query->forClinica($user->clinica_efectiva_id);
@@ -95,6 +96,7 @@ class CitaController extends Controller
                 $validator = Validator::make($request->all(), [
                     'paciente_id' => 'required|exists:pacientes,id',
                     'user_id' => 'nullable|exists:users,id',
+                    'sillon_id' => 'nullable|exists:sillones,id',
                     'custom_email' => 'nullable|email|max:255',
                     'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
@@ -137,6 +139,7 @@ class CitaController extends Controller
                     'nuevo_paciente.tipo_paciente' => 'nullable|string|max:255',
                     'nuevo_paciente.user_id' => 'nullable|exists:users,id',
                     'user_id' => 'nullable|exists:users,id',
+                    'sillon_id' => 'nullable|exists:sillones,id',
                     'custom_email' => 'nullable|email|max:255',
                     'fecha' => 'required|date',
                     'hora' => 'required|date_format:H:i',
@@ -283,6 +286,20 @@ class CitaController extends Controller
                 ], 422);
             }
 
+            $sillonId = $request->filled('sillon_id') ? (int) $request->sillon_id : null;
+            $sillonError = $this->assertSillonDisponible(
+                $sillonId,
+                (string) $request->fecha,
+                (string) $request->hora,
+                $sucursalId ? (int) $sucursalId : null
+            );
+            if ($sillonError) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $sillonError,
+                ], 422);
+            }
+
             $estadoInicial = $request->estado
                 ?? $availability->estadoInicial($clinica);
 
@@ -291,6 +308,7 @@ class CitaController extends Controller
                 'paciente_id' => $paciente->id,
                 'admin_id' => $user->id,
                 'user_id' => $userId,
+                'sillon_id' => $sillonId,
                 'clinica_id' => $user->clinica_efectiva_id,
                 'sucursal_id' => $sucursalId,
                 'fecha' => $request->fecha,
@@ -301,7 +319,7 @@ class CitaController extends Controller
                 'custom_email' => $request->custom_email ?? null
             ]);
 
-            $cita->load(['paciente', 'admin', 'user.clinica']);
+            $cita->load(['paciente', 'admin', 'user.clinica', 'sillon']);
 
             // Correo siempre (fallback / respaldo). WhatsApp en cola si aplica.
             $this->sendCalendarInvitation($cita, 'create');
@@ -338,7 +356,7 @@ class CitaController extends Controller
     public function show($id)
     {
         try {
-            $cita = Cita::with(['paciente', 'admin'])->findOrFail($id);
+            $cita = Cita::with(['paciente', 'admin', 'sillon'])->findOrFail($id);
             $user = Auth::user();
 
             // Verificar que la cita pertenece a la misma clínica del usuario
@@ -374,6 +392,7 @@ class CitaController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'user_id' => 'nullable|exists:users,id',
+                'sillon_id' => 'nullable|exists:sillones,id',
                 'custom_email' => 'nullable|email|max:255',
                 'fecha' => 'sometimes|date',
                 'hora' => 'sometimes|date_format:H:i',
@@ -406,6 +425,9 @@ class CitaController extends Controller
                 ? $cita->hora->format('H:i')
                 : substr((string) $cita->hora, 0, 5));
             $doctorId = $request->has('user_id') ? $request->user_id : $cita->user_id;
+            $sillonId = $request->has('sillon_id')
+                ? ($request->sillon_id === '' || $request->sillon_id === 'null' ? null : (int) $request->sillon_id)
+                : $cita->sillon_id;
             $fechaCambio = $request->has('fecha')
                 && (string) $fechaNueva !== optional($cita->fecha)->format('Y-m-d');
             $horaActual = $cita->hora instanceof \DateTimeInterface
@@ -436,8 +458,28 @@ class CitaController extends Controller
                 }
             }
 
-            $cita->update($request->only(['user_id', 'custom_email', 'fecha', 'hora', 'estado', 'primera_vez', 'notas']));
-            $cita->load(['paciente', 'admin', 'user', 'clinica']);
+            if ($request->has('fecha') || $request->has('hora') || $request->has('sillon_id')) {
+                $sillonError = $this->assertSillonDisponible(
+                    $sillonId ? (int) $sillonId : null,
+                    (string) $fechaNueva,
+                    (string) $horaNueva,
+                    $cita->sucursal_id ? (int) $cita->sucursal_id : null,
+                    $cita->id
+                );
+                if ($sillonError) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $sillonError,
+                    ], 422);
+                }
+            }
+
+            $payload = $request->only(['user_id', 'custom_email', 'fecha', 'hora', 'estado', 'primera_vez', 'notas']);
+            if ($request->has('sillon_id')) {
+                $payload['sillon_id'] = $sillonId;
+            }
+            $cita->update($payload);
+            $cita->load(['paciente', 'admin', 'user', 'clinica', 'sillon']);
             $estadoCambio = $request->has('estado') && $cita->estado !== $estadoAnterior;
 
             // Enviar actualización de calendario si cambió fecha u hora
@@ -566,7 +608,7 @@ class CitaController extends Controller
             $mes = $request->get('mes', now()->month);
             $ano = $request->get('año', now()->year);
 
-            $query = Cita::with(['paciente', 'admin'])
+            $query = Cita::with(['paciente', 'admin', 'sillon'])
                         ->forClinica($user->clinica_efectiva_id)
                         ->byMonth($mes, $ano);
             
@@ -774,6 +816,7 @@ class CitaController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'paciente_id' => 'required|exists:pacientes,id',
+                'sillon_id' => 'nullable|exists:sillones,id',
                 'citas' => 'required|array|min:1',
                 'citas.*.fecha' => 'required|date',
                 'citas.*.hora' => 'required|date_format:H:i',
@@ -805,6 +848,7 @@ class CitaController extends Controller
             $clinica = Clinica::find($user->clinica_efectiva_id);
             $availability = app(CitaAvailabilityService::class);
             $estadoDefault = $availability->estadoInicial($clinica);
+            $sillonId = $request->filled('sillon_id') ? (int) $request->sillon_id : null;
 
             $citasCreadas = [];
             $citasSkipped = [];
@@ -830,10 +874,26 @@ class CitaController extends Controller
                     continue;
                 }
 
+                $sillonError = $this->assertSillonDisponible(
+                    $sillonId,
+                    (string) $citaData['fecha'],
+                    (string) $citaData['hora'],
+                    $sucursalId ? (int) $sucursalId : null
+                );
+                if ($sillonError) {
+                    $citasSkipped[] = [
+                        'fecha' => $citaData['fecha'],
+                        'hora' => $citaData['hora'],
+                        'motivo' => $sillonError,
+                    ];
+                    continue;
+                }
+
                 $cita = Cita::create([
                     'paciente_id' => $paciente->id,
                     'admin_id' => $user->id,
                     'user_id' => $doctorId,
+                    'sillon_id' => $sillonId,
                     'clinica_id' => $user->clinica_efectiva_id,
                     'sucursal_id' => $sucursalId,
                     'fecha' => $citaData['fecha'],
@@ -843,7 +903,7 @@ class CitaController extends Controller
                     'notas' => $citaData['notas'] ?? null
                 ]);
 
-                $cita->load(['paciente', 'admin']);
+                $cita->load(['paciente', 'admin', 'sillon']);
                 $citasCreadas[] = $cita;
                 $primeraVez = false; // Las siguientes ya no son primera vez
             }
@@ -1007,5 +1067,49 @@ class CitaController extends Controller
             // Log error but don't fail the cita operation
             \Log::error('Error sending calendar invitation: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Valida sillón de la clínica y evita doble booking en mismo horario.
+     */
+    private function assertSillonDisponible(
+        ?int $sillonId,
+        string $fecha,
+        string $hora,
+        ?int $sucursalId = null,
+        ?int $excludeCitaId = null
+    ): ?string {
+        if (! $sillonId) {
+            return null;
+        }
+
+        $user = Auth::user();
+        $sillon = Sillon::where('clinica_id', $user->clinica_efectiva_id)
+            ->where('id', $sillonId)
+            ->where('activo', true)
+            ->first();
+
+        if (! $sillon) {
+            return 'El sillón seleccionado no es válido';
+        }
+
+        if ($sucursalId && $sillon->sucursal_id && (int) $sillon->sucursal_id !== (int) $sucursalId) {
+            return 'El sillón no pertenece a esta sucursal';
+        }
+
+        $query = Cita::where('sillon_id', $sillonId)
+            ->whereDate('fecha', $fecha)
+            ->whereTime('hora', $hora)
+            ->where('estado', '!=', 'cancelada');
+
+        if ($excludeCitaId) {
+            $query->where('id', '!=', $excludeCitaId);
+        }
+
+        if ($query->exists()) {
+            return 'El sillón ya tiene una cita en ese horario';
+        }
+
+        return null;
     }
 }

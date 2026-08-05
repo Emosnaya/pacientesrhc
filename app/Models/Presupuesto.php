@@ -62,4 +62,12 @@ class Presupuesto extends Model
     {
         return $this->hasMany(PresupuestoItem::class)->orderBy('orden')->orderBy('id');
     }
+
+    /**
+     * Pagos aplicados explícitamente a este presupuesto.
+     */
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class)->orderBy('fecha_pago')->orderBy('id');
+    }
 }

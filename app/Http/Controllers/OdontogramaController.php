@@ -43,6 +43,7 @@ class OdontogramaController extends Controller
             'historia_clinica_dental_id' => 'nullable|exists:historia_clinica_dental,id',
             'fecha' => 'nullable|date',
             'dientes' => 'nullable|array',
+            'is_emergency_record' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -71,6 +72,7 @@ class OdontogramaController extends Controller
                 'historia_clinica_dental_id' => $request->historia_clinica_dental_id,
                 'fecha' => $request->fecha ?? now(),
                 'dientes' => $dientes,
+                'is_emergency_record' => (bool) $request->boolean('is_emergency_record'),
                 // Análisis Periodontal
                 'ap_calculo_supragingival' => $request->ap_calculo_supragingival ?? false,
                 'ap_calculo_infragingival' => $request->ap_calculo_infragingival ?? false,

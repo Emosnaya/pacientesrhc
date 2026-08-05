@@ -18,6 +18,7 @@ class Odontograma extends Model
         'historia_clinica_dental_id',
         'fecha',
         'dientes',
+        'is_emergency_record',
         // Análisis Periodontal
         'ap_calculo_supragingival',
         'ap_calculo_infragingival',
@@ -49,6 +50,7 @@ class Odontograma extends Model
     protected $casts = [
         'fecha' => 'date',
         'dientes' => 'array',
+        'is_emergency_record' => 'boolean',
         'ap_calculo_supragingival' => 'boolean',
         'ap_calculo_infragingival' => 'boolean',
         'ap_movilidad_dental' => 'boolean',
