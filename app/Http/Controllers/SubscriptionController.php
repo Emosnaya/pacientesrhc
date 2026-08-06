@@ -7,6 +7,7 @@ use App\Models\Clinica;
 use App\Models\User;
 use App\Models\Sucursal;
 use App\Models\Payment;
+use App\Support\SucursalLocationPayload;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -332,14 +333,16 @@ class SubscriptionController extends Controller
             ]);
 
             // 3. Crear sucursal principal
-            $sucursal = Sucursal::create([
+            $location = SucursalLocationPayload::fromArray(is_array($consultorioData) ? $consultorioData : []);
+            $sucursal = Sucursal::create(array_merge([
                 'clinica_id' => $consultorio->id,
                 'nombre' => $consultorioData['nombre'],
                 'es_principal' => true,
                 'activa' => true,
-                'direccion' => $consultorioData['direccion'] ?? null,
                 'telefono' => $consultorioData['telefono'] ?? null,
-            ]);
+                'visible_directorio' => true,
+            ], $location['attrs']));
+            SucursalLocationPayload::applyAfterCreate($sucursal, $location);
 
             // 4. Vincular propietario en user_clinicas
             $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());
@@ -497,14 +500,16 @@ class SubscriptionController extends Controller
             ]);
 
             // Crear sucursal principal
-            Sucursal::create([
+            $location = SucursalLocationPayload::fromArray(is_array($consultorioData) ? $consultorioData : []);
+            $sucursalExtra = Sucursal::create(array_merge([
                 'clinica_id' => $nuevoConsultorio->id,
                 'nombre' => $consultorioData['nombre'],
                 'es_principal' => true,
                 'activa' => true,
-                'direccion' => $consultorioData['direccion'] ?? null,
                 'telefono' => $consultorioData['telefono'] ?? null,
-            ]);
+                'visible_directorio' => true,
+            ], $location['attrs']));
+            SucursalLocationPayload::applyAfterCreate($sucursalExtra, $location);
 
             // Vincular al usuario como propietario
             $user->clinicas()->attach($nuevoConsultorio->id, User::pivotPropietarioConsultorio());
@@ -1409,6 +1414,14 @@ class SubscriptionController extends Controller
             'consultorio_data.telefono'     => 'nullable|string',
             'consultorio_data.email'        => 'nullable|email',
             'consultorio_data.direccion'    => 'nullable|string',
+            'consultorio_data.ciudad'       => 'nullable|string|max:120',
+            'consultorio_data.estado'       => 'nullable|string|max:120',
+            'consultorio_data.codigo_postal'=> 'nullable|string|max:20',
+            'consultorio_data.landmark_id'  => 'nullable|integer|exists:landmarks,id',
+            'consultorio_data.landmark_detalle' => 'nullable|string|max:255',
+            'consultorio_data.latitud'      => 'nullable|numeric|between:-90,90',
+            'consultorio_data.longitud'     => 'nullable|numeric|between:-180,180',
+            'consultorio_data.coords_manuales' => 'nullable|boolean',
             'referral_code'                 => 'nullable|string',
         ], [
             'user_data.cedula.regex' => 'La cédula profesional debe contener entre 7 y 8 dígitos numéricos.',
@@ -1478,14 +1491,16 @@ class SubscriptionController extends Controller
             ]);
 
             // 3. Crear sucursal principal
-            $sucursal = Sucursal::create([
+            $location = SucursalLocationPayload::fromArray(is_array($cd) ? $cd : []);
+            $sucursal = Sucursal::create(array_merge([
                 'clinica_id' => $consultorio->id,
                 'nombre'     => $cd['nombre'],
                 'es_principal'=> true,
                 'activa'     => true,
-                'direccion'  => $cd['direccion'] ?? null,
                 'telefono'   => $cd['telefono'] ?? null,
-            ]);
+                'visible_directorio' => true,
+            ], $location['attrs']));
+            SucursalLocationPayload::applyAfterCreate($sucursal, $location);
 
             // 4. Vincular propietario
             $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());

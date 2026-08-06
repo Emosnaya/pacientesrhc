@@ -18,6 +18,55 @@ class PacientePortalDirectorioController extends Controller
 {
     private const AGENDA_DOCTOR_ROLES = ['doctor', 'doctora', 'licenciado', 'enfermero', 'enfermera', 'fisioterapeuta'];
 
+    /**
+     * Variantes que apuntan a la misma especialidad del catálogo.
+     */
+    private const ESPECIALIDAD_CANONICA = [
+        'cardiaco' => 'cardiologia',
+        'rehabilitacion_cardiaca' => 'rehabilitacion_cardiopulmonar',
+        'rehabilitacion_pulmonar' => 'rehabilitacion_cardiopulmonar',
+        'rehabilitacion' => 'rehabilitacion_cardiopulmonar',
+        'pulmonar' => 'neumologia',
+        'odontologia' => 'dental',
+        'dentista' => 'dental',
+        'obstetricia' => 'ginecologia',
+        'gineco' => 'ginecologia',
+        'ginecologia_obstetricia' => 'ginecologia',
+        'ginecologia_y_obstetricia' => 'ginecologia',
+        'medicina_general' => 'general',
+        'interna' => 'medicina_interna',
+        'traumatologia' => 'ortopedia',
+        'ortopedia_traumatologia' => 'ortopedia',
+        'ortopedia_y_traumatologia' => 'ortopedia',
+        'orl' => 'otorrinolaringologia',
+        'otorrino' => 'otorrinolaringologia',
+        'nutriologia' => 'nutricion',
+        'psicoterapia' => 'psicologia',
+        'salud_mental' => 'psicologia',
+        'cirugia' => 'cirugia_general',
+        'rehabilitacion_fisica' => 'fisioterapia',
+        'fisio' => 'fisioterapia',
+    ];
+
+    /**
+     * Claves que debe buscar cada especialidad canónica (tipo principal y módulos).
+     */
+    private const ESPECIALIDAD_GRUPOS = [
+        'cardiologia' => ['cardiologia', 'cardiaco'],
+        'neumologia' => ['neumologia', 'pulmonar'],
+        'dental' => ['dental', 'odontologia'],
+        'ginecologia' => ['ginecologia', 'obstetricia'],
+        'general' => ['general', 'medicina_general'],
+        'medicina_interna' => ['medicina_interna'],
+        'ortopedia' => ['ortopedia', 'traumatologia'],
+        'otorrinolaringologia' => ['otorrinolaringologia', 'orl'],
+        'nutricion' => ['nutricion', 'nutriologia'],
+        'psicologia' => ['psicologia', 'psicoterapia'],
+        'cirugia_general' => ['cirugia_general', 'cirugia'],
+        'fisioterapia' => ['fisioterapia', 'rehabilitacion_fisica'],
+        'rehabilitacion_cardiopulmonar' => ['rehabilitacion_cardiopulmonar', 'rehabilitacion', 'cardiaco', 'pulmonar', 'fisioterapia'],
+    ];
+
     private function pacienteAutorizado(): ?Paciente
     {
         $user = Auth::user();
@@ -41,6 +90,7 @@ class PacientePortalDirectorioController extends Controller
         $q = trim((string) $request->query('q', ''));
         $especialidad = trim((string) $request->query('especialidad', ''));
         $fecha = $request->query('fecha');
+        $landmarkId = $request->query('landmark_id');
         $soloConHorarios = filter_var($request->query('con_horarios', false), FILTER_VALIDATE_BOOLEAN);
         $limit = min(80, max(10, (int) $request->query('limit', 40)));
 
@@ -54,35 +104,46 @@ class PacientePortalDirectorioController extends Controller
 
         $query = Sucursal::query()
             ->visiblesDirectorio()
-            ->whereHas('clinica', fn ($q) => $q->where('activa', true))
-            ->with(['clinica:id,nombre,tipo_clinica,logo,color_principal,direccion,citas_solapamiento_modo,cita_estado_inicial,portal_permite_multiples_citas_mismo_horario,modulos_habilitados']);
+            ->whereHas('clinica', fn ($q) => $q->publicableEnDirectorio())
+            ->with([
+                'clinica:id,nombre,tipo_clinica,logo,color_principal,direccion,citas_solapamiento_modo,cita_estado_inicial,portal_permite_multiples_citas_mismo_horario,modulos_habilitados',
+                'landmark:id,nombre,tipo,ciudad,alcaldia,latitud,longitud',
+            ]);
+
+        if ($landmarkId && is_numeric($landmarkId)) {
+            $query->where('landmark_id', (int) $landmarkId);
+        }
 
         if ($q !== '') {
             $like = '%'.$q.'%';
-            $query->where(function ($sub) use ($like) {
+            $clavesTexto = $this->especialidadCandidatos($q);
+            $query->where(function ($sub) use ($like, $clavesTexto) {
                 $sub->where('nombre', 'like', $like)
                     ->orWhere('direccion', 'like', $like)
                     ->orWhere('ciudad', 'like', $like)
                     ->orWhere('estado', 'like', $like)
                     ->orWhere('tipo_clinica', 'like', $like)
+                    ->orWhere('landmark_detalle', 'like', $like)
+                    ->orWhereHas('landmark', function ($l) use ($like) {
+                        $l->where('nombre', 'like', $like)
+                            ->orWhere('alcaldia', 'like', $like);
+                    })
                     ->orWhereHas('clinica', function ($c) use ($like) {
                         $c->where('nombre', 'like', $like)
                             ->orWhere('direccion', 'like', $like)
                             ->orWhere('tipo_clinica', 'like', $like);
                     });
+
+                // Texto que coincide con un módulo habilitado (ej. "nutricion").
+                foreach ($clavesTexto as $clave) {
+                    $sub->orWhereJsonContains('modulos_habilitados', $clave)
+                        ->orWhereHas('clinica', fn ($c) => $c->whereJsonContains('modulos_habilitados', $clave));
+                }
             });
         }
 
         if ($especialidad !== '') {
-            $needle = $this->especialidadClave($especialidad);
-            $query->where(function ($sub) use ($needle, $especialidad) {
-                $sub->where('tipo_clinica', 'like', '%'.$especialidad.'%')
-                    ->orWhere('tipo_clinica', 'like', '%'.$needle.'%')
-                    ->orWhereHas('clinica', function ($c) use ($needle, $especialidad) {
-                        $c->where('tipo_clinica', 'like', '%'.$especialidad.'%')
-                            ->orWhere('tipo_clinica', 'like', '%'.$needle.'%');
-                    });
-            });
+            $this->aplicarFiltroEspecialidad($query, $especialidad);
         }
 
         $rows = $query
@@ -139,6 +200,14 @@ class PacientePortalDirectorioController extends Controller
                     'especialidades' => $especialidades,
                     'slots_abiertos' => $slotsAbiertos,
                     'vinculada' => $vinculada,
+                    'landmark_id' => $sucursal->landmark_id,
+                    'landmark_detalle' => $sucursal->landmark_detalle,
+                    'landmark' => $sucursal->landmark ? [
+                        'id' => $sucursal->landmark->id,
+                        'nombre' => $sucursal->landmark->nombre,
+                        'tipo' => $sucursal->landmark->tipo,
+                        'alcaldia' => $sucursal->landmark->alcaldia,
+                    ] : null,
                     'clinica' => [
                         'id' => $clinica->id,
                         'nombre' => $clinica->nombre,
@@ -159,8 +228,83 @@ class PacientePortalDirectorioController extends Controller
                 'count' => $rows->count(),
                 'q' => $q !== '' ? $q : null,
                 'especialidad' => $especialidad !== '' ? $especialidad : null,
+                'landmark_id' => $landmarkId && is_numeric($landmarkId) ? (int) $landmarkId : null,
                 'fecha' => $fecha,
+                'filtros_especialidad' => $this->catalogoEspecialidadesConConteo(),
             ],
+        ]);
+    }
+
+    /**
+     * Catálogo global de especialidades/módulos para filtros del mapa.
+     */
+    public function catalogoEspecialidades(): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $catalogo = $this->catalogoEspecialidadesConConteo();
+
+        return response()->json([
+            'data' => $catalogo,
+            'meta' => [
+                'total' => count($catalogo),
+                'disponibles' => count(array_filter($catalogo, fn ($item) => $item['disponible'])),
+            ],
+        ]);
+    }
+
+    /**
+     * Hospitales/plazas con al menos un consultorio visible (descubrimiento paciente).
+     */
+    public function landmarks(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $q = trim((string) $request->query('q', ''));
+        $limit = min(80, max(10, (int) $request->query('limit', 40)));
+
+        $query = \App\Models\Landmark::query()
+            ->activos()
+            ->whereHas('sucursales', function ($s) {
+                $s->visiblesDirectorio()->whereHas('clinica', fn ($c) => $c->publicableEnDirectorio());
+            })
+            ->withCount(['sucursales as consultorios_count' => function ($s) {
+                $s->visiblesDirectorio()->whereHas('clinica', fn ($c) => $c->publicableEnDirectorio());
+            }]);
+
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where(function ($sub) use ($like) {
+                $sub->where('nombre', 'like', $like)
+                    ->orWhere('alcaldia', 'like', $like);
+            });
+        }
+
+        $rows = $query->orderByDesc('consultorios_count')
+            ->orderBy('orden')
+            ->orderBy('nombre')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($l) => [
+                'id' => $l->id,
+                'nombre' => $l->nombre,
+                'tipo' => $l->tipo,
+                'alcaldia' => $l->alcaldia,
+                'ciudad' => $l->ciudad,
+                'latitud' => $l->latitud,
+                'longitud' => $l->longitud,
+                'consultorios_count' => (int) $l->consultorios_count,
+            ]);
+
+        return response()->json([
+            'data' => $rows,
+            'meta' => ['count' => $rows->count()],
         ]);
     }
 
@@ -176,7 +320,7 @@ class PacientePortalDirectorioController extends Controller
 
         $sucursal = Sucursal::query()
             ->visiblesDirectorio()
-            ->with(['clinica'])
+            ->with(['clinica', 'landmark'])
             ->find($sucursalId);
 
         if (! $sucursal || ! $sucursal->clinica || ! $sucursal->clinica->activa) {
@@ -220,6 +364,14 @@ class PacientePortalDirectorioController extends Controller
                 'especialidades' => $this->especialidadesDeSucursal($sucursal, $clinica),
                 'doctores' => $doctores,
                 'vinculada' => $vinculada,
+                'landmark_id' => $sucursal->landmark_id,
+                'landmark_detalle' => $sucursal->landmark_detalle,
+                'landmark' => $sucursal->landmark ? [
+                    'id' => $sucursal->landmark->id,
+                    'nombre' => $sucursal->landmark->nombre,
+                    'tipo' => $sucursal->landmark->tipo,
+                    'alcaldia' => $sucursal->landmark->alcaldia,
+                ] : null,
                 'clinica' => [
                     'id' => $clinica->id,
                     'nombre' => $clinica->nombre,
@@ -311,37 +463,88 @@ class PacientePortalDirectorioController extends Controller
     }
 
     /**
-     * @return array<int, string>
+     * Un centro atiende una especialidad si es su tipo principal
+     * o si tiene el módulo habilitado (sucursal o clínica).
      */
+    private function aplicarFiltroEspecialidad($query, string $especialidad): void
+    {
+        $candidatos = $this->especialidadCandidatos($especialidad);
+
+        $query->where(function ($sub) use ($candidatos) {
+            foreach ($candidatos as $clave) {
+                // Prefijo (no substring) para que "general" no arrastre "cirugia_general".
+                $sub->orWhere('tipo_clinica', 'like', $clave.'%')
+                    ->orWhereJsonContains('modulos_habilitados', $clave)
+                    ->orWhereHas('clinica', function ($c) use ($clave) {
+                        $c->where(function ($inner) use ($clave) {
+                            $inner->where('tipo_clinica', 'like', $clave.'%')
+                                ->orWhereJsonContains('modulos_habilitados', $clave);
+
+                            $tiposPorDefecto = Clinica::tiposConModuloPorDefecto($clave);
+                            if ($tiposPorDefecto !== []) {
+                                // Clínicas sin módulos configurados heredan los de su tipo.
+                                $inner->orWhere(function ($legacy) use ($tiposPorDefecto) {
+                                    $legacy->whereIn('tipo_clinica', $tiposPorDefecto)
+                                        ->where(function ($vacios) {
+                                            $vacios->whereNull('modulos_habilitados')
+                                                ->orWhereJsonLength('modulos_habilitados', 0);
+                                        });
+                                });
+                            }
+                        });
+                    });
+            }
+        });
+    }
+
+    /**
+     * Claves equivalentes entre especialidades y módulos internos.
+     */
+    private function especialidadCandidatos(string $especialidad): array
+    {
+        $clave = $this->especialidadClave($especialidad);
+        $canonica = $this->especialidadCanonica($clave);
+
+        return collect([$clave, $canonica])
+            ->merge(self::ESPECIALIDAD_GRUPOS[$canonica] ?? [])
+            ->filter(fn ($c) => is_string($c) && trim($c) !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Clave del catálogo a la que pertenece una especialidad o módulo.
+     */
+    private function especialidadCanonica(string $valor): string
+    {
+        $clave = $this->especialidadClave($valor);
+
+        return self::ESPECIALIDAD_CANONICA[$clave] ?? $clave;
+    }
+
     private function especialidadesDeSucursal(Sucursal $sucursal, Clinica $clinica): array
     {
-        $fromSucursal = collect($sucursal->modulos_habilitados ?? [])
+        $principal = $sucursal->tipo_clinica ?: $clinica->tipo_clinica;
+
+        $modulos = collect($sucursal->modulos_habilitados ?? []);
+        if ($modulos->isEmpty()) {
+            $modulos = collect($clinica->modulos_efectivos ?? []);
+        }
+
+        // Un tipo paraguas (ej. rehab cardiopulmonar) se omite si ya se listan sus submódulos.
+        $submodulos = Clinica::MODULOS_POR_TIPO[$this->especialidadClave((string) $principal)] ?? [];
+        if ($submodulos !== [] && $modulos->intersect($submodulos)->isNotEmpty()) {
+            $principal = null;
+        }
+
+        return collect([$principal])
+            ->merge($modulos)
             ->filter(fn ($m) => is_string($m) && trim($m) !== '')
             ->map(fn ($m) => $this->especialidadEtiqueta($this->especialidadClave($m)))
-            ->values();
-
-        if ($fromSucursal->isNotEmpty()) {
-            return $fromSucursal->all();
-        }
-
-        if ($sucursal->tipo_clinica) {
-            return [$this->especialidadEtiqueta($this->especialidadClave($sucursal->tipo_clinica))];
-        }
-
-        $fromClinica = collect($clinica->modulos_efectivos ?? [])
-            ->filter(fn ($m) => is_string($m) && trim($m) !== '')
-            ->map(fn ($m) => $this->especialidadEtiqueta($this->especialidadClave($m)))
-            ->values();
-
-        if ($fromClinica->isNotEmpty()) {
-            return $fromClinica->all();
-        }
-
-        if ($clinica->tipo_clinica) {
-            return [$this->especialidadEtiqueta($this->especialidadClave($clinica->tipo_clinica))];
-        }
-
-        return [];
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function especialidadClave(string $value): string
@@ -365,6 +568,141 @@ class PacientePortalDirectorioController extends Controller
             return (string) $tipos[$key]['nombre'];
         }
 
+        $modulos = config('clinica_tipos.modulos_seleccionables', []);
+        if (is_array($modulos) && isset($modulos[$key]['nombre'])) {
+            return (string) $modulos[$key]['nombre'];
+        }
+
         return ucfirst(str_replace('_', ' ', $key));
+    }
+
+    /**
+     * Catálogo unificado: cada especialidad puede venir del tipo principal del centro
+     * o de un módulo habilitado, y trae el conteo de centros visibles que la atienden.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function catalogoEspecialidadesConConteo(): array
+    {
+        $items = $this->catalogoBase();
+
+        $sucursales = Sucursal::query()
+            ->visiblesDirectorio()
+            ->whereHas('clinica', fn ($q) => $q->publicableEnDirectorio())
+            ->with(['clinica:id,tipo_clinica,modulos_habilitados'])
+            ->get(['id', 'clinica_id', 'tipo_clinica', 'modulos_habilitados']);
+
+        foreach ($sucursales as $sucursal) {
+            $clinica = $sucursal->clinica;
+            if (! $clinica) {
+                continue;
+            }
+
+            $principal = $this->especialidadCanonica((string) ($sucursal->tipo_clinica ?: $clinica->tipo_clinica));
+            $modulos = collect($sucursal->modulos_habilitados ?? []);
+            if ($modulos->isEmpty()) {
+                $modulos = collect($clinica->modulos_efectivos ?? []);
+            }
+
+            $modulos = $modulos
+                ->filter(fn ($m) => is_string($m) && trim($m) !== '')
+                ->map(fn ($m) => $this->especialidadCanonica($m))
+                ->unique();
+
+            if ($principal !== '' && isset($items[$principal])) {
+                $items[$principal]['count_principal']++;
+            }
+
+            foreach ($modulos as $modulo) {
+                if ($modulo !== $principal && isset($items[$modulo])) {
+                    $items[$modulo]['count_modulo']++;
+                }
+            }
+
+            $atendidas = $modulos->push($principal)->filter()->unique();
+            foreach ($atendidas as $clave) {
+                if (isset($items[$clave])) {
+                    $items[$clave]['count']++;
+                }
+            }
+        }
+
+        return collect($items)
+            ->map(function (array $item) {
+                $item['disponible'] = $item['count'] > 0;
+
+                return $item;
+            })
+            ->sort(function (array $a, array $b) {
+                // Primero lo que hoy sí tiene centros publicados, luego el resto A-Z.
+                if (($a['count'] > 0) !== ($b['count'] > 0)) {
+                    return $a['count'] > 0 ? -1 : 1;
+                }
+                if ($a['count'] !== $b['count']) {
+                    return $b['count'] <=> $a['count'];
+                }
+
+                return strcmp($a['label'], $b['label']);
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Especialidades posibles del producto: tipos principales + módulos habilitables.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function catalogoBase(): array
+    {
+        $items = [];
+
+        $registrar = function (string $key, array $meta, string $fuente) use (&$items): void {
+            $canonica = $this->especialidadCanonica($key);
+            if ($canonica === '') {
+                return;
+            }
+
+            if (! isset($items[$canonica])) {
+                $items[$canonica] = [
+                    'key' => $canonica,
+                    'label' => $this->especialidadEtiqueta($canonica),
+                    'color' => null,
+                    'icon' => null,
+                    'count' => 0,
+                    'count_principal' => 0,
+                    'count_modulo' => 0,
+                    'es_tipo_principal' => false,
+                    'es_modulo' => false,
+                ];
+            }
+
+            $items[$canonica]['color'] = $items[$canonica]['color'] ?: ($meta['color'] ?? null);
+            $items[$canonica]['icon'] = $items[$canonica]['icon'] ?: ($meta['icon'] ?? null);
+
+            if ($fuente === 'tipo') {
+                $items[$canonica]['es_tipo_principal'] = true;
+                // La etiqueta del tipo principal es la más descriptiva para el paciente.
+                if ($canonica === $this->especialidadClave($key) && ! empty($meta['nombre'])) {
+                    $items[$canonica]['label'] = (string) $meta['nombre'];
+                }
+            } else {
+                $items[$canonica]['es_modulo'] = true;
+            }
+        };
+
+        foreach ((array) config('clinica_tipos.tipos', []) as $key => $meta) {
+            if (is_string($key) && $key !== '' && is_array($meta)) {
+                $registrar($key, $meta, 'tipo');
+            }
+        }
+
+        foreach ((array) config('clinica_tipos.modulos_seleccionables', []) as $key => $meta) {
+            if (is_string($key) && $key !== '' && is_array($meta)) {
+                $registrar($key, $meta, 'modulo');
+            }
+        }
+
+        return $items;
     }
 }

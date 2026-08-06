@@ -27,6 +27,10 @@ class Cita extends Model
         'estado',
         'primera_vez',
         'notas',
+        'especialidad_solicitada',
+        'origen',
+        'contactado_at',
+        'requiere_confirmacion',
         'custom_email',
         'motivo_cancelacion',
         'recordatorio_enviado',
@@ -46,6 +50,8 @@ class Cita extends Model
         'fecha' => 'date:Y-m-d',
         'hora' => 'datetime:H:i',
         'primera_vez' => 'boolean',
+        'requiere_confirmacion' => 'boolean',
+        'contactado_at' => 'datetime',
         'recordatorio_enviado' => 'boolean',
         'recordatorio_enviado_at' => 'datetime',
         'reagenda_intentos' => 'integer',
@@ -105,6 +111,24 @@ class Cita extends Model
     public function sucursal()
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    public function eventos()
+    {
+        return $this->hasMany(CitaEvento::class)->orderBy('created_at');
+    }
+
+    public function esSolicitudPortalPendiente(): bool
+    {
+        if ($this->estado !== 'pendiente') {
+            return false;
+        }
+
+        if ($this->requiere_confirmacion) {
+            return true;
+        }
+
+        return empty($this->user_id) && ($this->origen === 'portal' || ! empty($this->especialidad_solicitada));
     }
 
     /**

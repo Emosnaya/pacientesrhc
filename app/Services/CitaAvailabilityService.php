@@ -88,9 +88,9 @@ class CitaAvailabilityService
         }
 
         if ($modo === self::MODO_PROFESIONAL) {
+            // Solicitud sin profesional: no bloquea a todos los doctores.
+            // El cupo se valida al asignar doctor en la confirmación.
             if (! $doctorId) {
-                // Sin profesional asignado no se puede validar cupo profesional:
-                // se permite, pero el frontend debería pedir doctor cuando el modo es profesional.
                 return ['ok' => true, 'message' => null];
             }
 
@@ -102,6 +102,9 @@ class CitaAvailabilityService
                 return ['ok' => false, 'message' => 'El profesional ya tiene una cita en ese horario'];
             }
         }
+
+        // En modo clinica, las pendientes (con o sin doctor) ya bloquean vía ESTADOS_ACTIVOS.
+        // En modo permitir, no hay bloqueo adicional.
 
         return ['ok' => true, 'message' => null];
     }

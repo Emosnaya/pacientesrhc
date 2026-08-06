@@ -16,7 +16,7 @@ class SucursalController extends Controller
     {
         $user = Auth::user();
 
-        $query = Sucursal::with('clinica');
+        $query = Sucursal::with(['clinica', 'landmark']);
 
         if ($request->has('clinica_id') && $user->isSuperAdmin()) {
             // Solo superadmin puede consultar otra clínica explícitamente
@@ -120,12 +120,20 @@ class SucursalController extends Controller
             'notas'              => 'nullable|string',
             'tipo_clinica'       => 'nullable|string|max:100',
             'modulos_habilitados'=> 'nullable|array',
+            'landmark_id'        => 'nullable|integer|exists:landmarks,id',
+            'landmark_detalle'   => 'nullable|string|max:255',
+            'latitud'            => 'nullable|numeric|between:-90,90',
+            'longitud'           => 'nullable|numeric|between:-180,180',
+            'coords_manuales'    => 'nullable|boolean',
         ]);
         
         $validated['clinica_id'] = $user->clinica_efectiva_id;
         if (! array_key_exists('visible_directorio', $validated)) {
             $validated['visible_directorio'] = true;
         }
+
+        $location = $this->extractLocationPayload($validated);
+        $validated = $location['attrs'];
         
         $clinica = Clinica::findOrFail($validated['clinica_id']);
         if (!$clinica->puedeCrearMasSucursales()) {
@@ -149,11 +157,12 @@ class SucursalController extends Controller
         }
         
         $sucursal = Sucursal::create($validated);
+        $this->applyManualCoordsIfNeeded($sucursal, $location);
         
         return response()->json([
             'success' => true,
             'message' => 'Sucursal creada exitosamente',
-            'data'    => $sucursal->load('clinica')
+            'data'    => $sucursal->fresh(['clinica', 'landmark'])
         ], 201);
     }
 
@@ -190,7 +199,15 @@ class SucursalController extends Controller
             'notas'              => 'nullable|string',
             'tipo_clinica'       => 'nullable|string|max:100',
             'modulos_habilitados'=> 'nullable|array',
+            'landmark_id'        => 'nullable|integer|exists:landmarks,id',
+            'landmark_detalle'   => 'nullable|string|max:255',
+            'latitud'            => 'nullable|numeric|between:-90,90',
+            'longitud'           => 'nullable|numeric|between:-180,180',
+            'coords_manuales'    => 'nullable|boolean',
         ]);
+
+        $location = $this->extractLocationPayload($validated);
+        $validated = $location['attrs'];
         
         if (($validated['es_principal'] ?? false) && !$sucursal->es_principal) {
             Sucursal::where('clinica_id', $sucursal->clinica_id)
@@ -199,11 +216,12 @@ class SucursalController extends Controller
         }
         
         $sucursal->update($validated);
+        $this->applyManualCoordsIfNeeded($sucursal, $location);
         
         return response()->json([
             'success' => true,
             'message' => 'Sucursal actualizada exitosamente',
-            'data'    => $sucursal->load('clinica')
+            'data'    => $sucursal->fresh(['clinica', 'landmark'])
         ]);
     }
 
@@ -295,5 +313,43 @@ class SucursalController extends Controller
         ];
         
         return response()->json($stats);
+    }
+
+    /**
+     * Separa coords/landmark del payload de sucursal.
+     * Si vienen lat+lng, el pin es manual y no debe pisarse por geocode.
+     */
+    private function extractLocationPayload(array $validated): array
+    {
+        $lat = array_key_exists('latitud', $validated) ? $validated['latitud'] : null;
+        $lng = array_key_exists('longitud', $validated) ? $validated['longitud'] : null;
+        $manual = (bool) ($validated['coords_manuales'] ?? false);
+
+        unset($validated['latitud'], $validated['longitud'], $validated['coords_manuales']);
+
+        if ($lat !== null && $lng !== null && $lat !== '' && $lng !== '') {
+            $manual = true;
+            $validated['latitud'] = (float) $lat;
+            $validated['longitud'] = (float) $lng;
+            $validated['coords_manuales'] = true;
+            $validated['geocode_status'] = 'MANUAL';
+            $validated['geocoded_at'] = now();
+        }
+
+        return [
+            'attrs' => $validated,
+            'manual' => $manual,
+            'lat' => $lat !== null && $lat !== '' ? (float) $lat : null,
+            'lng' => $lng !== null && $lng !== '' ? (float) $lng : null,
+        ];
+    }
+
+    private function applyManualCoordsIfNeeded(Sucursal $sucursal, array $location): void
+    {
+        if (! empty($location['manual']) && $location['lat'] !== null && $location['lng'] !== null) {
+            $sucursal->setManualCoords($location['lat'], $location['lng']);
+        } elseif (! empty($sucursal->landmark_id) && ! $sucursal->tiene_coordenadas) {
+            $sucursal->applyLandmarkCoordsIfNeeded();
+        }
     }
 }

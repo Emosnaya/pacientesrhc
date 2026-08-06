@@ -433,6 +433,18 @@ class PacienteController extends Controller
         $paciente->load('clinicas');
         $paciente->mergeClinicaPivotAttributes($user->clinica_efectiva_id);
 
+        try {
+            \App\Models\PacienteNotificacion::notify(
+                (int) $paciente->id,
+                'vinculacion',
+                'Nuevo espacio vinculado',
+                'Te vinculaste a '.($clinica?->nombre ?: 'una clínica').'. Ya puedes ver citas y documentos compartidos.',
+                ['clinica_id' => $clinicaId]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return response()->json([
             'message' => 'Paciente vinculado a tu clínica',
             'paciente' => $paciente,
@@ -516,6 +528,10 @@ class PacienteController extends Controller
             'diagnostico' => $request->diagnostico,
             'medicamentos' => $request->medicamentos,
             'alergias' => $request->alergias,
+            'grupo_sanguineo' => $request->grupo_sanguineo,
+            'contacto_emergencia_nombre' => $request->contacto_emergencia_nombre,
+            'contacto_emergencia_telefono' => $request->contacto_emergencia_telefono,
+            'notas_emergencia' => $request->notas_emergencia,
             'envio' => $request->envio,
             'talla' => $talla,
             'peso' => $peso,

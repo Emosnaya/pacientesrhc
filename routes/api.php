@@ -28,6 +28,8 @@ use App\Http\Controllers\CualidadFisicaController;
 use App\Http\Controllers\ReporteFinalPulmonarController;
 use App\Http\Controllers\PruebaEsfuerzoPulmonarController;
 use App\Http\Controllers\SucursalController;
+use App\Http\Controllers\LandmarkController;
+use App\Http\Controllers\GeocodeController;
 use App\Http\Controllers\HistoriaClinicaDentalController;
 use App\Http\Controllers\OdontogramaController;
 use App\Http\Controllers\SillonController;
@@ -95,6 +97,12 @@ Route::prefix('registro')->group(function() {
     Route::get('/verify-session/{sessionId}', [SubscriptionController::class, 'verifySession']);
 });
 
+// Catálogo público de hospitales/plazas + preview de pin (alta sin sesión)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/landmarks', [LandmarkController::class, 'index']);
+    Route::post('/geocode/preview', [GeocodeController::class, 'preview']);
+});
+
 // Webhook de Stripe (sin autenticación, Stripe valida con signature)
 Route::post('/registro/webhook/stripe', [SubscriptionController::class, 'handleWebhook']);
 
@@ -112,6 +120,12 @@ Route::post('/public/access/internal-consultorio', [InternalAccessController::cl
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/documento-compartido/{token}/info', [\App\Http\Controllers\DocumentoCompartidoPublicoController::class, 'info']);
     Route::get('/documento-compartido/{token}', [\App\Http\Controllers\DocumentoCompartidoPublicoController::class, 'ver']);
+    Route::get('/pasaporte/{uuid}', [\App\Http\Controllers\PasaportePublicoController::class, 'show']);
+});
+
+// Captura de prospectos (pasaporte escaneado sin suscripción, landing)
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/public/leads', [\App\Http\Controllers\LeadPublicoController::class, 'store']);
 });
 
 // Aceptación de aviso de privacidad / términos (enlace del correo al paciente)
@@ -177,13 +191,19 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::post('/paciente-portal/agenda/citas/{id}/reagendar', [PacientePortalController::class, 'agendaReagendarCita']);
     Route::get('/paciente-portal/directorio', [PacientePortalDirectorioController::class, 'index']);
     Route::get('/paciente-portal/directorio/disponibilidad', [PacientePortalDirectorioController::class, 'disponibilidad']);
+    Route::get('/paciente-portal/directorio/landmarks', [PacientePortalDirectorioController::class, 'landmarks']);
+    Route::get('/paciente-portal/catalogo/especialidades', [PacientePortalDirectorioController::class, 'catalogoEspecialidades']);
     Route::get('/paciente-portal/directorio/{sucursalId}', [PacientePortalDirectorioController::class, 'show']);
+    Route::post('/paciente-portal/agenda/citas/{id}/cancelar', [PacientePortalController::class, 'agendaCancelarCita']);
     Route::get('/paciente-portal/perfil', [PacientePortalController::class, 'perfil']);
     Route::put('/paciente-portal/perfil', [PacientePortalController::class, 'updatePerfil']);
+    Route::post('/paciente-portal/perfil/foto', [PacientePortalController::class, 'updateFoto']);
     Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
     Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
     Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
     Route::get('/paciente-portal/mi-qr', [PacientePortalController::class, 'miQr']);
+    Route::get('/paciente-portal/notificaciones', [\App\Http\Controllers\PacientePortalNotificacionController::class, 'index']);
+    Route::post('/paciente-portal/notificaciones/marcar-leidas', [\App\Http\Controllers\PacientePortalNotificacionController::class, 'marcarLeidas']);
     Route::get('/paciente-portal/pagos', [PacientePortalController::class, 'pagos']);
     Route::get('/paciente-portal/pagos/{id}/recibo', [PacientePortalController::class, 'pagoReciboPdf']);
     Route::get('/paciente-portal/presupuestos', [PresupuestoController::class, 'portalIndex']);
@@ -336,11 +356,13 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
     });
     
     // Rutas para el calendario de citas
-    Route::apiResource('/citas', CitaController::class);
     Route::get('/citas/calendar/data', [CitaController::class, 'getCalendarData']);
+    Route::get('/citas/solicitudes-pendientes', [CitaController::class, 'solicitudesPendientes']);
+    Route::post('/citas/multiple', [CitaController::class, 'storeMultiple']);
+    Route::apiResource('/citas', CitaController::class);
     Route::put('/citas/{id}/status', [CitaController::class, 'changeStatus']);
     Route::post('/citas/{id}/chat', [CitaController::class, 'abrirChatPaciente']);
-    Route::post('/citas/multiple', [CitaController::class, 'storeMultiple']);
+    Route::post('/citas/{id}/contactado', [CitaController::class, 'marcarContactado']);
     Route::delete('/citas/{id}/force', [CitaController::class, 'forceDelete']);
 
     // Sillones (agenda multi-sillón, clínicas dentales)

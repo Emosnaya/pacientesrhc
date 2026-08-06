@@ -31,6 +31,9 @@ class Sucursal extends Model
         'es_principal',
         'activa',
         'visible_directorio',
+        'landmark_id',
+        'landmark_detalle',
+        'coords_manuales',
         'notas',
         'tipo_clinica',
         'modulos_habilitados',
@@ -40,6 +43,7 @@ class Sucursal extends Model
         'es_principal' => 'boolean',
         'activa' => 'boolean',
         'visible_directorio' => 'boolean',
+        'coords_manuales' => 'boolean',
         'modulos_habilitados' => 'array',
         'horarios_atencion' => 'array',
         'latitud' => 'float',
@@ -52,6 +56,11 @@ class Sucursal extends Model
     public function clinica()
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    public function landmark()
+    {
+        return $this->belongsTo(Landmark::class);
     }
 
     public function usuarios()
@@ -106,9 +115,14 @@ class Sucursal extends Model
 
     /**
      * Geocodifica si cambió la dirección. Conserva las últimas coordenadas válidas si falla.
+     * No sobrescribe cuando el pin fue fijado manualmente (salvo force).
      */
     public function syncGeocode(bool $force = false): void
     {
+        if ($this->coords_manuales && ! $force) {
+            return;
+        }
+
         $addressChanged = $this->wasRecentlyCreated
             || $this->wasChanged(['direccion', 'ciudad', 'estado', 'codigo_postal'])
             || $force;
@@ -119,6 +133,11 @@ class Sucursal extends Model
 
         $address = $this->direccion_completa;
         if ($address === '' || $address === 'México') {
+            // Sin dirección usable: intenta anclar al hospital/plaza de referencia.
+            if ($this->applyLandmarkCoordsIfNeeded()) {
+                return;
+            }
+
             $this->forceFill([
                 'geocode_status' => 'EMPTY',
                 'geocoded_at' => now(),
@@ -135,6 +154,16 @@ class Sucursal extends Model
                 'longitud' => $result['lng'],
                 'geocode_status' => 'OK',
                 'geocoded_at' => now(),
+                'coords_manuales' => false,
+            ])->saveQuietly();
+
+            return;
+        }
+
+        if ($this->applyLandmarkCoordsIfNeeded()) {
+            $this->forceFill([
+                'geocode_status' => $result['status'].'_LANDMARK',
+                'geocoded_at' => now(),
             ])->saveQuietly();
 
             return;
@@ -143,6 +172,49 @@ class Sucursal extends Model
         // Conserva coords previas y solo actualiza el estado del intento.
         $this->forceFill([
             'geocode_status' => $result['status'],
+            'geocoded_at' => now(),
+        ])->saveQuietly();
+    }
+
+    /**
+     * Usa coordenadas del landmark cuando no hay pin o el geocode falló.
+     */
+    public function applyLandmarkCoordsIfNeeded(): bool
+    {
+        if ($this->coords_manuales || ! $this->landmark_id) {
+            return false;
+        }
+
+        if ($this->tiene_coordenadas && ! $this->wasChanged('landmark_id')) {
+            return false;
+        }
+
+        $landmark = $this->landmark ?: Landmark::query()->find($this->landmark_id);
+        if (! $landmark || $landmark->latitud === null || $landmark->longitud === null) {
+            return false;
+        }
+
+        $this->forceFill([
+            'latitud' => $landmark->latitud,
+            'longitud' => $landmark->longitud,
+            'geocode_status' => 'LANDMARK',
+            'geocoded_at' => now(),
+            'coords_manuales' => false,
+        ])->saveQuietly();
+
+        return true;
+    }
+
+    /**
+     * Fija pin manual (mapa en alta/edición). Evita que el geocode lo pise.
+     */
+    public function setManualCoords(float $lat, float $lng): void
+    {
+        $this->forceFill([
+            'latitud' => $lat,
+            'longitud' => $lng,
+            'coords_manuales' => true,
+            'geocode_status' => 'MANUAL',
             'geocoded_at' => now(),
         ])->saveQuietly();
     }
@@ -175,10 +247,20 @@ class Sucursal extends Model
         });
 
         static::saved(function (Sucursal $sucursal) {
+            if ($sucursal->coords_manuales) {
+                return;
+            }
+
             if ($sucursal->wasRecentlyCreated
                 || $sucursal->wasChanged(['direccion', 'ciudad', 'estado', 'codigo_postal'])
             ) {
                 $sucursal->syncGeocode();
+
+                return;
+            }
+
+            if ($sucursal->wasChanged('landmark_id') && ! $sucursal->tiene_coordenadas) {
+                $sucursal->applyLandmarkCoordsIfNeeded();
             }
         });
     }

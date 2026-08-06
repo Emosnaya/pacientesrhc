@@ -65,11 +65,16 @@ class Paciente extends Model
         'medicamentos',
         'motivo_consulta',
         'alergias',
+        'grupo_sanguineo',
+        'contacto_emergencia_nombre',
+        'contacto_emergencia_telefono',
+        'notas_emergencia',
         'envio',
         'tipo_paciente',
         'categoria_pago',
         'aseguradora',
         'color',
+        'foto',
         'user_id',
         'clinica_id',
         'sucursal_id',
@@ -84,7 +89,7 @@ class Paciente extends Model
         'archivo_muerto_motivo'
     ];
 
-    protected $appends = ['domicilio_formateado'];
+    protected $appends = ['domicilio_formateado', 'foto_url'];
 
     /**
      * No exponer hash de invitación en JSON de API.
@@ -112,6 +117,9 @@ class Paciente extends Model
         'medicamentos' => 'encrypted',
         'motivo_consulta' => 'encrypted',
         'alergias' => 'encrypted',
+        'contacto_emergencia_nombre' => 'encrypted',
+        'contacto_emergencia_telefono' => 'encrypted',
+        'notas_emergencia' => 'encrypted',
         'fechaNacimiento' => 'date',
         'aviso_privacidad_aceptado_at' => 'datetime',
         'consentimiento_token_expires_at' => 'datetime',
@@ -162,6 +170,15 @@ class Paciente extends Model
             return implode(', ', $parts);
         }
         return $this->domicilio ?? '';
+    }
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (! $this->foto) {
+            return null;
+        }
+
+        return rtrim((string) config('app.url'), '/').'/storage/'.$this->foto;
     }
 
     /**
