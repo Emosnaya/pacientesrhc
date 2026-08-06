@@ -134,8 +134,9 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::post('/public/paciente/consentimiento/aceptar', [PacienteConsentimientoController::class, 'aceptar']);
 });
 
-// Portal del paciente (primer acceso: OTP + contraseña; sin multi.tenant)
+// Portal del paciente (registro / OTP / login; sin multi.tenant)
 Route::middleware(['throttle:otp'])->group(function () {
+    Route::post('/paciente-portal/register', [PacientePortalAuthController::class, 'register']);
     Route::post('/paciente-portal/request-otp', [PacientePortalAuthController::class, 'requestOtp']);
     Route::post('/paciente-portal/verify-otp', [PacientePortalAuthController::class, 'verifyOtp']);
 });

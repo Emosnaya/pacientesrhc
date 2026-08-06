@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\PacientePortalOtpMail;
+use App\Models\Paciente;
 use App\Models\PacientePortalOtp;
 use App\Models\User;
 use Carbon\Carbon;
@@ -20,12 +21,125 @@ class PacientePortalAuthController extends Controller
     private const ABILITY_SET_PASSWORD = 'paciente-portal:set-password';
 
     /**
-     * Solicitar OTP al correo (solo cuentas portal con paciente_id).
+     * Alta pública desde la app: crea expediente + cuenta portal y envía OTP.
+     * Si ya existe cuenta sin contraseña, reenvía el OTP (activar / primer acceso).
+     */
+    public function register(Request $request): JsonResponse
+    {
+        $v = Validator::make($request->all(), [
+            'nombre' => 'required|string|max:120',
+            'apellidoPat' => 'required|string|max:120',
+            'apellidoMat' => 'nullable|string|max:120',
+            'email' => 'required|email|max:190',
+            'telefono' => 'nullable|string|max:40',
+            'fechaNacimiento' => 'nullable|date|before:today',
+            'genero' => 'nullable|in:0,1',
+            'acepto_privacidad' => 'accepted',
+        ], [
+            'acepto_privacidad.accepted' => 'Debes aceptar el aviso de privacidad para continuar.',
+        ]);
+        if ($v->fails()) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $v->errors()], 422);
+        }
+
+        $email = strtolower(trim((string) $request->email));
+        $existing = User::query()->where('email', $email)->first();
+
+        if ($existing) {
+            if (! $existing->paciente_id) {
+                return response()->json([
+                    'message' => 'Este correo ya está registrado en LynkaMed. Usa otro o inicia sesión en el portal de clínicas.',
+                ], 422);
+            }
+
+            if ($existing->password_set_at) {
+                return response()->json([
+                    'message' => 'Ya tienes una cuenta. Inicia sesión o recupera tu contraseña.',
+                    'code' => 'account_exists',
+                ], 409);
+            }
+
+            $sent = $this->issueOtpForUser($existing);
+            if ($sent !== true) {
+                return $sent;
+            }
+
+            return response()->json([
+                'message' => 'Te enviamos un código para activar tu cuenta.',
+                'email' => $email,
+                'requires_otp' => true,
+            ]);
+        }
+
+        try {
+            $user = DB::transaction(function () use ($request, $email) {
+                $vAviso = (string) config('legal.version_aviso_privacidad', '1');
+                $vTerm = (string) config('legal.version_terminos', '1');
+
+                $paciente = new Paciente;
+                $paciente->nombre = trim((string) $request->nombre);
+                $paciente->apellidoPat = trim((string) $request->apellidoPat);
+                $paciente->apellidoMat = trim((string) ($request->apellidoMat ?? ''));
+                $paciente->email = $email;
+                $paciente->telefono = $request->filled('telefono') ? trim((string) $request->telefono) : null;
+                $paciente->fechaNacimiento = $request->filled('fechaNacimiento') ? $request->fechaNacimiento : null;
+                if ($request->filled('genero')) {
+                    $paciente->genero = (int) $request->genero === 1 ? 1 : 0;
+                }
+                $paciente->clinica_id = null;
+                $paciente->sucursal_id = null;
+                $paciente->aviso_privacidad_aceptado_at = now();
+                $paciente->version_aviso = 'aviso:'.$vAviso.'|terminos:'.$vTerm.'|origen:app';
+                $paciente->save();
+
+                $user = new User;
+                $user->nombre = $paciente->nombre ?? '';
+                $user->apellidoPat = $paciente->apellidoPat ?? '';
+                $user->apellidoMat = $paciente->apellidoMat ?? '';
+                $user->email = $email;
+                $user->cedula = null;
+                $user->paciente_id = $paciente->id;
+                $user->rol = 'paciente';
+                $user->password = null;
+                $user->password_set_at = null;
+                $user->email_verified = false;
+                $user->clinica_id = null;
+                $user->clinica_activa_id = null;
+                $user->sucursal_id = null;
+                $user->isAdmin = false;
+                $user->isSuperAdmin = false;
+                $user->save();
+
+                return $user;
+            });
+        } catch (\Throwable $e) {
+            Log::error('PacientePortal register failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'No se pudo crear la cuenta. Intenta de nuevo.',
+            ], 500);
+        }
+
+        $sent = $this->issueOtpForUser($user);
+        if ($sent !== true) {
+            return $sent;
+        }
+
+        return response()->json([
+            'message' => 'Cuenta creada. Te enviamos un código a tu correo.',
+            'email' => $email,
+            'requires_otp' => true,
+        ], 201);
+    }
+
+    /**
+     * Solicitar OTP al correo (activar cuenta o recuperar contraseña).
      */
     public function requestOtp(Request $request): JsonResponse
     {
         $v = Validator::make($request->all(), [
             'email' => 'required|email',
+            'purpose' => 'nullable|in:setup,reset',
         ]);
         if ($v->fails()) {
             return response()->json(['message' => 'Datos inválidos', 'errors' => $v->errors()], 422);
@@ -40,30 +154,9 @@ class PacientePortalAuthController extends Controller
             ]);
         }
 
-        PacientePortalOtp::query()
-            ->where('paciente_id', $user->paciente_id)
-            ->whereNull('consumed_at')
-            ->delete();
-
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        PacientePortalOtp::create([
-            'paciente_id' => $user->paciente_id,
-            'otp_hash' => PacientePortalOtp::hashCode($code),
-            'expires_at' => now()->addMinutes(15),
-        ]);
-
-        try {
-            Mail::to($email)->send(new PacientePortalOtpMail(
-                nombre: trim(($user->nombre ?? '').' '.($user->apellidoPat ?? '')),
-                code: $code
-            ));
-        } catch (\Throwable $e) {
-            \Log::error('PacientePortal OTP mail failed', ['error' => $e->getMessage()]);
-
-            return response()->json([
-                'message' => 'No se pudo enviar el correo. Intenta más tarde.',
-            ], 503);
+        $sent = $this->issueOtpForUser($user);
+        if ($sent !== true) {
+            return $sent;
         }
 
         return response()->json([
@@ -100,18 +193,60 @@ class PacientePortalAuthController extends Controller
 
         $otp->markConsumed();
 
+        if (! $user->email_verified) {
+            $user->email_verified = true;
+            $user->save();
+        }
+
         $user->tokens()->delete();
         $plain = $user->createToken('portal-setup', [self::ABILITY_SET_PASSWORD])->plainTextToken;
 
+        // Tras OTP siempre se define / restablece contraseña (alta, activación o recuperación).
         return response()->json([
             'token' => $plain,
-            'requires_password' => $user->password_set_at === null,
+            'requires_password' => true,
             'user' => [
                 'id' => $user->id,
                 'email' => $user->email,
                 'paciente_id' => $user->paciente_id,
             ],
         ]);
+    }
+
+    /**
+     * @return true|\Illuminate\Http\JsonResponse
+     */
+    private function issueOtpForUser(User $user)
+    {
+        PacientePortalOtp::query()
+            ->where('paciente_id', $user->paciente_id)
+            ->whereNull('consumed_at')
+            ->delete();
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        PacientePortalOtp::create([
+            'paciente_id' => $user->paciente_id,
+            'otp_hash' => PacientePortalOtp::hashCode($code),
+            'expires_at' => now()->addMinutes(15),
+        ]);
+
+        $email = strtolower(trim((string) $user->email));
+
+        try {
+            Mail::to($email)->send(new PacientePortalOtpMail(
+                nombre: trim(($user->nombre ?? '').' '.($user->apellidoPat ?? '')),
+                code: $code
+            ));
+        } catch (\Throwable $e) {
+            Log::error('PacientePortal OTP mail failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'No se pudo enviar el correo. Intenta más tarde.',
+            ], 503);
+        }
+
+        return true;
     }
 
     public function setPassword(Request $request): JsonResponse
@@ -136,6 +271,7 @@ class PacientePortalAuthController extends Controller
             $plain = DB::transaction(function () use ($user, $request) {
                 $user->password = Hash::make($request->password);
                 $user->password_set_at = now();
+                $user->email_verified = true;
                 $user->save();
 
                 $user->currentAccessToken()->delete();
