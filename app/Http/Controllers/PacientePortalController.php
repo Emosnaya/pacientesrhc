@@ -15,11 +15,13 @@ use App\Models\PortalExpedienteCompartido;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Services\CitaAvailabilityService;
+use App\Services\CitaSolicitudService;
 use App\Services\SucursalHorarioService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PacientePortalController extends Controller
@@ -202,7 +204,11 @@ class PacientePortalController extends Controller
             'codigo_postal' => 'nullable|string|max:20',
             'ciudad' => 'nullable|string|max:255',
             'estado_dir' => 'nullable|string|max:255',
-            'alergias' => 'nullable|string',
+            'alergias' => 'nullable|string|max:2000',
+            'grupo_sanguineo' => 'nullable|string|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
+            'contacto_emergencia_nombre' => 'nullable|string|max:150',
+            'contacto_emergencia_telefono' => 'nullable|string|max:50',
+            'notas_emergencia' => 'nullable|string|max:2000',
         ]);
 
         $email = strtolower(trim($validated['email']));
@@ -242,6 +248,10 @@ class PacientePortalController extends Controller
         $paciente->ciudad = $validated['ciudad'] ?? null;
         $paciente->estado_dir = $validated['estado_dir'] ?? null;
         $paciente->alergias = $validated['alergias'] ?? null;
+        $paciente->grupo_sanguineo = $validated['grupo_sanguineo'] ?? null;
+        $paciente->contacto_emergencia_nombre = $validated['contacto_emergencia_nombre'] ?? null;
+        $paciente->contacto_emergencia_telefono = $validated['contacto_emergencia_telefono'] ?? null;
+        $paciente->notas_emergencia = $validated['notas_emergencia'] ?? null;
 
         $paciente->save();
 
@@ -252,6 +262,45 @@ class PacientePortalController extends Controller
         $user->save();
 
         return response()->json($this->perfilPayload($paciente->fresh()->load('clinicas')));
+    }
+
+    /**
+     * POST /api/paciente-portal/perfil/foto
+     * Sube o reemplaza la foto del paciente (galería o cámara desde la app).
+     */
+    public function updateFoto(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $request->validate([
+            'foto' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120',
+        ]);
+
+        try {
+            if ($paciente->foto && Storage::disk('public')->exists($paciente->foto)) {
+                Storage::disk('public')->delete($paciente->foto);
+            }
+
+            $file = $request->file('foto');
+            $ext = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+            $path = $file->storeAs(
+                'pacientes/fotos',
+                'paciente_'.$paciente->id.'_'.time().'.'.$ext,
+                'public'
+            );
+
+            $paciente->foto = $path;
+            $paciente->save();
+
+            return response()->json($this->perfilPayload($paciente->fresh()->load('clinicas')));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'No se pudo guardar la foto'], 500);
+        }
     }
 
     /**
@@ -292,6 +341,13 @@ class PacientePortalController extends Controller
             'domicilio_formateado' => $paciente->domicilio_formateado,
             'motivos_consulta_clinicas' => $motivos,
             'alergias' => $paciente->alergias,
+            'grupo_sanguineo' => $paciente->grupo_sanguineo,
+            'contacto_emergencia_nombre' => $paciente->contacto_emergencia_nombre,
+            'contacto_emergencia_telefono' => $paciente->contacto_emergencia_telefono,
+            'notas_emergencia' => $paciente->notas_emergencia,
+            'foto' => $paciente->foto,
+            'foto_url' => $paciente->foto_url,
+            'pasaporte_url' => rtrim((string) config('app.frontend_url'), '/') . '/pasaporte/' . $paciente->uuid_publico,
         ];
 
         $dom = $paciente->domicilio;
@@ -327,7 +383,7 @@ class PacientePortalController extends Controller
             ->where('paciente_id', $paciente->id)
             ->whereIn('clinica_id', $clinicaIds)
             ->whereBetween('fecha', [$from, $to])
-            ->with(['sucursal', 'clinica', 'user:id,nombre,apellidoPat,apellidoMat,rol'])
+            ->with(['sucursal', 'clinica', 'user:id,nombre,apellidoPat,apellidoMat,rol', 'eventos'])
             ->orderBy('fecha')
             ->orderBy('hora')
             ->get()
@@ -346,7 +402,14 @@ class PacientePortalController extends Controller
                     'hora' => $c->hora ? Carbon::parse($c->hora)->format('H:i') : null,
                     'estado' => $c->estado,
                     'notas' => $c->notas,
-                    'especialidad' => $this->agendaEspecialidadDesdeNotas($c->notas),
+                    'especialidad' => $c->especialidad_solicitada
+                        ? $this->agendaEspecialidadEtiqueta($c->especialidad_solicitada)
+                        : $this->agendaEspecialidadDesdeNotas($c->notas),
+                    'especialidad_solicitada' => $c->especialidad_solicitada,
+                    'origen' => $c->origen ?? 'panel',
+                    'requiere_confirmacion' => (bool) ($c->requiere_confirmacion || ($c->estado === 'pendiente' && empty($c->user_id))),
+                    'contactado_at' => $c->contactado_at?->toIso8601String(),
+                    'motivo_cancelacion' => $c->motivo_cancelacion,
                     'doctor' => $doctorNombre ? [
                         'id' => $c->user->id,
                         'nombre' => $doctorNombre,
@@ -363,6 +426,12 @@ class PacientePortalController extends Controller
                     'reagenda_intentos' => $intentos,
                     'reagendas_restantes' => max(0, $maxReagendas - $intentos),
                     'puede_reagendar' => $cancelableEstado && $c->esFutura(),
+                    'eventos' => $c->eventos->map(fn ($e) => [
+                        'tipo' => $e->tipo,
+                        'actor' => $e->actor,
+                        'mensaje' => $e->mensaje,
+                        'created_at' => $e->created_at?->toIso8601String(),
+                    ])->values(),
                 ];
             });
 
@@ -596,8 +665,26 @@ class PacientePortalController extends Controller
                 $validated['notas'] ?? null,
                 $especialidad
             ),
+            'especialidad_solicitada' => $especialidad,
+            'origen' => 'portal',
+            'requiere_confirmacion' => $requiereConfirmacionClinica,
             'reagenda_intentos' => 0,
         ]);
+
+        $solicitudService = app(CitaSolicitudService::class);
+        $solicitudService->registrarEvento(
+            $cita,
+            'solicitado',
+            'paciente',
+            Auth::id() ? (int) Auth::id() : null,
+            $requiereConfirmacionClinica
+                ? 'Solicitud enviada sin profesional asignado'
+                : 'Cita agendada desde la app',
+            [
+                'especialidad' => $especialidad,
+                'doctor_id' => $doctorId,
+            ]
+        );
 
         $chatConversacion = $this->agendaEnsurePatientChatConversation(
             $clinica,
@@ -609,6 +696,10 @@ class PacientePortalController extends Controller
         );
 
         SendCitaWhatsAppNotification::dispatch($cita->id, 'confirmacion');
+
+        if ($requiereConfirmacionClinica) {
+            $solicitudService->notificarClinicaNuevaSolicitud($cita);
+        }
 
         return response()->json([
             'message' => $requiereConfirmacionClinica
@@ -623,6 +714,8 @@ class PacientePortalController extends Controller
                 'sucursal_id' => $sucursal->id,
                 'doctor_id' => $doctorId,
                 'especialidad' => $especialidad,
+                'especialidad_solicitada' => $especialidad,
+                'requiere_confirmacion' => $requiereConfirmacionClinica,
                 'chat_conversacion_id' => $chatConversacion?->id,
                 'requiere_confirmacion_clinica' => $requiereConfirmacionClinica,
                 'siguiente_paso' => $requiereConfirmacionClinica
@@ -709,6 +802,9 @@ class PacientePortalController extends Controller
             return response()->json(['message' => $check['message']], 422);
         }
 
+        $especialidadFinal = $especialidad ?: $cita->especialidad_solicitada;
+        $requiereConfirmacion = ! $doctorId;
+
         $nueva = Cita::create([
             'paciente_id' => $cita->paciente_id,
             'admin_id' => $cita->admin_id,
@@ -719,7 +815,10 @@ class PacientePortalController extends Controller
             'hora' => $validated['hora'],
             'estado' => 'pendiente',
             'primera_vez' => false,
-            'notas' => $this->agendaBuildNotas($cita->notas, $especialidad),
+            'notas' => $this->agendaBuildNotas($cita->notas, $especialidadFinal),
+            'especialidad_solicitada' => $especialidadFinal,
+            'origen' => 'portal',
+            'requiere_confirmacion' => $requiereConfirmacion,
             'reagenda_intentos' => $intentos + 1,
             'reagendada_de_cita_id' => $cita->id,
         ]);
@@ -727,6 +826,14 @@ class PacientePortalController extends Controller
         $cita->estado = 'cancelada';
         $cita->motivo_cancelacion = 'Reagendada por paciente';
         $cita->save();
+
+        $solicitudService = app(CitaSolicitudService::class);
+        $solicitudService->registrarEvento($cita, 'cancelado', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Reagendada por paciente');
+        $solicitudService->registrarEvento($nueva, 'solicitado', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Cita reagendada');
+        if ($requiereConfirmacion) {
+            $solicitudService->notificarClinicaNuevaSolicitud($nueva);
+        }
+
         SendCitaWhatsAppNotification::dispatch($nueva->id, 'reagendada');
 
         return response()->json([
@@ -735,8 +842,56 @@ class PacientePortalController extends Controller
                 'id' => $nueva->id,
                 'fecha' => $nueva->fecha?->format('Y-m-d'),
                 'hora' => Carbon::parse($nueva->hora)->format('H:i'),
+                'estado' => $nueva->estado,
+                'requiere_confirmacion' => $requiereConfirmacion,
                 'reagenda_intentos' => $nueva->reagenda_intentos,
                 'reagendas_restantes' => max(0, $maxReagendas - (int) $nueva->reagenda_intentos),
+            ],
+        ]);
+    }
+
+    /**
+     * Cancelar cita desde el portal del paciente.
+     */
+    public function agendaCancelarCita(Request $request, int $id): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $validated = $request->validate([
+            'motivo' => 'nullable|string|max:500',
+        ]);
+
+        $cita = Cita::query()->where('id', $id)->where('paciente_id', $paciente->id)->first();
+        if (! $cita) {
+            return response()->json(['message' => 'Cita no encontrada'], 404);
+        }
+        if (in_array($cita->estado, ['cancelada', 'completada'], true)) {
+            return response()->json(['message' => 'Esta cita ya no se puede cancelar'], 422);
+        }
+
+        $cita->estado = 'cancelada';
+        $cita->motivo_cancelacion = $validated['motivo'] ?? 'Cancelada por el paciente';
+        $cita->save();
+
+        app(CitaSolicitudService::class)->registrarEvento(
+            $cita,
+            'cancelado',
+            'paciente',
+            Auth::id() ? (int) Auth::id() : null,
+            $cita->motivo_cancelacion
+        );
+
+        SendCitaWhatsAppNotification::dispatch($cita->id, 'cancelacion');
+
+        return response()->json([
+            'message' => 'Cita cancelada',
+            'data' => [
+                'id' => $cita->id,
+                'estado' => $cita->estado,
+                'motivo_cancelacion' => $cita->motivo_cancelacion,
             ],
         ]);
     }
@@ -992,6 +1147,16 @@ class PacientePortalController extends Controller
 
     private function agendaEspecialidadEtiqueta(string $key): string
     {
+        $tipos = config('clinica_tipos.tipos', []);
+        if (is_array($tipos) && isset($tipos[$key]['nombre'])) {
+            return (string) $tipos[$key]['nombre'];
+        }
+
+        $modulos = config('clinica_tipos.modulos_seleccionables', []);
+        if (is_array($modulos) && isset($modulos[$key]['nombre'])) {
+            return (string) $modulos[$key]['nombre'];
+        }
+
         return ucfirst(str_replace('_', ' ', $key));
     }
 
@@ -1301,9 +1466,17 @@ class PacientePortalController extends Controller
             $paciente->save();
         }
 
+        $url = rtrim((string) config('app.frontend_url'), '/') . '/pasaporte/' . $paciente->uuid_publico;
+
         return response()->json([
             'uuid' => $paciente->uuid_publico,
             'nombre_completo' => trim("{$paciente->nombre} {$paciente->apellidoPat} {$paciente->apellidoMat}"),
+            'url' => $url,
+            'grupo_sanguineo' => $paciente->grupo_sanguineo,
+            'alergias' => $paciente->alergias,
+            'contacto_emergencia_nombre' => $paciente->contacto_emergencia_nombre,
+            'contacto_emergencia_telefono' => $paciente->contacto_emergencia_telefono,
+            'notas_emergencia' => $paciente->notas_emergencia,
         ]);
     }
 }

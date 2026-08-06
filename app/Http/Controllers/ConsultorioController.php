@@ -7,6 +7,7 @@ use App\Models\ConsultorioInvitacion;
 use App\Models\Sucursal;
 use App\Models\User;
 use App\Models\UserClinica;
+use App\Support\SucursalLocationPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,6 +47,14 @@ class ConsultorioController extends Controller
             'telefono'    => 'nullable|string|max:20',
             'direccion'   => 'nullable|string|max:500',
             'email'       => 'nullable|email|max:255',
+            'ciudad'      => 'nullable|string|max:120',
+            'estado'      => 'nullable|string|max:120',
+            'codigo_postal' => 'nullable|string|max:20',
+            'landmark_id' => 'nullable|integer|exists:landmarks,id',
+            'landmark_detalle' => 'nullable|string|max:255',
+            'latitud'     => 'nullable|numeric|between:-90,90',
+            'longitud'    => 'nullable|numeric|between:-180,180',
+            'coords_manuales' => 'nullable|boolean',
         ]);
 
         /** @var User $user */
@@ -98,14 +107,16 @@ class ConsultorioController extends Controller
             ]);
 
             // 2. Sucursal principal automática
-            Sucursal::create([
+            $location = SucursalLocationPayload::fromArray($request->all());
+            $sucursal = Sucursal::create(array_merge([
                 'clinica_id'   => $consultorio->id,
                 'nombre'       => $request->nombre,
                 'es_principal' => true,
                 'activa'       => true,
-                'direccion'    => $request->direccion,
                 'telefono'     => $request->telefono,
-            ]);
+                'visible_directorio' => true,
+            ], $location['attrs']));
+            SucursalLocationPayload::applyAfterCreate($sucursal, $location);
 
             // 3. Vincular al propietario en la tabla pivot (admin/superadmin en este workspace)
             $user->clinicas()->attach($consultorio->id, User::pivotPropietarioConsultorio());

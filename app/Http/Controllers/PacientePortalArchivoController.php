@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PacienteArchivo;
+use App\Models\PacienteArchivoCompartido;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -97,6 +98,15 @@ class PacientePortalArchivoController extends Controller
             'visible_en_portal'   => true,   // el paciente siempre ve sus propios archivos
             'subido_por_user_id'  => Auth::id(),
         ]);
+
+        // Marcar compartido con la clínica destino (bandeja "Enviados por el paciente")
+        PacienteArchivoCompartido::firstOrCreate(
+            [
+                'paciente_archivo_id' => $archivo->id,
+                'clinica_id' => (int) $request->clinica_id,
+            ],
+            ['compartido_at' => now()]
+        );
 
         return response()->json(['data' => $this->format($archivo)], 201);
     }

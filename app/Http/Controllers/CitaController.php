@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Evento;
 use App\Jobs\SendCitaWhatsAppNotification;
 use App\Services\CitaAvailabilityService;
+use App\Services\CitaSolicitudService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -437,7 +438,12 @@ class CitaController extends Controller
             $doctorCambio = $request->has('user_id') && (int) $doctorId !== (int) $cita->user_id;
             $estadoAnterior = $cita->estado;
 
-            if ($request->has('fecha') || $request->has('hora') || $request->has('user_id')) {
+            $debeRevalidarCupo = $request->has('fecha')
+                || $request->has('hora')
+                || $request->has('user_id')
+                || ($request->has('estado') && $request->estado === 'confirmada');
+
+            if ($debeRevalidarCupo) {
                 $clinica = Clinica::find($cita->clinica_id);
                 $availability = app(CitaAvailabilityService::class);
                 $check = $availability->canBook(
@@ -478,18 +484,48 @@ class CitaController extends Controller
             if ($request->has('sillon_id')) {
                 $payload['sillon_id'] = $sillonId;
             }
+            if ($request->has('estado') && $request->estado === 'confirmada') {
+                $payload['requiere_confirmacion'] = false;
+            }
             $cita->update($payload);
             $cita->load(['paciente', 'admin', 'user', 'clinica', 'sillon']);
             $estadoCambio = $request->has('estado') && $cita->estado !== $estadoAnterior;
 
-            // Enviar actualización de calendario si cambió fecha u hora
+            $solicitudService = app(CitaSolicitudService::class);
             if ($fechaCambio || $horaCambio) {
+                $solicitudService->registrarEvento(
+                    $cita,
+                    'modificado',
+                    'clinica',
+                    $user->id,
+                    'Fecha u hora modificada por la clínica',
+                    ['fecha' => $fechaNueva, 'hora' => $horaNueva]
+                );
                 $this->sendCalendarInvitation($cita, 'update');
                 SendCitaWhatsAppNotification::dispatch($cita->id, 'reagendada');
             } elseif ($estadoCambio) {
+                $tipoEvento = $cita->estado === 'cancelada' ? 'cancelado' : 'confirmado';
+                $solicitudService->registrarEvento(
+                    $cita,
+                    $tipoEvento,
+                    'clinica',
+                    $user->id,
+                    $cita->estado === 'cancelada' ? 'Cita cancelada por la clínica' : 'Cita confirmada por la clínica'
+                );
                 $tipo = $cita->estado === 'cancelada' ? 'cancelacion' : 'estado';
                 SendCitaWhatsAppNotification::dispatch($cita->id, $tipo);
+                if ($cita->estado === 'confirmada') {
+                    $this->sendCalendarInvitation($cita, 'update');
+                }
             } elseif ($doctorCambio) {
+                $solicitudService->registrarEvento(
+                    $cita,
+                    'doctor_asignado',
+                    'clinica',
+                    $user->id,
+                    'Profesional asignado',
+                    ['user_id' => $doctorId]
+                );
                 SendCitaWhatsAppNotification::dispatch($cita->id, 'doctor_asignado');
             }
 
@@ -608,7 +644,7 @@ class CitaController extends Controller
             $mes = $request->get('mes', now()->month);
             $ano = $request->get('año', now()->year);
 
-            $query = Cita::with(['paciente', 'admin', 'sillon'])
+            $query = Cita::with(['paciente', 'admin', 'user', 'sillon'])
                         ->forClinica($user->clinica_efectiva_id)
                         ->byMonth($mes, $ano);
             
@@ -787,18 +823,135 @@ class CitaController extends Controller
                     ->update(['last_read_at' => now()]);
             }
 
+            if (! $cita->contactado_at) {
+                $cita->contactado_at = now();
+                $cita->save();
+                app(CitaSolicitudService::class)->registrarEvento(
+                    $cita,
+                    'contactado',
+                    'clinica',
+                    $staffUserId,
+                    'La clínica abrió chat con el paciente'
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Chat listo',
                 'data' => [
                     'conversacion_id' => $conv->id,
                     'paciente_user_id' => $pacienteUserId,
+                    'contactado_at' => $cita->contactado_at?->toIso8601String(),
                 ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al abrir chat del paciente: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Marca que la clínica ya contactó al paciente por una solicitud.
+     */
+    public function marcarContactado(Request $request, $id)
+    {
+        try {
+            $cita = Cita::findOrFail($id);
+            $user = Auth::user();
+
+            if ($cita->clinica_id !== $user->clinica_efectiva_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes acceso a esta cita',
+                ], 403);
+            }
+
+            if (! $cita->contactado_at) {
+                $cita->contactado_at = now();
+                $cita->save();
+                app(CitaSolicitudService::class)->registrarEvento(
+                    $cita,
+                    'contactado',
+                    'clinica',
+                    $user->id,
+                    $request->input('mensaje') ?: 'La clínica marcó la solicitud como contactada'
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Solicitud marcada como contactada',
+                'data' => $cita->fresh(['paciente', 'user']),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al marcar contacto: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Contador y listado corto de solicitudes pendientes del portal.
+     */
+    public function solicitudesPendientes(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $clinicaId = $user->clinica_efectiva_id;
+            $sucursalId = $request->has('sucursal_id') ? $request->sucursal_id : $user->sucursal_id;
+
+            $query = Cita::query()
+                ->with(['paciente:id,nombre,apellidoPat,apellidoMat,telefono,email', 'sucursal:id,nombre'])
+                ->where('clinica_id', $clinicaId)
+                ->where('estado', 'pendiente')
+                ->where(function ($q) {
+                    $q->where('requiere_confirmacion', true)
+                        ->orWhere(function ($inner) {
+                            $inner->whereNull('user_id')->where('origen', 'portal');
+                        })
+                        ->orWhereNotNull('especialidad_solicitada');
+                })
+                ->orderBy('fecha')
+                ->orderBy('hora');
+
+            if ($sucursalId) {
+                $query->where('sucursal_id', $sucursalId);
+            }
+
+            $rows = $query->limit(30)->get()->map(function (Cita $cita) {
+                return [
+                    'id' => $cita->id,
+                    'fecha' => optional($cita->fecha)->format('Y-m-d'),
+                    'hora' => $cita->hora instanceof \DateTimeInterface
+                        ? $cita->hora->format('H:i')
+                        : substr((string) $cita->hora, 0, 5),
+                    'especialidad_solicitada' => $cita->especialidad_solicitada,
+                    'contactado_at' => $cita->contactado_at?->toIso8601String(),
+                    'paciente' => $cita->paciente ? [
+                        'id' => $cita->paciente->id,
+                        'nombre' => trim(($cita->paciente->nombre ?? '').' '.($cita->paciente->apellidoPat ?? '')),
+                        'telefono' => $cita->paciente->telefono,
+                        'email' => $cita->paciente->email,
+                    ] : null,
+                    'sucursal' => $cita->sucursal ? [
+                        'id' => $cita->sucursal->id,
+                        'nombre' => $cita->sucursal->nombre,
+                    ] : null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'count' => $rows->count(),
+                'data' => $rows,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener solicitudes: '.$e->getMessage(),
             ], 500);
         }
     }

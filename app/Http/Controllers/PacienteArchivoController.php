@@ -103,6 +103,25 @@ class PacienteArchivoController extends Controller
 
         $archivo->update(['visible_en_portal' => ! $archivo->visible_en_portal]);
 
+        if ($archivo->visible_en_portal) {
+            try {
+                $archivo->loadMissing('clinica:id,nombre');
+                $clinicaNombre = $archivo->clinica?->nombre ?: 'tu clínica';
+                \App\Models\PacienteNotificacion::notify(
+                    (int) $archivo->paciente_id,
+                    'documento_clinica',
+                    'Nuevo documento disponible',
+                    "{$clinicaNombre} compartió un documento contigo: {$archivo->nombre_original}",
+                    [
+                        'archivo_id' => $archivo->id,
+                        'clinica_id' => $archivo->clinica_id,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return response()->json(['data' => $this->format($archivo)]);
     }
 

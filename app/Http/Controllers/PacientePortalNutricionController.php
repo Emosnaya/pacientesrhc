@@ -98,6 +98,9 @@ class PacientePortalNutricionController extends Controller
             'hambre_nivel' => 'nullable|integer|min:1|max:10',
             'notas_paciente' => 'nullable|string',
             'completado' => 'nullable|boolean',
+            'pasos' => 'nullable|integer|min:0|max:200000',
+            'ritmo_cardiaco' => 'nullable|integer|min:30|max:250',
+            'habitos' => 'nullable|array',
         ]);
 
         $pertenece = $paciente->clinicas()->where('clinicas.id', $payload['clinica_id'])->exists();
@@ -131,6 +134,24 @@ class PacientePortalNutricionController extends Controller
             $ejercicio['minutos'] = (int) $payload['ejercicio_min'];
         }
 
+        $habitos = $payload['habitos'] ?? [];
+        if (isset($payload['pasos'])) {
+            $habitos['pasos'] = (int) $payload['pasos'];
+        }
+        if (isset($payload['ritmo_cardiaco'])) {
+            $habitos['ritmo_cardiaco'] = (int) $payload['ritmo_cardiaco'];
+        }
+
+        $existente = PacienteNutricionSeguimiento::query()
+            ->where('paciente_id', $paciente->id)
+            ->where('clinica_id', (int) $payload['clinica_id'])
+            ->whereDate('fecha', $payload['fecha'])
+            ->first();
+
+        if ($existente?->habitos && is_array($existente->habitos)) {
+            $habitos = array_merge($existente->habitos, $habitos);
+        }
+
         $seguimiento = PacienteNutricionSeguimiento::updateOrCreate(
             [
                 'paciente_id' => $paciente->id,
@@ -138,16 +159,17 @@ class PacientePortalNutricionController extends Controller
                 'fecha' => $payload['fecha'],
             ],
             [
-                'plan_id' => $payload['plan_id'] ?? null,
+                'plan_id' => $payload['plan_id'] ?? $existente?->plan_id,
                 'user_id' => Auth::id(),
-                'comidas' => !empty($comidas) ? $comidas : null,
-                'agua_ml' => $payload['agua_ml'] ?? null,
-                'ejercicio' => !empty($ejercicio) ? $ejercicio : null,
-                'cumplio_plan' => $payload['cumplio_plan'] ?? null,
-                'energia_nivel' => $payload['energia_nivel'] ?? null,
-                'hambre_nivel' => $payload['hambre_nivel'] ?? null,
-                'notas_paciente' => $payload['notas_paciente'] ?? null,
-                'completado' => $payload['completado'] ?? true,
+                'comidas' => !empty($comidas) ? $comidas : ($existente?->comidas),
+                'agua_ml' => array_key_exists('agua_ml', $payload) ? $payload['agua_ml'] : $existente?->agua_ml,
+                'ejercicio' => !empty($ejercicio) ? $ejercicio : ($existente?->ejercicio),
+                'habitos' => !empty($habitos) ? $habitos : ($existente?->habitos),
+                'cumplio_plan' => array_key_exists('cumplio_plan', $payload) ? $payload['cumplio_plan'] : $existente?->cumplio_plan,
+                'energia_nivel' => array_key_exists('energia_nivel', $payload) ? $payload['energia_nivel'] : $existente?->energia_nivel,
+                'hambre_nivel' => array_key_exists('hambre_nivel', $payload) ? $payload['hambre_nivel'] : $existente?->hambre_nivel,
+                'notas_paciente' => array_key_exists('notas_paciente', $payload) ? $payload['notas_paciente'] : $existente?->notas_paciente,
+                'completado' => $payload['completado'] ?? ($existente?->completado ?? true),
                 'capturado_por' => 'paciente',
             ]
         );

@@ -218,6 +218,38 @@ class Clinica extends Model
         return true;
     }
 
+    /**
+     * Clínicas publicables en el directorio del paciente:
+     * activas, con suscripción/trial vigente, y sin demos de seed.
+     */
+    public function scopePublicableEnDirectorio($query)
+    {
+        $hoy = now()->toDateString();
+
+        return $query
+            ->where('activa', true)
+            ->where(function ($q) {
+                $q->whereNull('email')
+                    ->orWhere(function ($email) {
+                        $email->where('email', 'not like', '%@demo.pacientesrhc')
+                            ->where('email', 'not like', 'demo-%@%');
+                    });
+            })
+            ->where('nombre', 'not like', '%Demo%')
+            ->where(function ($q) use ($hoy) {
+                $q->where(function ($pagada) use ($hoy) {
+                    $pagada->where('pagado', true)
+                        ->whereDate('fecha_vencimiento', '>=', $hoy);
+                })->orWhere(function ($trial) {
+                    $trial->whereNotNull('trial_ends_at')
+                        ->where('trial_ends_at', '>=', now());
+                })->orWhere(function ($vencimiento) use ($hoy) {
+                    // Trial / gracia vía fecha_vencimiento (aún no pagado).
+                    $vencimiento->whereDate('fecha_vencimiento', '>=', $hoy);
+                });
+            });
+    }
+
     // Métodos auxiliares
     public function isActive(): bool
     {
@@ -324,18 +356,35 @@ class Clinica extends Model
             return $modulos;
         }
 
-        // Mapeo tipo_clinica → módulos seleccionables por defecto
-        $defaults = [
-            'rehabilitacion_cardiopulmonar' => ['cardiaco', 'pulmonar', 'fisioterapia', 'nutricion', 'psicologia'],
-            'fisioterapia'  => ['fisioterapia'],
-            'nutricion'     => ['nutricion'],
-            'psicologia'    => ['psicologia'],
-            'dental'        => [],
-            'cardiologia'   => [],
-            'ginecologia'   => [],
-            // Las demás especialidades no usan módulos seleccionables
-        ];
+        return self::MODULOS_POR_TIPO[$this->tipo_clinica] ?? [];
+    }
 
-        return $defaults[$this->tipo_clinica] ?? [];
+    /**
+     * Mapeo tipo_clinica → módulos seleccionables por defecto.
+     * Las especialidades ausentes no usan módulos seleccionables.
+     */
+    public const MODULOS_POR_TIPO = [
+        'rehabilitacion_cardiopulmonar' => ['cardiaco', 'pulmonar', 'fisioterapia', 'nutricion', 'psicologia'],
+        'fisioterapia'  => ['fisioterapia'],
+        'nutricion'     => ['nutricion'],
+        'psicologia'    => ['psicologia'],
+        'dental'        => [],
+        'cardiologia'   => [],
+        'ginecologia'   => [],
+    ];
+
+    /**
+     * Tipos de clínica que incluyen este módulo sin configurarlo explícitamente.
+     */
+    public static function tiposConModuloPorDefecto(string $modulo): array
+    {
+        $tipos = [];
+        foreach (self::MODULOS_POR_TIPO as $tipo => $modulos) {
+            if (in_array($modulo, $modulos, true)) {
+                $tipos[] = $tipo;
+            }
+        }
+
+        return $tipos;
     }
 }
