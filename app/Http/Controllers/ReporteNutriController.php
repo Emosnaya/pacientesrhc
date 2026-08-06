@@ -8,6 +8,9 @@ use App\Models\ReporteNutri;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
+use App\Support\FormValue;
+
 class ReporteNutriController extends Controller
 {
     /**
@@ -124,7 +127,7 @@ class ReporteNutriController extends Controller
         }
         
         $reporteNutri = $nutri;
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         
         $reporteNutri->sistolica = $data['sistolica'];
         $reporteNutri->diastolica = $data['diastolica'];

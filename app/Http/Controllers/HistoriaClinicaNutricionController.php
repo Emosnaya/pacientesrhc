@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
+use App\Support\FormValue;
+
 class HistoriaClinicaNutricionController extends Controller
 {
     use ClinicaScope;
@@ -57,7 +60,7 @@ class HistoriaClinicaNutricionController extends Controller
                 'fecha_elaboracion' => 'required|date',
             ]);
 
-            $data = array_merge($request->all(), [
+            $data = array_merge(FormValue::fromRequest($request), [
                 'user_id'    => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id'=> $sucursalId,
@@ -118,7 +121,7 @@ class HistoriaClinicaNutricionController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $historia->update($request->all());
+            $historia->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

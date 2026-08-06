@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
+use App\Support\FormValue;
+
 class HistoriaClinicaCardiologiaController extends Controller
 {
     use ClinicaScope;
@@ -67,7 +70,7 @@ class HistoriaClinicaCardiologiaController extends Controller
                 // Resto de campos son opcionales
             ]);
 
-            $data = array_merge($request->all(), [
+            $data = array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -135,7 +138,7 @@ class HistoriaClinicaCardiologiaController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $historia->update($request->all());
+            $historia->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

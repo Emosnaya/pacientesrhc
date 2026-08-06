@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
+use App\Support\FormValue;
+
 class EcocardiogramaController extends Controller
 {
     use ClinicaScope;
@@ -59,7 +62,7 @@ class EcocardiogramaController extends Controller
                 'tipo_estudio' => 'nullable|string|max:100',
             ]);
 
-            $data = array_merge($request->all(), [
+            $data = array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -120,7 +123,7 @@ class EcocardiogramaController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $eco->update($request->all());
+            $eco->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

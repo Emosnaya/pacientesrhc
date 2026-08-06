@@ -8,6 +8,9 @@ use App\Models\ReportePsico;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
+use App\Support\FormValue;
+
 class ReportePsicoController extends Controller
 {
     /**
@@ -130,7 +133,7 @@ class ReportePsicoController extends Controller
         }
         
         $psicoFind = $psico;
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         
         $psicoFind->motivo_consulta = $data['motivo_consulta']?$data['motivo_consulta']:null;
         $psicoFind->antecedentes_medicos = $data['antecedentes_medicos']?$data['antecedentes_medicos']:null;

@@ -7,6 +7,9 @@ use App\Models\Paciente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
+use App\Support\FormValue;
+
 class ExpedientePulmonarController extends Controller
 {
     /**
@@ -93,7 +96,7 @@ class ExpedientePulmonarController extends Controller
             return redirect()->back()->with('error', 'No tienes acceso a este paciente.');
         }
 
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         // Asignar el user_id del usuario que crea el expediente
         $data['user_id'] = $user->id;
         $data['clinica_id'] = $user->clinica_efectiva_id;
@@ -206,7 +209,7 @@ class ExpedientePulmonarController extends Controller
             'hora_consulta' => 'required|date_format:H:i',
         ]);
 
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
 
         // Procesar campos JSON
         if ($request->has('enfermedades_cronicas')) {

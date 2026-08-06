@@ -10,6 +10,9 @@ use App\Models\Paciente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
+
+use App\Support\FormValue;
+
 class FisioterapiaController extends Controller
 {
     // ============================================
@@ -39,7 +42,7 @@ class FisioterapiaController extends Controller
         }
 
         $user = auth()->user();
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         $data['user_id'] = $user->id;
         $data['clinica_id'] = $user->clinica_efectiva_id;
         $data['sucursal_id'] = $user->sucursal_id;
@@ -70,7 +73,7 @@ class FisioterapiaController extends Controller
         }
 
         $historia = HistoriaClinicaFisioterapia::findOrFail($id);
-        $historia->update($request->all());
+        $historia->update(FormValue::fromRequest($request));
 
         return response()->json([
             'message' => 'Historia clínica actualizada exitosamente',
@@ -114,7 +117,7 @@ class FisioterapiaController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         $data['user_id'] = auth()->id();
 
         $nota = NotaEvolucionFisioterapia::create($data);
@@ -143,7 +146,7 @@ class FisioterapiaController extends Controller
         }
 
         $nota = NotaEvolucionFisioterapia::findOrFail($id);
-        $nota->update($request->all());
+        $nota->update(FormValue::fromRequest($request));
 
         return response()->json([
             'message' => 'Nota de evolución actualizada exitosamente',
@@ -187,7 +190,7 @@ class FisioterapiaController extends Controller
         }
 
         $user = auth()->user();
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         $data['user_id'] = $user->id;
         $data['clinica_id'] = $user->clinica_efectiva_id;
         $data['sucursal_id'] = $user->sucursal_id;
@@ -217,7 +220,7 @@ class FisioterapiaController extends Controller
         }
 
         $nota = NotaAltaFisioterapia::findOrFail($id);
-        $nota->update($request->all());
+        $nota->update(FormValue::fromRequest($request));
 
         return response()->json([
             'message' => 'Nota de alta actualizada exitosamente',
