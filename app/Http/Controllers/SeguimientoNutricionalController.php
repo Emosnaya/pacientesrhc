@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
+use App\Support\FormValue;
+
 class SeguimientoNutricionalController extends Controller
 {
     use ClinicaScope;
@@ -45,7 +48,7 @@ class SeguimientoNutricionalController extends Controller
                 'fecha_elaboracion' => 'required|date',
             ]);
 
-            $seguimiento = SeguimientoNutricional::create(array_merge($request->all(), [
+            $seguimiento = SeguimientoNutricional::create(array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -89,7 +92,7 @@ class SeguimientoNutricionalController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $seguimiento->update($request->all());
+            $seguimiento->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

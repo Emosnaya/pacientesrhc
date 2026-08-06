@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
+
+use App\Support\FormValue;
+
 class EsfuerzoController extends Controller
 {
     /**
@@ -277,8 +280,11 @@ class EsfuerzoController extends Controller
         $pesfuerzo->fechaDeInicio =  $data['pruebaInicio'];
         $pesfuerzo->balke = ($data['balke'] == 'true') ? 1:0;
         $pesfuerzo->bruce = ($data['bruce'] == 'true') ? 1:0;
-        $pesfuerzo->naughton = (isset($data['naughton']) && $data['naughton'] == 'true') ? 1:0;
-        $pesfuerzo->tipo_esfuerzo = isset($data['tipoEsfuerzo']) ? $data['tipoEsfuerzo'] : 'cardiaco';
+        $pesfuerzo->naughton = (($data['naughton'] ?? null) == 'true') ? 1:0;
+        $tipoEsfuerzo = $data['tipoEsfuerzo'] ?? null;
+        $pesfuerzo->tipo_esfuerzo = ($tipoEsfuerzo !== null && $tipoEsfuerzo !== '')
+            ? $tipoEsfuerzo
+            : 'cardiaco';
         $pesfuerzo->ciclo = ($data['ciclo'] == 'true') ? 1:0;
         $pesfuerzo->banda = ($data['banda'] == 'true') ? 1:0;
         $pesfuerzo->medicionGases = ($data['medicionGases'] == 'true') ? 1:0;
@@ -353,10 +359,15 @@ class EsfuerzoController extends Controller
         $pesfuerzo->r_qmax =  $data['rQmax'];
         $pesfuerzo->umbral_aeer_anaer = $data['umbralAer'];
         $pesfuerzo->po2_teor = $data['poTeorico'];
-        $pesfuerzo->vo2_max_percent = isset($data['vo2MaxPercent']) && $data['vo2MaxPercent'] !== '' ? $data['vo2MaxPercent'] : null;
-        $pesfuerzo->fc_max_calc =  $fcMaxCalc;
-        $pesfuerzo->fc_85 =  $fc85;
-        $pesfuerzo->fc_max_alcanzado =  $fcMaxAlcanzado;
+        $vo2MaxPercent = $data['vo2MaxPercent'] ?? null;
+        if ($vo2MaxPercent === null || $vo2MaxPercent === '') {
+            $pesfuerzo->vo2_max_percent = null;
+        } else {
+            $pesfuerzo->vo2_max_percent = $vo2MaxPercent;
+        }
+        $pesfuerzo->fc_max_calc = $fcMaxCalc;
+        $pesfuerzo->fc_85 = $fc85;
+        $pesfuerzo->fc_max_alcanzado = $fcMaxAlcanzado;
         $pesfuerzo->vo2t_mujer =  $vo2tM;
         $pesfuerzo->mets_teorico_mujer =  $metsMT;
         $pesfuerzo->vo2t_varon =  $vo2tV;
@@ -460,30 +471,30 @@ class EsfuerzoController extends Controller
         $pesfuerzo = $esfuerzo;
         $nuevoPaciente = $paciente; // Ya tenemos el paciente cargado
 
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
 
         $prevalencia = 0.98;
-        $sensibilidad = $data['confusor'] === 'true' ? .64 : .68;
-        $especificidad = $data['confusor'] === 'true' ? 0.74 : 0.77;
+        $sensibilidad = ($data['confusor'] ?? null) === 'true' ? .64 : .68;
+        $especificidad = ($data['confusor'] ?? null) === 'true' ? 0.74 : 0.77;
 
         $vpp = ($sensibilidad*$prevalencia)/(($sensibilidad*$prevalencia)+(1-$especificidad)*(1-$prevalencia));
         $vpn = ($especificidad*$prevalencia)/(($especificidad*$prevalencia)+(1-$sensibilidad)*(1-$prevalencia));
 
-        $fcBasal = $data['fcBasal'];
-        $tasBasal = $data['tasBasal'];
-        $tadBasal = $data['tadBasal'];
+        $fcBasal = ($data['fcBasal'] ?? null);
+        $tasBasal = ($data['tasBasal'] ?? null);
+        $tadBasal = ($data['tadBasal'] ?? null);
         $dpBasal = $fcBasal*$tasBasal;
 
-        $fcBorg =  $data['fcBorg12'];
-        $tasBorg = $data['tasBorg12'];
-        $tadBorg = $data['tadBorg12'];
+        $fcBorg =  ($data['fcBorg12'] ?? null);
+        $tasBorg = ($data['tasBorg12'] ?? null);
+        $tadBorg = ($data['tadBorg12'] ?? null);
         $dpBorg =$fcBorg*$tasBorg;
 
-        $fc50 = $data['fcw50'];
-        $tas50 = $data['tasw50'];
+        $fc50 = ($data['fcw50'] ?? null);
+        $tas50 = ($data['tasw50'] ?? null);
         $dp50 = $fc50*$tas50; 
 
-        $tasMax = $data['tasMax'];
+        $tasMax = ($data['tasMax'] ?? null);
         $tAmax_tbasal = $tasMax-$tasBasal;
         $tAmax_tbasal_value = null;
 
@@ -502,26 +513,26 @@ class EsfuerzoController extends Controller
             $tAmax_tbasal_value = 5;
         }
 
-        $fcMax = $data['fcMax'];
+        $fcMax = ($data['fcMax'] ?? null);
         $dpMax = $fcMax*$tasMax;
 
-        $fc1ermin = $data['fc1erMin'];
-        $tas1ermin = $data['tas1erMin'];
+        $fc1ermin = ($data['fc1erMin'] ?? null);
+        $tas1ermin = ($data['tas1erMin'] ?? null);
         $dp1ermin = $fc1ermin*$tas1ermin;
 
 
-        $fc3ermin = $data['fc3erMin'];
-        $tas3ermin = $data['tas3erMin'];
+        $fc3ermin = ($data['fc3erMin'] ?? null);
+        $tas3ermin = ($data['tas3erMin'] ?? null);
         $dp3ermin = $fc3ermin*$tas3ermin;
 
-        $icc = ($data['icc'] == 'true')? 1 : 0;
+        $icc = (($data['icc'] ?? null) == 'true')? 1 : 0;
 
-        $maxInfra = $data['maxInfradesnivel'];
+        $maxInfra = ($data['maxInfradesnivel'] ?? null);
 
-        $UisqBorf = $data['borgUisq'];
+        $UisqBorf = ($data['borgUisq'] ?? null);
 
-        $fcUisq = $data['fcUisq'];
-        $tasUisq = $data['tasUisq'];
+        $fcUisq = ($data['fcUisq'] ?? null);
+        $tasUisq = ($data['tasUisq'] ?? null);
         $dpUisq = $fcUisq*$tasUisq;
 
         $fcMaxCalc = 220-$nuevoPaciente->edad;
@@ -539,10 +550,10 @@ class EsfuerzoController extends Controller
 
         $metsTG = ($metsVT*$nuevoPaciente->genero)+($metsMT*(1-$nuevoPaciente->genero));
 
-        $banda = ($data['banda'] === 1 || $data['banda'] === 'true') ? 1 : 0;
-        $ciclo = ($data['ciclo'] === 1 || $data['ciclo'] === 'true') ? 1 : 0;
+        $banda = (($data['banda'] ?? null) === 1 || ($data['banda'] ?? null) === 'true') ? 1 : 0;
+        $ciclo = (($data['ciclo'] ?? null) === 1 || ($data['ciclo'] ?? null) === 'true') ? 1 : 0;
 
-        $mediconGases = ($data['medicionGases'] === 'true' || $data['medicionGases'] === 1) ? 1 : 0;
+        $mediconGases = (($data['medicionGases'] ?? null) === 'true' || ($data['medicionGases'] ?? null) === 1) ? 1 : 0;
 
         // Mismas claves camelCase que en store() (el front envía el body plano, no snake_case)
         $metsCicloB12 = $ciclo * $this->safeDivide($data['wattsCicloBorg'] ?? null, 16, 0);
@@ -574,7 +585,7 @@ class EsfuerzoController extends Controller
         $metsMax = $metsMaxBanda + $metsCicloMax + $metsGasesMax;
         $po2r = $this->safeDivide(($metsMax * 3.5) * $nuevoPaciente->peso, $fcMax, 0);
         $porvo2Alcanzado = $this->safeDivide(($metsMax * 3.5), ($metsTG * 3.5), 0) * 100;
-        $duke = ($metsMax + 1.69) - (5 * $maxInfra) - (4 * $data['scoreAngina']);
+        $duke = ($metsMax + 1.69) - (5 * $maxInfra) - (4 * ($data['scoreAngina'] ?? null));
         $veteranos = 5*($icc)+($maxInfra)+($tAmax_tbasal_value)-$metsMax;
         $vo2Uisq = $chUisq + $cvUisq;
         $metsUisqBanda = $banda*($vo2Uisq/3.5);
@@ -601,42 +612,45 @@ class EsfuerzoController extends Controller
 
 
 
-        $pesfuerzo->numPrueba = $data['numPrueba'];
+        $pesfuerzo->numPrueba = ($data['numPrueba'] ?? null);
         $pesfuerzo->icc =  $icc;
-        $pesfuerzo->FEVI =  $data['fevi'];
-        $pesfuerzo->metodo = $data['metodo'];
-        $pesfuerzo->ectopia_ventricular = ($data['ectopia'] == 'true') ? 1:0;
-        $pesfuerzo->disfuncionDias = ($data['disfuncion'] == 'true' || $data['disfuncion'] === '0') ? $data['disfuncion'] : 0;
-        $pesfuerzo->nyha = $data['nya'];
-        $pesfuerzo->ccs = $data['ccs'];
-        $pesfuerzo->betabloqueador = ($data['betabloqueador'] == 'true') ? 1:0;
-        $pesfuerzo->iecas = ($data['iecass'] == 'true') ? 1:0;
-        $pesfuerzo->nitratos = ($data['nitratos'] == 'true') ? 1:0;
-        $pesfuerzo->digoxina = ($data['digoxina'] == 'true') ? 1:0;
-        $pesfuerzo->calcioAntag = ($data['calcio'] == 'true') ? 1:0;
-        $pesfuerzo->antirritmicos = ($data['antiarritmicos'] == 'true') ? 1:0;
-        $pesfuerzo->hipolipemiantes = ($data['hipolipemiantes'] == 'true') ? 1:0;
-        $pesfuerzo->diureticos = ($data['diureticos'] == 'true') ? 1:0;
-        $pesfuerzo->aldactone = ($data['aldactone'] == 'true') ? 1:0;
-        $pesfuerzo->antiagregante = ($data['antiagregante'] == 'true') ? 1:0;
-        $pesfuerzo->otros = ($data['otros'] == 'true') ? 1:0;
+        $pesfuerzo->FEVI =  ($data['fevi'] ?? null);
+        $pesfuerzo->metodo = ($data['metodo'] ?? null);
+        $pesfuerzo->ectopia_ventricular = (($data['ectopia'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->disfuncionDias = (($data['disfuncion'] ?? null) == 'true' || ($data['disfuncion'] ?? null) === '0') ? ($data['disfuncion'] ?? null) : 0;
+        $pesfuerzo->nyha = ($data['nya'] ?? null);
+        $pesfuerzo->ccs = ($data['ccs'] ?? null);
+        $pesfuerzo->betabloqueador = (($data['betabloqueador'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->iecas = (($data['iecass'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->nitratos = (($data['nitratos'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->digoxina = (($data['digoxina'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->calcioAntag = (($data['calcio'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->antirritmicos = (($data['antiarritmicos'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->hipolipemiantes = (($data['hipolipemiantes'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->diureticos = (($data['diureticos'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->aldactone = (($data['aldactone'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->antiagregante = (($data['antiagregante'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->otros = (($data['otros'] ?? null) == 'true') ? 1:0;
         $pesfuerzo->prevalencia =  $prevalencia;
-        $pesfuerzo->confusor = ($data['confusor'] == 'true') ? 1:0;
+        $pesfuerzo->confusor = (($data['confusor'] ?? null) == 'true') ? 1:0;
         $pesfuerzo->sensibilidad = $sensibilidad;
         $pesfuerzo->especificidad = $especificidad;
         $pesfuerzo->vpp = $vpp;
         $pesfuerzo->vpn = $vpn;
-        $pesfuerzo->pruebaIngreso = ($data['pruebaIngreso'] == 'true') ? 1:0;
-        $pesfuerzo->pruebaFinFase2 = ($data['pruebaFin2'] == 'true') ? 1:0;
-        $pesfuerzo->pruebaFinFase3 = ($data['pruebaFin3'] == 'true') ? 1:0;
-        $pesfuerzo->fechaDeInicio =  $data['pruebaInicio'];
-        $pesfuerzo->balke = ($data['balke'] == 'true') ? 1:0;
-        $pesfuerzo->bruce = ($data['bruce'] == 'true') ? 1:0;
-        $pesfuerzo->naughton = ($data['naughton'] == 'true') ? 1:0;
-        $pesfuerzo->tipo_esfuerzo = isset($data['tipoEsfuerzo']) ? $data['tipoEsfuerzo'] : 'cardiaco';
-        $pesfuerzo->ciclo = ($data['ciclo'] == 'true') ? 1:0;
-        $pesfuerzo->banda = ($data['banda'] == 'true') ? 1:0;
-        $pesfuerzo->medicionGases = ($data['medicionGases'] == 'true') ? 1:0;
+        $pesfuerzo->pruebaIngreso = (($data['pruebaIngreso'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->pruebaFinFase2 = (($data['pruebaFin2'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->pruebaFinFase3 = (($data['pruebaFin3'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->fechaDeInicio =  ($data['pruebaInicio'] ?? null);
+        $pesfuerzo->balke = (($data['balke'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->bruce = (($data['bruce'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->naughton = (($data['naughton'] ?? null) == 'true') ? 1:0;
+        $tipoEsfuerzo = $data['tipoEsfuerzo'] ?? null;
+        $pesfuerzo->tipo_esfuerzo = ($tipoEsfuerzo !== null && $tipoEsfuerzo !== '')
+            ? $tipoEsfuerzo
+            : 'cardiaco';
+        $pesfuerzo->ciclo = (($data['ciclo'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->banda = (($data['banda'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->medicionGases = (($data['medicionGases'] ?? null) == 'true') ? 1:0;
         $pesfuerzo->fcBasal = $fcBasal;
         $pesfuerzo->tasBasal = $tasBasal;
         $pesfuerzo->tadBasal = $tadBasal;
@@ -645,73 +659,78 @@ class EsfuerzoController extends Controller
         $pesfuerzo->tasBorg12 = $tasBorg;
         $pesfuerzo->tadBorg12 = $tadBorg;
         $pesfuerzo->dpBorg12 = $dpBorg;
-        $pesfuerzo->w_50 = $data['w50'];
+        $pesfuerzo->w_50 = ($data['w50'] ?? null);
         $pesfuerzo->fc_w_50 = $fc50;
         $pesfuerzo->tas_w_50 = $tas50;
-        $pesfuerzo->tad_w_50 = $data['tad50'];
-        $pesfuerzo->borg_w_50 = $data['borgw50'];
+        $pesfuerzo->tad_w_50 = ($data['tad50'] ?? null);
+        $pesfuerzo->borg_w_50 = ($data['borgw50'] ?? null);
         $pesfuerzo->dp_w_50 = $dp50;
         $pesfuerzo->fcMax = $fcMax;
         $pesfuerzo->tasMax = $tasMax;
-        $pesfuerzo->tadMax = $data['tadMax'];
-        $pesfuerzo->borgMax = $data['borgMax'];
+        $pesfuerzo->tadMax = ($data['tadMax'] ?? null);
+        $pesfuerzo->borgMax = ($data['borgMax'] ?? null);
         $pesfuerzo->tAMax_tAbasal = $tAmax_tbasal;
         $pesfuerzo->tAMax_tAbasal_val = $tAmax_tbasal_value;
         $pesfuerzo->tiempoEsfuerzo = $tiempoEsfuerzo;
         $pesfuerzo->dpMax = $dpMax;
-        $pesfuerzo->motivoSuspension = $data['motivoSusp'];
-        $pesfuerzo->pba_submax = ($data['pbaSubmax'] == 'true') ? 1:0;
-        $pesfuerzo->fc_mayor_50 = ($data['fcMayor85'] == 'true') ? 1:0;
+        $pesfuerzo->motivoSuspension = ($data['motivoSusp'] ?? null);
+        $pesfuerzo->pba_submax = (($data['pbaSubmax'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->fc_mayor_50 = (($data['fcMayor85'] ?? null) == 'true') ? 1:0;
         $pesfuerzo->fc_1er_min = $fc1ermin;
         $pesfuerzo->tas_1er_min = $tas1ermin;
-        $pesfuerzo->tad_1er_min = $data['tad1erMin'];
-        $pesfuerzo->borg_1er_min = $data['borg1erMin'];
+        $pesfuerzo->tad_1er_min = ($data['tad1erMin'] ?? null);
+        $pesfuerzo->borg_1er_min = ($data['borg1erMin'] ?? null);
         $pesfuerzo->dp_1er_min = $dp1ermin;
         $pesfuerzo->fc_3er_min = $fc3ermin;
         $pesfuerzo->tas_3er_min = $tas3ermin;
-        $pesfuerzo->tad_3er_min =  $data['tad3erMin'];
-        $pesfuerzo->borg_3er_min =  $data['borg3erMin'];
+        $pesfuerzo->tad_3er_min =  ($data['tad3erMin'] ?? null);
+        $pesfuerzo->borg_3er_min =  ($data['borg3erMin'] ?? null);
         $pesfuerzo->dp_3er_min =  $dp3ermin;
-        $pesfuerzo->fc_5to_min =  $data['fc5toMin'];
-        $pesfuerzo->tas_5to_min =  $data['tas5toMin'];
-        $pesfuerzo->tad_5to_min =   $data['tad5toMin'];
-        $pesfuerzo->fc_8vo_min =  $data['fc8voMin'];
-        $pesfuerzo->tas_8vo_min =  $data['tas8voMin'];
-        $pesfuerzo->tad_8vo_min =  $data['tad8voMin'];
+        $pesfuerzo->fc_5to_min =  ($data['fc5toMin'] ?? null);
+        $pesfuerzo->tas_5to_min =  ($data['tas5toMin'] ?? null);
+        $pesfuerzo->tad_5to_min =   ($data['tad5toMin'] ?? null);
+        $pesfuerzo->fc_8vo_min =  ($data['fc8voMin'] ?? null);
+        $pesfuerzo->tas_8vo_min =  ($data['tas8voMin'] ?? null);
+        $pesfuerzo->tad_8vo_min =  ($data['tad8voMin'] ?? null);
         $pesfuerzo->fc_U_isq =  $fcUisq;
         $pesfuerzo->tas_U_isq =  $tasUisq;
-        $pesfuerzo->tad_U_isq =  $data['tadUisq'];
-        $pesfuerzo->borg_U_isq =  $data['borgUisq'];
-        $pesfuerzo->scoreAngina =  $data['scoreAngina'];
-        $pesfuerzo->arritmias =  ($data['arritmias'] == 'true') ? 1:0;
-        $pesfuerzo->tipoArritmias =  $data['tipoArritmias'];
-        $pesfuerzo->positiva =  ($data['positiva'] == 'true') ? 1:0;
-        $pesfuerzo->tipoCambioElectrico =  $data['tipoCambioE'];
-        $pesfuerzo->MaxInfra =   $data['maxInfradesnivel'];
+        $pesfuerzo->tad_U_isq =  ($data['tadUisq'] ?? null);
+        $pesfuerzo->borg_U_isq =  ($data['borgUisq'] ?? null);
+        $pesfuerzo->scoreAngina =  ($data['scoreAngina'] ?? null);
+        $pesfuerzo->arritmias =  (($data['arritmias'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->tipoArritmias =  ($data['tipoArritmias'] ?? null);
+        $pesfuerzo->positiva =  (($data['positiva'] ?? null) == 'true') ? 1:0;
+        $pesfuerzo->tipoCambioElectrico =  ($data['tipoCambioE'] ?? null);
+        $pesfuerzo->MaxInfra =   ($data['maxInfradesnivel'] ?? null);
         $pesfuerzo->veteranos =  $veteranos;
         $pesfuerzo->duke =  $duke;
-        $pesfuerzo->riesgo =  $data['riesgo'];
+        $pesfuerzo->riesgo =  ($data['riesgo'] ?? null);
         $pesfuerzo->u_isq_borg =  $UisqBorf;
         $pesfuerzo->u_isq_dp =  $dpUisq;
-        $pesfuerzo->vel_borg_12 =  $data['velBorg'];
-        $pesfuerzo->inclin_borg_12 =  $data['inclinBorg'];
-        $pesfuerzo->watts_ciclo_b_12 =  $data['wattsCicloBorg'];
-        $pesfuerzo->vel_max =  $data['velmax'];
-        $pesfuerzo->incl_max =  $data['inclMax'];
-        $pesfuerzo->watts_ciclo_max =  $data['wattsCicloMax'];
-        $pesfuerzo->vel_um_isq =  $data['velUmIsq'];
-        $pesfuerzo->incl_um_isq =  $data['inclUmIsq'];
-        $pesfuerzo->watts_ciclo_u_isq =   $data['wattsCicloUmIsq'];
-        $pesfuerzo->vo2_max_gases =  $data['vo2MaxGases'];
-        $pesfuerzo->vo2_pico_gases =  $data['vo2picoGases'];
-        $pesfuerzo->vo2_borg_gases =  $data['vo2BorgGases'];
-        $pesfuerzo->r_qmax =  $data['rQmax'];
-        $pesfuerzo->umbral_aeer_anaer = $data['umbralAer'];
-        $pesfuerzo->po2_teor = $data['poTeorico'];
-        $pesfuerzo->vo2_max_percent = isset($data['vo2MaxPercent']) && $data['vo2MaxPercent'] !== '' ? $data['vo2MaxPercent'] : null;
-        $pesfuerzo->fc_max_calc =  $fcMaxCalc;
-        $pesfuerzo->fc_85 =  $fc85;
-        $pesfuerzo->fc_max_alcanzado =  $fcMaxAlcanzado;
+        $pesfuerzo->vel_borg_12 =  ($data['velBorg'] ?? null);
+        $pesfuerzo->inclin_borg_12 =  ($data['inclinBorg'] ?? null);
+        $pesfuerzo->watts_ciclo_b_12 =  ($data['wattsCicloBorg'] ?? null);
+        $pesfuerzo->vel_max =  ($data['velmax'] ?? null);
+        $pesfuerzo->incl_max =  ($data['inclMax'] ?? null);
+        $pesfuerzo->watts_ciclo_max =  ($data['wattsCicloMax'] ?? null);
+        $pesfuerzo->vel_um_isq =  ($data['velUmIsq'] ?? null);
+        $pesfuerzo->incl_um_isq =  ($data['inclUmIsq'] ?? null);
+        $pesfuerzo->watts_ciclo_u_isq =   ($data['wattsCicloUmIsq'] ?? null);
+        $pesfuerzo->vo2_max_gases =  ($data['vo2MaxGases'] ?? null);
+        $pesfuerzo->vo2_pico_gases =  ($data['vo2picoGases'] ?? null);
+        $pesfuerzo->vo2_borg_gases =  ($data['vo2BorgGases'] ?? null);
+        $pesfuerzo->r_qmax =  ($data['rQmax'] ?? null);
+        $pesfuerzo->umbral_aeer_anaer = ($data['umbralAer'] ?? null);
+        $pesfuerzo->po2_teor = ($data['poTeorico'] ?? null);
+        $vo2MaxPercent = $data['vo2MaxPercent'] ?? null;
+        if ($vo2MaxPercent === null || $vo2MaxPercent === '') {
+            $pesfuerzo->vo2_max_percent = null;
+        } else {
+            $pesfuerzo->vo2_max_percent = $vo2MaxPercent;
+        }
+        $pesfuerzo->fc_max_calc = $fcMaxCalc;
+        $pesfuerzo->fc_85 = $fc85;
+        $pesfuerzo->fc_max_alcanzado = $fcMaxAlcanzado;
         $pesfuerzo->vo2t_mujer =  $vo2tM;
         $pesfuerzo->mets_teorico_mujer =  $metsMT;
         $pesfuerzo->vo2t_varon =  $vo2tV;
@@ -759,8 +778,8 @@ class EsfuerzoController extends Controller
         $pesfuerzo->cv_borg_12 =  $cvBorg;
         $pesfuerzo->cv_max =  $cvMax;
         $pesfuerzo->cv_u_isq =  $cvUisq;
-        $pesfuerzo->conclusiones =  $data['comentarios'];
-        $pesfuerzo->fecha =  $data['fecha'];
+        $pesfuerzo->conclusiones =  ($data['comentarios'] ?? null);
+        $pesfuerzo->fecha =  ($data['fecha'] ?? null);
         $pesfuerzo->recup_tas = $this->safeDivide($tas3ermin, $tas1ermin, 0);
         $pesfuerzo->tipo_exp = 1;
         $pesfuerzo->clinica_id = $user->clinica_efectiva_id;

@@ -8,6 +8,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
+use App\Support\FormValue;
+
 class EstratiAacvprController extends Controller
 {
     /**
@@ -336,7 +339,7 @@ class EstratiAacvprController extends Controller
         
         $expediente->comentarios = $request['comentarios'];
 
-        $this->assignAacvprSheet($expediente, $request->all());
+        $this->assignAacvprSheet($expediente, FormValue::fromRequest($request));
 
         $expediente->save();
 

@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
+use App\Support\FormValue;
+
 class NotaSubsecuenteCardiologiaController extends Controller
 {
     use ClinicaScope;
@@ -58,7 +61,7 @@ class NotaSubsecuenteCardiologiaController extends Controller
                 'hora' => 'nullable|date_format:H:i',
             ]);
 
-            $data = array_merge($request->all(), [
+            $data = array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -120,7 +123,7 @@ class NotaSubsecuenteCardiologiaController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $nota->update($request->all());
+            $nota->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
+use App\Support\FormValue;
+
 class HistoriaGinecologicaController extends Controller
 {
     use ClinicaScope;
@@ -58,7 +61,7 @@ class HistoriaGinecologicaController extends Controller
                 'fecha_consulta' => 'required|date',
             ]);
 
-            $data = array_merge($request->all(), [
+            $data = array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -119,7 +122,7 @@ class HistoriaGinecologicaController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $historia->update($request->all());
+            $historia->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

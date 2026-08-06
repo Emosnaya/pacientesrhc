@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
+use App\Support\FormValue;
+
 class NotaClinicaSoapNutricionalController extends Controller
 {
     use ClinicaScope;
@@ -45,7 +48,7 @@ class NotaClinicaSoapNutricionalController extends Controller
                 'fecha_elaboracion' => 'required|date',
             ]);
 
-            $nota = NotaClinicaSoapNutricional::create(array_merge($request->all(), [
+            $nota = NotaClinicaSoapNutricional::create(array_merge(FormValue::fromRequest($request), [
                 'user_id' => $user->id,
                 'clinica_id' => $clinicaId,
                 'sucursal_id' => $sucursalId,
@@ -89,7 +92,7 @@ class NotaClinicaSoapNutricionalController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $nota->update($request->all());
+            $nota->update(FormValue::fromRequest($request));
 
             return response()->json([
                 'success' => true,

@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\PDFController;
 
+
+use App\Support\FormValue;
+
 class CualidadFisicaController extends Controller
 {
     /**
@@ -48,7 +51,7 @@ class CualidadFisicaController extends Controller
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
-        $data = $request->all();
+        $data = FormValue::fromRequest($request);
         $data['user_id'] = $user->id;
         $data['clinica_id'] = $user->clinica_efectiva_id;
 
@@ -83,7 +86,7 @@ class CualidadFisicaController extends Controller
             ->where('clinica_id', $user->clinica_efectiva_id)
             ->firstOrFail();
 
-        $cualidadFisica->update($request->all());
+        $cualidadFisica->update(FormValue::fromRequest($request));
 
         return response()->json($cualidadFisica);
     }

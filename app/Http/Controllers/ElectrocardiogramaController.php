@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
+use App\Support\FormValue;
+
 class ElectrocardiogramaController extends Controller
 {
     use ClinicaScope;
@@ -60,7 +63,7 @@ class ElectrocardiogramaController extends Controller
                 'imagen_ecg' => 'nullable|image|max:5120', // 5MB max
             ]);
 
-            $data = $request->except('imagen_ecg');
+            $data = FormValue::fromRequest($request, ['imagen_ecg']);
             $data['user_id'] = $user->id;
             $data['clinica_id'] = $clinicaId;
             $data['sucursal_id'] = $sucursalId;
@@ -128,7 +131,7 @@ class ElectrocardiogramaController extends Controller
                 ->where('clinica_id', $clinicaId)
                 ->firstOrFail();
 
-            $data = $request->except('imagen_ecg');
+            $data = FormValue::fromRequest($request, ['imagen_ecg']);
 
             // Actualizar imagen si se proporciona una nueva
             if ($request->hasFile('imagen_ecg')) {
