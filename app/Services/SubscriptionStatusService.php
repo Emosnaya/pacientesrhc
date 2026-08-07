@@ -9,13 +9,13 @@ use Carbon\Carbon;
 class SubscriptionStatusService
 {
     /**
-     * Días calendario tras la fecha de vencimiento en los que aún hay acceso (sin 402).
-     * Día 0 = día de vencimiento; día 1 = un día después. El bloqueo empieza en GRACE_DAYS.
+     * Dï¿½as calendario tras la fecha de vencimiento en los que aï¿½n hay acceso (sin 402).
+     * Dï¿½a 0 = dï¿½a de vencimiento; dï¿½a 1 = un dï¿½a despuï¿½s. El bloqueo empieza en GRACE_DAYS.
      */
     public const GRACE_DAYS = 2;
 
     /**
-     * ¿La fecha de vencimiento aún cubre hoy? (válido hasta el día anterior al vencimiento).
+     * ï¿½La fecha de vencimiento aï¿½n cubre hoy? (vï¿½lido hasta el dï¿½a anterior al vencimiento).
      * Si vence el 15-jun, el 14 tiene acceso; el 15 ya vence.
      */
     public static function fechaVencimientoVigente(?Carbon $fechaVencimiento): bool
@@ -28,7 +28,7 @@ class SubscriptionStatusService
     }
 
     /**
-     * Días enteros respecto a la fecha de vencimiento (0 = vence hoy, negativo = ya pasó).
+     * Dï¿½as enteros respecto a la fecha de vencimiento (0 = vence hoy, negativo = ya pasï¿½).
      */
     public static function diasRespectoVencimiento(?Carbon $fechaVencimiento): ?int
     {
@@ -53,7 +53,7 @@ class SubscriptionStatusService
 
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningún pago para esta cuenta.',
+                'No se ha registrado ningï¿½n pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -68,8 +68,8 @@ class SubscriptionStatusService
         if ($fechaVencimiento && ! self::fechaVencimientoVigente($fechaVencimiento)) {
             $diasVencido = abs($diasRestantes ?? 0);
 
-            // Período de gracia: acceso completo los primeros GRACE_DAYS días (0 y 1).
-            // Banner de vencida en frontend desde día 1; modal/402 desde día GRACE_DAYS (2).
+            // Perï¿½odo de gracia: acceso completo los primeros GRACE_DAYS dï¿½as (0 y 1).
+            // Banner de vencida en frontend desde dï¿½a 1; modal/402 desde dï¿½a GRACE_DAYS (2).
             if ($diasVencido < self::GRACE_DAYS) {
                 return self::activePayload(
                     $esConsultorio ? 'consultorio_gracia' : 'clinica_gracia',
@@ -85,8 +85,8 @@ class SubscriptionStatusService
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_vencido' : 'clinica_vencida',
                 $esConsultorio
-                    ? "Tu suscripción venció hace {$diasVencido} días. Renueva para continuar usando el sistema."
-                    : 'La suscripción de tu clínica ha vencido. Renueva para continuar.',
+                    ? "Tu suscripciï¿½n venciï¿½ hace {$diasVencido} dï¿½as. Renueva para continuar usando el sistema."
+                    : 'La suscripciï¿½n de tu clï¿½nica ha vencido. Renueva para continuar.',
                 $esConsultorio,
                 $diasVencido
             );
@@ -99,7 +99,7 @@ class SubscriptionStatusService
             if ($esPropietario && ! $user->tieneSuscripcionConsultorioActiva() && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'Tu suscripción de consultorio ha vencido. Renueva para continuar.',
+                    'Tu suscripciï¿½n de consultorio ha vencido. Renueva para continuar.',
                     true,
                     0
                 );
@@ -108,7 +108,7 @@ class SubscriptionStatusService
             if (! $esPropietario && ! $suscripcionCompartida) {
                 return self::inactivePayload(
                     'consultorio_vencido',
-                    'El consultorio no tiene suscripción activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
+                    'El consultorio no tiene suscripciï¿½n activa. El propietario debe renovar el plan para que el equipo pueda entrar.',
                     true,
                     0
                 );
@@ -118,7 +118,7 @@ class SubscriptionStatusService
         if (! $clinica->activa) {
             return self::inactivePayload(
                 'clinica_inactiva',
-                'Tu espacio de trabajo está desactivado. Contacta al administrador.',
+                'Tu espacio de trabajo estï¿½ desactivado. Contacta al administrador.',
                 $esConsultorio,
                 null
             );
@@ -128,7 +128,7 @@ class SubscriptionStatusService
             && ! ($fechaVencimiento && self::fechaVencimientoVigente($fechaVencimiento))) {
             return self::inactivePayload(
                 $esConsultorio ? 'consultorio_sin_pago' : 'clinica_sin_pago',
-                'No se ha registrado ningún pago para esta cuenta.',
+                'No se ha registrado ningï¿½n pago para esta cuenta.',
                 $esConsultorio,
                 null
             );
@@ -179,9 +179,9 @@ class SubscriptionStatusService
                 'precio' => $anio['total'],
                 'ciclo' => 'anual',
                 'ahorro' => $anio['ahorro_anual'] ?? 0,
-                'meses_gratis' => $anio['meses_gratis'] ?? 1,
+                'meses_gratis' => $anio['meses_gratis'] ?? 2,
                 'precio_sin_descuento' => $anio['precio_sin_descuento'] ?? (($mes['total'] ?? 0) * 12),
-                'etiqueta' => '1 mes gratis',
+                'etiqueta' => '2 meses gratis',
             ],
         ];
     }

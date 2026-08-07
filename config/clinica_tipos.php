@@ -7,19 +7,19 @@ return [
     |--------------------------------------------------------------------------
     */
     'base_precios' => [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000, 'mensual_normal' => 3000, 'anual_normal' => 36000],
-        'dental'       => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
-        'cardiologia'  => ['mensual' => 1699, 'anual' => 17999, 'mensual_normal' => 1999, 'anual_normal' => 21999],
-        'fisioterapia' => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'ginecologia'  => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'pediatria'    => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'neurologia'   => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'neumologia'   => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'general'      => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'nutricion'    => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 13999],
-        'psicologia'   => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 13999],
-        'psiquiatria'  => ['mensual' => 1299, 'anual' => 13990, 'mensual_normal' => 1699, 'anual_normal' => 18999],
-        'consultorio'  => ['mensual' => 1299, 'anual' => 11990, 'mensual_normal' => 1699, 'anual_normal' => 14999],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 30000, 'mensual_normal' => 3000, 'anual_normal' => 30000],
+        'dental'       => ['mensual' => 1699, 'anual' => 16990, 'mensual_normal' => 1999, 'anual_normal' => 19990],
+        'cardiologia'  => ['mensual' => 1699, 'anual' => 16990, 'mensual_normal' => 1999, 'anual_normal' => 19990],
+        'fisioterapia' => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'ginecologia'  => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'pediatria'    => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'neurologia'   => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'neumologia'   => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'general'      => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'nutricion'    => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 12990],
+        'psicologia'   => ['mensual' =>  999, 'anual' =>  9990, 'mensual_normal' => 1299, 'anual_normal' => 12990],
+        'psiquiatria'  => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
+        'consultorio'  => ['mensual' => 1299, 'anual' => 12990, 'mensual_normal' => 1699, 'anual_normal' => 16990],
     ],
 
     /*

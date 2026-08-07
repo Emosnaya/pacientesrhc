@@ -123,8 +123,16 @@ class FinanzasController extends Controller
             'fecha_pago' => $request->fecha_pago ? Carbon::parse($request->fecha_pago)->toDateString() : now()->toDateString(),
         ]);
 
-        // Cargar relaciones
-        $pago->load(['paciente', 'usuario', 'cita', 'atribuidoA', 'presupuesto:id,titulo,monto_total,estado']);
+        // Cargar relaciones (clínica/sucursal para el recibo digital)
+        $pago->load([
+            'paciente',
+            'usuario',
+            'cita',
+            'atribuidoA',
+            'presupuesto:id,titulo,monto_total,estado',
+            'clinica:id,nombre,logo,telefono,email,direccion,tipo_clinica',
+            'sucursal:id,nombre,direccion,telefono',
+        ]);
 
         return response()->json([
             'message' => 'Pago registrado exitosamente',
@@ -265,8 +273,15 @@ class FinanzasController extends Controller
             'fecha_pago' => $request->fecha_pago ? Carbon::parse($request->fecha_pago)->toDateString() : $pago->fecha_pago,
         ]);
 
-        // Cargar relaciones
-        $pago->load(['paciente', 'usuario', 'cita', 'atribuidoA', 'presupuesto:id,titulo,monto_total,estado']);
+        $pago->load([
+            'paciente',
+            'usuario',
+            'cita',
+            'atribuidoA',
+            'presupuesto:id,titulo,monto_total,estado',
+            'clinica:id,nombre,logo,telefono,email,direccion,tipo_clinica',
+            'sucursal:id,nombre,direccion,telefono',
+        ]);
 
         return response()->json([
             'message' => 'Pago actualizado exitosamente',

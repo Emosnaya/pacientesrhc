@@ -180,6 +180,76 @@ class AIService
     }
 
     /**
+     * Frase corta de ánimo / coach para el plan de bienestar del paciente.
+     * No da consejo médico; solo motivación.
+     */
+    public function wellnessCoachTip(array $context = []): array
+    {
+        try {
+            $estado = $context['estado_animo'] ?? 'sin indicar';
+            $aguaPct = $context['agua_pct'] ?? null;
+            $comidas = $context['comidas_hechas'] ?? null;
+            $comidasTotal = $context['comidas_total'] ?? null;
+            $ejercicios = $context['ejercicios_hechos'] ?? null;
+            $ejerciciosTotal = $context['ejercicios_total'] ?? null;
+            $completado = !empty($context['completado']);
+            $nombre = $context['nombre'] ?? 'campeón/a';
+
+            $prompt = "Eres un coach de bienestar amable de LynkaMed (app de salud). "
+                ."Escribe UNA sola frase corta (máx 25 palabras) en español mexicano, motivadora, "
+                ."sin consejos médicos ni diagnósticos, sin emojis excesivos (máx 1). "
+                ."Habla de tú. No uses markdown.\n\n"
+                ."Contexto del día del paciente {$nombre}:\n"
+                ."- Ánimo: {$estado}\n"
+                .($aguaPct !== null ? "- Hidratación ~{$aguaPct}% de la meta\n" : '')
+                .($comidas !== null ? "- Comidas registradas: {$comidas}/{$comidasTotal}\n" : '')
+                .($ejercicios !== null ? "- Ejercicios: {$ejercicios}/{$ejerciciosTotal}\n" : '')
+                .'- Día confirmado: '.($completado ? 'sí' : 'aún en progreso')."\n\n"
+                .'Frase:';
+
+            $result = $this->callGemini($prompt, 80, 0.85);
+            if (! ($result['success'] ?? false)) {
+                return [
+                    'success' => true,
+                    'text' => $this->fallbackCoachTip($estado, $completado),
+                    'fallback' => true,
+                ];
+            }
+
+            $text = trim(preg_replace('/\s+/', ' ', (string) $result['text']));
+            $text = trim($text, " \t\n\r\0\x0B\"'");
+
+            return [
+                'success' => true,
+                'text' => $text !== '' ? $text : $this->fallbackCoachTip($estado, $completado),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error wellnessCoachTip: '.$e->getMessage());
+
+            return [
+                'success' => true,
+                'text' => $this->fallbackCoachTip($context['estado_animo'] ?? null, !empty($context['completado'])),
+                'fallback' => true,
+            ];
+        }
+    }
+
+    private function fallbackCoachTip(?string $estado, bool $completado): string
+    {
+        if ($completado) {
+            return '¡Día cerrado! Cada registro suma: mañana seguimos con el mismo ritmo.';
+        }
+
+        return match ($estado) {
+            'cansado' => 'Si hoy vas con calma, igual cuenta: un vaso de agua y una comida a tiempo ya es avance.',
+            'hambre' => 'Escucha a tu cuerpo: sigue tu plan y anota lo que comas para no improvisar.',
+            'estresado' => 'Respira un momento. Un check de agua o un paseo corto también es cuidarte.',
+            'motivado', 'bien' => 'Vas bien. Sigue con agua, comidas y movimiento: tu plan está de tu lado.',
+            default => 'Pequeños pasos diarios construyen tu bienestar. ¡Tú puedes!',
+        };
+    }
+
+    /**
      * Resumir texto largo usando Gemini
      */
     public function summarizeText($text, $tipoReporte = 'general')

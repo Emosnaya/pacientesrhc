@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Paciente;
 use App\Models\PacienteNutricionPlan;
 use App\Models\PacienteNutricionSeguimiento;
+use App\Services\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -96,6 +97,8 @@ class PacientePortalNutricionController extends Controller
             'cumplio_plan' => 'nullable|boolean',
             'energia_nivel' => 'nullable|integer|min:1|max:10',
             'hambre_nivel' => 'nullable|integer|min:1|max:10',
+            'estado_animo' => 'nullable|string|in:bien,cansado,hambre,estresado,motivado',
+            'foto_comida_url' => 'nullable|string|max:500',
             'notas_paciente' => 'nullable|string',
             'completado' => 'nullable|boolean',
             'pasos' => 'nullable|integer|min:0|max:200000',
@@ -108,7 +111,7 @@ class PacientePortalNutricionController extends Controller
             return response()->json(['message' => 'No perteneces a esa clínica'], 403);
         }
 
-        if (!empty($payload['plan_id'])) {
+        if (! empty($payload['plan_id'])) {
             $planValido = PacienteNutricionPlan::query()
                 ->where('id', (int) $payload['plan_id'])
                 ->where('paciente_id', $paciente->id)
@@ -122,12 +125,15 @@ class PacientePortalNutricionController extends Controller
         }
 
         $comidas = $payload['comidas'] ?? [];
-        if (!empty($payload['comidas_texto'])) {
+        if (! empty($payload['comidas_texto'])) {
             $comidas['descripcion'] = $payload['comidas_texto'];
+        }
+        if (! empty($payload['foto_comida_url'])) {
+            $comidas['foto_dia'] = $payload['foto_comida_url'];
         }
 
         $ejercicio = $payload['ejercicio'] ?? [];
-        if (!empty($payload['ejercicio_texto'])) {
+        if (! empty($payload['ejercicio_texto'])) {
             $ejercicio['descripcion'] = $payload['ejercicio_texto'];
         }
         if (isset($payload['ejercicio_min'])) {
@@ -141,6 +147,12 @@ class PacientePortalNutricionController extends Controller
         if (isset($payload['ritmo_cardiaco'])) {
             $habitos['ritmo_cardiaco'] = (int) $payload['ritmo_cardiaco'];
         }
+        if (! empty($payload['estado_animo'])) {
+            $habitos['estado_animo'] = $payload['estado_animo'];
+        }
+        if (! empty($payload['foto_comida_url'])) {
+            $habitos['foto_comida_url'] = $payload['foto_comida_url'];
+        }
 
         $existente = PacienteNutricionSeguimiento::query()
             ->where('paciente_id', $paciente->id)
@@ -150,6 +162,9 @@ class PacientePortalNutricionController extends Controller
 
         if ($existente?->habitos && is_array($existente->habitos)) {
             $habitos = array_merge($existente->habitos, $habitos);
+        }
+        if ($existente?->comidas && is_array($existente->comidas) && ! empty($comidas)) {
+            $comidas = array_merge($existente->comidas, $comidas);
         }
 
         $seguimiento = PacienteNutricionSeguimiento::updateOrCreate(
@@ -161,10 +176,10 @@ class PacientePortalNutricionController extends Controller
             [
                 'plan_id' => $payload['plan_id'] ?? $existente?->plan_id,
                 'user_id' => Auth::id(),
-                'comidas' => !empty($comidas) ? $comidas : ($existente?->comidas),
+                'comidas' => ! empty($comidas) ? $comidas : ($existente?->comidas),
                 'agua_ml' => array_key_exists('agua_ml', $payload) ? $payload['agua_ml'] : $existente?->agua_ml,
-                'ejercicio' => !empty($ejercicio) ? $ejercicio : ($existente?->ejercicio),
-                'habitos' => !empty($habitos) ? $habitos : ($existente?->habitos),
+                'ejercicio' => ! empty($ejercicio) ? $ejercicio : ($existente?->ejercicio),
+                'habitos' => ! empty($habitos) ? $habitos : ($existente?->habitos),
                 'cumplio_plan' => array_key_exists('cumplio_plan', $payload) ? $payload['cumplio_plan'] : $existente?->cumplio_plan,
                 'energia_nivel' => array_key_exists('energia_nivel', $payload) ? $payload['energia_nivel'] : $existente?->energia_nivel,
                 'hambre_nivel' => array_key_exists('hambre_nivel', $payload) ? $payload['hambre_nivel'] : $existente?->hambre_nivel,
@@ -175,5 +190,70 @@ class PacientePortalNutricionController extends Controller
         );
 
         return response()->json(['data' => $seguimiento->fresh('plan:id,titulo')]);
+    }
+
+    public function uploadFotoComida(Request $request)
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $request->validate([
+            'foto' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'clinica_id' => 'required|integer|exists:clinicas,id',
+            'fecha' => 'nullable|date',
+        ]);
+
+        $pertenece = $paciente->clinicas()->where('clinicas.id', (int) $request->clinica_id)->exists();
+        if (! $pertenece) {
+            return response()->json(['message' => 'No perteneces a esa clínica'], 403);
+        }
+
+        $file = $request->file('foto');
+        $ext = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        $fecha = $request->input('fecha') ?: now()->toDateString();
+        $path = $file->storeAs(
+            'pacientes/nutricion',
+            'comida_'.$paciente->id.'_'.$fecha.'_'.time().'.'.$ext,
+            'public'
+        );
+
+        $url = asset('storage/'.$path);
+
+        return response()->json([
+            'success' => true,
+            'path' => $path,
+            'url' => $url,
+        ]);
+    }
+
+    public function coachTip(Request $request, AIService $ai)
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $payload = $request->validate([
+            'estado_animo' => 'nullable|string|max:40',
+            'agua_pct' => 'nullable|integer|min:0|max:200',
+            'comidas_hechas' => 'nullable|integer|min:0|max:20',
+            'comidas_total' => 'nullable|integer|min:0|max:20',
+            'ejercicios_hechos' => 'nullable|integer|min:0|max:50',
+            'ejercicios_total' => 'nullable|integer|min:0|max:50',
+            'completado' => 'nullable|boolean',
+        ]);
+
+        $nombre = trim(($paciente->nombre ?? '').' '.($paciente->apellidoPat ?? ''));
+        $result = $ai->wellnessCoachTip(array_merge($payload, [
+            'nombre' => $nombre !== '' ? explode(' ', $nombre)[0] : 'campeón/a',
+        ]));
+
+        return response()->json([
+            'success' => (bool) ($result['success'] ?? false),
+            'tip' => $result['text'] ?? null,
+            'fallback' => ! empty($result['fallback']),
+        ]);
     }
 }

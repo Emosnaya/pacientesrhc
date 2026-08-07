@@ -369,9 +369,21 @@ class WhatsAppService
                 $cita->update([
                     'confirmacion_whatsapp' => 'confirmada',
                     'estado' => 'confirmada',
+                    'requiere_confirmacion' => false,
                 ]);
                 if ($mensaje) {
                     $mensaje->update(['accionable' => false]);
+                }
+                try {
+                    app(\App\Services\CitaSolicitudService::class)->registrarEvento(
+                        $cita->fresh(),
+                        'confirmado',
+                        'paciente',
+                        null,
+                        'Asistencia confirmada por WhatsApp'
+                    );
+                } catch (\Throwable $e) {
+                    // noop
                 }
                 return "✅ ¡Perfecto! Tu cita está confirmada para el *{$fechaFormateada}* a las *{$horaFormateada}*\n\nTe esperamos. ¡Gracias!";
 
@@ -390,6 +402,17 @@ class WhatsAppService
                 ]);
                 if ($mensaje) {
                     $mensaje->update(['accionable' => false]);
+                }
+                try {
+                    app(\App\Services\CitaSolicitudService::class)->registrarEvento(
+                        $cita->fresh(),
+                        'cancelado',
+                        'paciente',
+                        null,
+                        'Cancelada por el paciente vía WhatsApp'
+                    );
+                } catch (\Throwable $e) {
+                    // noop
                 }
                 return "❌ Tu cita del *{$fechaFormateada}* ha sido cancelada.\n\nSi deseas agendar nuevamente, contacta a la clínica.";
 

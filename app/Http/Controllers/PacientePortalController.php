@@ -10,6 +10,7 @@ use App\Models\ChatParticipante;
 use App\Models\Clinica;
 use App\Models\Evento;
 use App\Models\Paciente;
+use App\Models\PacienteDeviceToken;
 use App\Models\Pago;
 use App\Models\PortalExpedienteCompartido;
 use App\Models\Sucursal;
@@ -21,6 +22,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -265,6 +267,62 @@ class PacientePortalController extends Controller
     }
 
     /**
+     * Elimina el acceso de portal/app del paciente (requisito Apple / Google).
+     * No borra el expediente clínico que conserva la clínica.
+     */
+    public function eliminarCuenta(Request $request): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        $user = Auth::user();
+        if (! $paciente || ! $user) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $request->validate([
+            'confirmacion' => 'required|string|in:ELIMINAR',
+        ]);
+
+        try {
+            DB::transaction(function () use ($user, $paciente) {
+                PacienteDeviceToken::query()
+                    ->where('paciente_id', $paciente->id)
+                    ->delete();
+
+                // Revocar tokens Sanctum
+                if (method_exists($user, 'tokens')) {
+                    $user->tokens()->delete();
+                }
+
+                $stamp = now()->format('YmdHis');
+                $anonEmail = "deleted+{$user->id}.{$stamp}@deleted.lynkamed.local";
+
+                $user->email = $anonEmail;
+                $user->password = bcrypt(bin2hex(random_bytes(24)));
+                $user->password_set_at = null;
+                // Desvincula acceso portal; el registro Paciente permanece para la clínica.
+                $user->paciente_id = null;
+                $user->save();
+
+                // Quitar foto de perfil del portal si existe
+                if ($paciente->foto && Storage::disk('public')->exists($paciente->foto)) {
+                    Storage::disk('public')->delete($paciente->foto);
+                    $paciente->foto = null;
+                    $paciente->save();
+                }
+            });
+        } catch (\Throwable $e) {
+            \Log::error('Error eliminando cuenta portal paciente: '.$e->getMessage());
+
+            return response()->json(['message' => 'No se pudo eliminar la cuenta. Intenta más tarde.'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tu cuenta de LynkaMed Paciente fue eliminada.',
+        ]);
+    }
+
+    /**
      * POST /api/paciente-portal/perfil/foto
      * Sube o reemplaza la foto del paciente (galería o cámara desde la app).
      */
@@ -390,7 +448,16 @@ class PacientePortalController extends Controller
             ->map(function (Cita $c) {
                 $maxReagendas = max(0, (int) ($c->clinica->portal_max_reagendas_paciente ?? 2));
                 $intentos = (int) ($c->reagenda_intentos ?? 0);
+                $reagendasRestantes = max(0, $maxReagendas - $intentos);
                 $cancelableEstado = ! in_array($c->estado, ['cancelada', 'completada'], true);
+                $futura = $c->esFutura();
+                // Clínica aún debe aceptar la solicitud (sin doctor / flag).
+                $esperaClinica = (bool) ($c->requiere_confirmacion && empty($c->user_id));
+                // Paciente debe confirmar asistencia (pendiente y ya validada por clínica).
+                $puedeConfirmar = $cancelableEstado
+                    && $futura
+                    && $c->estado === 'pendiente'
+                    && ! $esperaClinica;
 
                 $doctorNombre = $c->user
                     ? trim(($c->user->nombre ?? '').' '.($c->user->apellidoPat ?? '').' '.($c->user->apellidoMat ?? ''))
@@ -408,6 +475,9 @@ class PacientePortalController extends Controller
                     'especialidad_solicitada' => $c->especialidad_solicitada,
                     'origen' => $c->origen ?? 'panel',
                     'requiere_confirmacion' => (bool) ($c->requiere_confirmacion || ($c->estado === 'pendiente' && empty($c->user_id))),
+                    'espera_clinica' => $esperaClinica,
+                    'puede_confirmar' => $puedeConfirmar,
+                    'puede_cancelar' => $cancelableEstado && $futura,
                     'contactado_at' => $c->contactado_at?->toIso8601String(),
                     'motivo_cancelacion' => $c->motivo_cancelacion,
                     'doctor' => $doctorNombre ? [
@@ -424,8 +494,8 @@ class PacientePortalController extends Controller
                         'nombre' => $c->sucursal->nombre,
                     ] : null,
                     'reagenda_intentos' => $intentos,
-                    'reagendas_restantes' => max(0, $maxReagendas - $intentos),
-                    'puede_reagendar' => $cancelableEstado && $c->esFutura(),
+                    'reagendas_restantes' => $reagendasRestantes,
+                    'puede_reagendar' => $cancelableEstado && $futura && $reagendasRestantes > 0,
                     'eventos' => $c->eventos->map(fn ($e) => [
                         'tipo' => $e->tipo,
                         'actor' => $e->actor,
@@ -615,6 +685,9 @@ class PacientePortalController extends Controller
         }
 
         $requiereConfirmacionClinica = ! $doctorId;
+        $estadoInicial = $requiereConfirmacionClinica
+            ? 'pendiente'
+            : app(CitaAvailabilityService::class)->estadoInicial($clinica);
 
         $pivot = $paciente->clinicas()->where('clinicas.id', $clinica->id)->first()?->pivot;
         if (! $pivot) {
@@ -657,9 +730,7 @@ class PacientePortalController extends Controller
             'sucursal_id' => $sucursal->id,
             'fecha' => $validated['fecha'],
             'hora' => $validated['hora'],
-            'estado' => $requiereConfirmacionClinica
-                ? 'pendiente'
-                : app(CitaAvailabilityService::class)->estadoInicial($clinica),
+            'estado' => $estadoInicial,
             'primera_vez' => false,
             'notas' => $this->agendaBuildNotas(
                 $validated['notas'] ?? null,
@@ -672,19 +743,34 @@ class PacientePortalController extends Controller
         ]);
 
         $solicitudService = app(CitaSolicitudService::class);
-        $solicitudService->registrarEvento(
-            $cita,
-            'solicitado',
-            'paciente',
-            Auth::id() ? (int) Auth::id() : null,
-            $requiereConfirmacionClinica
-                ? 'Solicitud enviada sin profesional asignado'
-                : 'Cita agendada desde la app',
-            [
-                'especialidad' => $especialidad,
-                'doctor_id' => $doctorId,
-            ]
-        );
+        if ($requiereConfirmacionClinica) {
+            $solicitudService->registrarEvento(
+                $cita,
+                'solicitado',
+                'paciente',
+                Auth::id() ? (int) Auth::id() : null,
+                'Solicitud enviada sin profesional asignado',
+                ['especialidad' => $especialidad, 'doctor_id' => $doctorId]
+            );
+        } elseif ($estadoInicial === 'confirmada') {
+            $solicitudService->registrarEvento(
+                $cita,
+                'agendada',
+                'paciente',
+                Auth::id() ? (int) Auth::id() : null,
+                'Cita agendada y confirmada desde la app',
+                ['especialidad' => $especialidad, 'doctor_id' => $doctorId]
+            );
+        } else {
+            $solicitudService->registrarEvento(
+                $cita,
+                'pendiente_confirmacion',
+                'paciente',
+                Auth::id() ? (int) Auth::id() : null,
+                'Cita agendada; confirma tu asistencia',
+                ['especialidad' => $especialidad, 'doctor_id' => $doctorId]
+            );
+        }
 
         $chatConversacion = $this->agendaEnsurePatientChatConversation(
             $clinica,
@@ -704,7 +790,9 @@ class PacientePortalController extends Controller
         return response()->json([
             'message' => $requiereConfirmacionClinica
                 ? 'Solicitud de cita enviada. La clínica/consultorio debe confirmar el horario.'
-                : 'Cita agendada correctamente',
+                : ($estadoInicial === 'confirmada'
+                    ? 'Cita agendada correctamente'
+                    : 'Cita agendada. Confirma tu asistencia cuando puedas.'),
             'data' => [
                 'id' => $cita->id,
                 'fecha' => $cita->fecha?->format('Y-m-d'),
@@ -716,11 +804,12 @@ class PacientePortalController extends Controller
                 'especialidad' => $especialidad,
                 'especialidad_solicitada' => $especialidad,
                 'requiere_confirmacion' => $requiereConfirmacionClinica,
+                'puede_confirmar' => $estadoInicial === 'pendiente' && ! $requiereConfirmacionClinica,
                 'chat_conversacion_id' => $chatConversacion?->id,
                 'requiere_confirmacion_clinica' => $requiereConfirmacionClinica,
                 'siguiente_paso' => $requiereConfirmacionClinica
                     ? 'Si no hay disponibilidad con staff en ese horario, la clínica podrá proponerte otros horarios o contactarte por chat.'
-                    : null,
+                    : ($estadoInicial === 'pendiente' ? 'Confirma tu asistencia desde Mis citas.' : null),
             ],
         ], 201);
     }
@@ -804,6 +893,9 @@ class PacientePortalController extends Controller
 
         $especialidadFinal = $especialidad ?: $cita->especialidad_solicitada;
         $requiereConfirmacion = ! $doctorId;
+        $estadoNueva = $requiereConfirmacion
+            ? 'pendiente'
+            : app(CitaAvailabilityService::class)->estadoInicial($clinica);
 
         $nueva = Cita::create([
             'paciente_id' => $cita->paciente_id,
@@ -813,7 +905,7 @@ class PacientePortalController extends Controller
             'sucursal_id' => $cita->sucursal_id,
             'fecha' => $validated['fecha'],
             'hora' => $validated['hora'],
-            'estado' => 'pendiente',
+            'estado' => $estadoNueva,
             'primera_vez' => false,
             'notas' => $this->agendaBuildNotas($cita->notas, $especialidadFinal),
             'especialidad_solicitada' => $especialidadFinal,
@@ -829,23 +921,94 @@ class PacientePortalController extends Controller
 
         $solicitudService = app(CitaSolicitudService::class);
         $solicitudService->registrarEvento($cita, 'cancelado', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Reagendada por paciente');
-        $solicitudService->registrarEvento($nueva, 'solicitado', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Cita reagendada');
         if ($requiereConfirmacion) {
+            $solicitudService->registrarEvento($nueva, 'solicitado', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Cita reagendada; la clínica debe confirmar');
             $solicitudService->notificarClinicaNuevaSolicitud($nueva);
+        } elseif ($estadoNueva === 'confirmada') {
+            $solicitudService->registrarEvento($nueva, 'agendada', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Cita reagendada y confirmada');
+        } else {
+            $solicitudService->registrarEvento($nueva, 'pendiente_confirmacion', 'paciente', Auth::id() ? (int) Auth::id() : null, 'Cita reagendada; confirma tu asistencia');
         }
 
         SendCitaWhatsAppNotification::dispatch($nueva->id, 'reagendada');
 
         return response()->json([
-            'message' => 'Cita reagendada correctamente',
+            'message' => $estadoNueva === 'confirmada'
+                ? 'Cita reagendada correctamente'
+                : ($requiereConfirmacion
+                    ? 'Cita reagendada. La clínica debe confirmar el nuevo horario.'
+                    : 'Cita reagendada. Confirma tu asistencia cuando puedas.'),
             'data' => [
                 'id' => $nueva->id,
                 'fecha' => $nueva->fecha?->format('Y-m-d'),
                 'hora' => Carbon::parse($nueva->hora)->format('H:i'),
                 'estado' => $nueva->estado,
                 'requiere_confirmacion' => $requiereConfirmacion,
+                'puede_confirmar' => $estadoNueva === 'pendiente' && ! $requiereConfirmacion,
                 'reagenda_intentos' => $nueva->reagenda_intentos,
                 'reagendas_restantes' => max(0, $maxReagendas - (int) $nueva->reagenda_intentos),
+            ],
+        ]);
+    }
+
+    /**
+     * Confirmar asistencia desde la app del paciente.
+     */
+    public function agendaConfirmarCita(Request $request, int $id): JsonResponse
+    {
+        $paciente = $this->pacienteAutorizado();
+        if (! $paciente) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $cita = Cita::query()->where('id', $id)->where('paciente_id', $paciente->id)->first();
+        if (! $cita) {
+            return response()->json(['message' => 'Cita no encontrada'], 404);
+        }
+        if (in_array($cita->estado, ['cancelada', 'completada'], true)) {
+            return response()->json(['message' => 'Esta cita ya no se puede confirmar'], 422);
+        }
+        if ($cita->estado === 'confirmada') {
+            return response()->json([
+                'message' => 'Esta cita ya está confirmada',
+                'data' => ['id' => $cita->id, 'estado' => $cita->estado],
+            ]);
+        }
+        if ($cita->estado !== 'pendiente') {
+            return response()->json(['message' => 'Solo puedes confirmar citas pendientes'], 422);
+        }
+
+        $esperaClinica = (bool) ($cita->requiere_confirmacion && empty($cita->user_id));
+        if ($esperaClinica) {
+            return response()->json([
+                'message' => 'La clínica aún debe aceptar o proponerte un horario. Mientras tanto puedes escribirle por chat.',
+            ], 422);
+        }
+        if (! $cita->esFutura()) {
+            return response()->json(['message' => 'No puedes confirmar una cita pasada'], 422);
+        }
+
+        $cita->estado = 'confirmada';
+        $cita->requiere_confirmacion = false;
+        $cita->confirmacion_whatsapp = $cita->confirmacion_whatsapp ?: 'confirmada';
+        $cita->save();
+
+        app(CitaSolicitudService::class)->registrarEvento(
+            $cita,
+            'confirmado',
+            'paciente',
+            Auth::id() ? (int) Auth::id() : null,
+            'Asistencia confirmada por el paciente'
+        );
+
+        SendCitaWhatsAppNotification::dispatch($cita->id, 'estado');
+
+        return response()->json([
+            'message' => 'Asistencia confirmada. ¡Te esperamos!',
+            'data' => [
+                'id' => $cita->id,
+                'estado' => $cita->estado,
+                'puede_confirmar' => false,
             ],
         ]);
     }
