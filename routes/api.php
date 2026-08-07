@@ -190,6 +190,7 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/agenda/disponibilidad', [PacientePortalController::class, 'agendaDisponibilidad']);
     Route::post('/paciente-portal/agenda/citas', [PacientePortalController::class, 'agendaCrearCita']);
     Route::post('/paciente-portal/agenda/citas/{id}/reagendar', [PacientePortalController::class, 'agendaReagendarCita']);
+    Route::post('/paciente-portal/agenda/citas/{id}/confirmar', [PacientePortalController::class, 'agendaConfirmarCita']);
     Route::get('/paciente-portal/directorio', [PacientePortalDirectorioController::class, 'index']);
     Route::get('/paciente-portal/directorio/disponibilidad', [PacientePortalDirectorioController::class, 'disponibilidad']);
     Route::get('/paciente-portal/directorio/landmarks', [PacientePortalDirectorioController::class, 'landmarks']);
@@ -199,12 +200,15 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/perfil', [PacientePortalController::class, 'perfil']);
     Route::put('/paciente-portal/perfil', [PacientePortalController::class, 'updatePerfil']);
     Route::post('/paciente-portal/perfil/foto', [PacientePortalController::class, 'updateFoto']);
+    Route::post('/paciente-portal/cuenta/eliminar', [PacientePortalController::class, 'eliminarCuenta']);
     Route::get('/paciente-portal/citas-calendario', [PacientePortalController::class, 'citasCalendario']);
     Route::get('/paciente-portal/expedientes-compartidos', [PacientePortalController::class, 'expedientesCompartidos']);
     Route::get('/paciente-portal/documento-compartido/{id}/pdf', [PacientePortalController::class, 'documentoCompartidoPdf']);
     Route::get('/paciente-portal/mi-qr', [PacientePortalController::class, 'miQr']);
     Route::get('/paciente-portal/notificaciones', [\App\Http\Controllers\PacientePortalNotificacionController::class, 'index']);
     Route::post('/paciente-portal/notificaciones/marcar-leidas', [\App\Http\Controllers\PacientePortalNotificacionController::class, 'marcarLeidas']);
+    Route::post('/paciente-portal/device-token', [\App\Http\Controllers\PacientePortalDeviceController::class, 'register']);
+    Route::delete('/paciente-portal/device-token', [\App\Http\Controllers\PacientePortalDeviceController::class, 'unregister']);
     Route::get('/paciente-portal/pagos', [PacientePortalController::class, 'pagos']);
     Route::get('/paciente-portal/pagos/{id}/recibo', [PacientePortalController::class, 'pagoReciboPdf']);
     Route::get('/paciente-portal/presupuestos', [PresupuestoController::class, 'portalIndex']);
@@ -215,6 +219,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::post('/paciente-portal/soporte/ticket', [\App\Http\Controllers\Api\SoporteTicketController::class, 'store']);
     Route::get('/paciente-portal/soporte/mis-tickets', [\App\Http\Controllers\Api\SoporteTicketController::class, 'misTickets']);
     Route::get('/paciente-portal/soporte/ticket/{id}', [\App\Http\Controllers\Api\SoporteTicketController::class, 'show']);
+    Route::get('/paciente-portal/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'getMensajes']);
+    Route::post('/paciente-portal/soporte/ticket/{id}/mensajes', [\App\Http\Controllers\Api\SoporteTicketController::class, 'enviarMensaje']);
     // Archivos del paciente (subidos por el mismo desde el portal)
     Route::get('/paciente-portal/archivos', [\App\Http\Controllers\PacientePortalArchivoController::class, 'index']);
     Route::get('/paciente-portal/archivos-clinica', [\App\Http\Controllers\PacientePortalArchivoController::class, 'indexClinica']);
@@ -233,6 +239,8 @@ Route::middleware(['auth:sanctum', 'multi.tenant', 'patient.portal'])->group(fun
     Route::get('/paciente-portal/nutricion/plan-activo', [PacientePortalNutricionController::class, 'planActivo']);
     Route::get('/paciente-portal/nutricion/seguimiento', [PacientePortalNutricionController::class, 'seguimientoIndex']);
     Route::post('/paciente-portal/nutricion/seguimiento', [PacientePortalNutricionController::class, 'seguimientoStore']);
+    Route::post('/paciente-portal/nutricion/foto-comida', [PacientePortalNutricionController::class, 'uploadFotoComida']);
+    Route::post('/paciente-portal/nutricion/coach-tip', [PacientePortalNutricionController::class, 'coachTip']);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -541,6 +549,16 @@ Route::middleware(['auth:sanctum', 'multi.tenant'])->group(function() {
         Route::delete('/{item}',                            [InventarioController::class, 'destroy']);
         Route::get('/{item}/movimientos',                   [InventarioController::class, 'movimientos']);
         Route::post('/{item}/movimiento',                   [InventarioController::class, 'registrarMovimiento']);
+    });
+
+    // ==========================================
+    // PROCEDIMIENTOS / TARIFAS DE LA CLÍNICA
+    // ==========================================
+    Route::prefix('procedimientos-clinica')->group(function () {
+        Route::get('/',  [\App\Http\Controllers\ProcedimientoClinicaController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\ProcedimientoClinicaController::class, 'store']);
+        Route::put('/{id}', [\App\Http\Controllers\ProcedimientoClinicaController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\ProcedimientoClinicaController::class, 'destroy']);
     });
 
     // LABORATORIOS

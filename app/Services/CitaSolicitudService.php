@@ -44,6 +44,8 @@ class CitaSolicitudService
             'solicitado' => ['Solicitud de cita enviada', 'La clínica recibirá tu solicitud y te confirmará o contactará.'],
             'contactado' => ['La clínica te contactó', 'Revisa tu chat o WhatsApp; la clínica se puso en contacto por tu cita.'],
             'confirmado' => ['Cita confirmada', 'Tu cita fue confirmada. Revísala en Mis citas.'],
+            'agendada' => ['Nueva cita agendada', $mensaje ?: 'Tu clínica te agendó una cita. Revísala en Mis citas.'],
+            'pendiente_confirmacion' => ['Confirma tu asistencia', $mensaje ?: 'Tu clínica te agendó una cita. Confirma tu asistencia en Mis citas.'],
             'modificado' => ['Cita modificada', 'La clínica actualizó el horario o detalles de tu cita.'],
             'cancelado' => ['Cita cancelada', $mensaje ?: 'Tu cita fue cancelada.'],
         ];

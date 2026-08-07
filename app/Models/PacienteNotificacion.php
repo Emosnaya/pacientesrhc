@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\ExpoPushService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class PacienteNotificacion extends Model
 {
@@ -35,12 +37,25 @@ class PacienteNotificacion extends Model
         ?string $cuerpo = null,
         ?array $data = null
     ): self {
-        return self::create([
+        $row = self::create([
             'paciente_id' => $pacienteId,
             'tipo' => $tipo,
             'titulo' => $titulo,
             'cuerpo' => $cuerpo,
             'data' => $data,
         ]);
+
+        try {
+            app(ExpoPushService::class)->sendToPaciente(
+                $pacienteId,
+                $titulo,
+                $cuerpo,
+                array_merge(['tipo' => $tipo, 'notif_id' => $row->id], $data ?? [])
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Push tras notificación falló: '.$e->getMessage());
+        }
+
+        return $row;
     }
 }

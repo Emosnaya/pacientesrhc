@@ -329,7 +329,7 @@ class SubscriptionController extends Controller
                 'stripe_subscription_id' => $session->subscription,
                 'fecha_vencimiento' => $nextBilling,
                 'next_billing_date' => $nextBilling,
-                'modulos_habilitados' => [],
+                'modulos_habilitados' => $consultorioData['modulos_habilitados'] ?? [],
             ]);
 
             // 3. Crear sucursal principal
@@ -341,6 +341,8 @@ class SubscriptionController extends Controller
                 'activa' => true,
                 'telefono' => $consultorioData['telefono'] ?? null,
                 'visible_directorio' => true,
+                'tipo_clinica' => $consultorioData['tipo_clinica'] ?? null,
+                'modulos_habilitados' => $consultorioData['modulos_habilitados'] ?? [],
             ], $location['attrs']));
             SucursalLocationPayload::applyAfterCreate($sucursal, $location);
 
@@ -496,7 +498,7 @@ class SubscriptionController extends Controller
                 'max_sucursales' => 1,
                 'stripe_subscription_id' => $session->subscription,
                 'fecha_vencimiento' => now()->addMonth()->endOfDay(),
-                'modulos_habilitados' => [],
+                'modulos_habilitados' => $consultorioData['modulos_habilitados'] ?? [],
             ]);
 
             // Crear sucursal principal
@@ -508,6 +510,8 @@ class SubscriptionController extends Controller
                 'activa' => true,
                 'telefono' => $consultorioData['telefono'] ?? null,
                 'visible_directorio' => true,
+                'tipo_clinica' => $consultorioData['tipo_clinica'] ?? null,
+                'modulos_habilitados' => $consultorioData['modulos_habilitados'] ?? [],
             ], $location['attrs']));
             SucursalLocationPayload::applyAfterCreate($sucursalExtra, $location);
 
@@ -1499,6 +1503,8 @@ class SubscriptionController extends Controller
                 'activa'     => true,
                 'telefono'   => $cd['telefono'] ?? null,
                 'visible_directorio' => true,
+                'tipo_clinica' => $cd['tipo_clinica'] ?? null,
+                'modulos_habilitados' => $cd['modulos_habilitados'] ?? [],
             ], $location['attrs']));
             SucursalLocationPayload::applyAfterCreate($sucursal, $location);
 

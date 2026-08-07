@@ -15,39 +15,39 @@ class PricingService
      * [tipo_clinica => [mensual, anual]]
      */
     public static array $BASE_LAUNCH = [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000],
-        'dental'       => ['mensual' => 1699, 'anual' => 17999],
-        'cardiologia'  => ['mensual' => 1699, 'anual' => 17999],
-        'fisioterapia' => ['mensual' => 1299, 'anual' => 13990],
-        'ginecologia'  => ['mensual' => 1299, 'anual' => 13990],
-        'pediatria'    => ['mensual' => 1299, 'anual' => 13990],
-        'neurologia'   => ['mensual' => 1299, 'anual' => 13990],
-        'neumologia'   => ['mensual' => 1299, 'anual' => 13990],
-        'general'      => ['mensual' => 1299, 'anual' => 13990],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 30000],
+        'dental'       => ['mensual' => 1699, 'anual' => 16990],
+        'cardiologia'  => ['mensual' => 1699, 'anual' => 16990],
+        'fisioterapia' => ['mensual' => 1299, 'anual' => 12990],
+        'ginecologia'  => ['mensual' => 1299, 'anual' => 12990],
+        'pediatria'    => ['mensual' => 1299, 'anual' => 12990],
+        'neurologia'   => ['mensual' => 1299, 'anual' => 12990],
+        'neumologia'   => ['mensual' => 1299, 'anual' => 12990],
+        'general'      => ['mensual' => 1299, 'anual' => 12990],
         'nutricion'    => ['mensual' =>  999, 'anual' =>  9990],
         'psicologia'   => ['mensual' =>  999, 'anual' =>  9990],
-        'psiquiatria'  => ['mensual' => 1299, 'anual' => 13990],
+        'psiquiatria'  => ['mensual' => 1299, 'anual' => 12990],
         // Consultorio privado (usa este key internamente)
-        'consultorio'  => ['mensual' => 1299, 'anual' => 11990],
+        'consultorio'  => ['mensual' => 1299, 'anual' => 12990],
     ];
 
     /**
      * Precios normales (post-lanzamiento) por tipo de clínica.
      */
     public static array $BASE_NORMAL = [
-        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 36000],
-        'dental'       => ['mensual' => 1999, 'anual' => 21999],
-        'cardiologia'  => ['mensual' => 1999, 'anual' => 21999],
-        'fisioterapia' => ['mensual' => 1699, 'anual' => 18999],
-        'ginecologia'  => ['mensual' => 1699, 'anual' => 18999],
-        'pediatria'    => ['mensual' => 1699, 'anual' => 18999],
-        'neurologia'   => ['mensual' => 1699, 'anual' => 18999],
-        'neumologia'   => ['mensual' => 1699, 'anual' => 18999],
-        'general'      => ['mensual' => 1699, 'anual' => 18999],
-        'nutricion'    => ['mensual' => 1299, 'anual' => 13999],
-        'psicologia'   => ['mensual' => 1299, 'anual' => 13999],
-        'psiquiatria'  => ['mensual' => 1699, 'anual' => 18999],
-        'consultorio'  => ['mensual' => 1699, 'anual' => 14999],
+        'rehabilitacion_cardiopulmonar' => ['mensual' => 3000, 'anual' => 30000],
+        'dental'       => ['mensual' => 1999, 'anual' => 19990],
+        'cardiologia'  => ['mensual' => 1999, 'anual' => 19990],
+        'fisioterapia' => ['mensual' => 1699, 'anual' => 16990],
+        'ginecologia'  => ['mensual' => 1699, 'anual' => 16990],
+        'pediatria'    => ['mensual' => 1699, 'anual' => 16990],
+        'neurologia'   => ['mensual' => 1699, 'anual' => 16990],
+        'neumologia'   => ['mensual' => 1699, 'anual' => 16990],
+        'general'      => ['mensual' => 1699, 'anual' => 16990],
+        'nutricion'    => ['mensual' => 1299, 'anual' => 12990],
+        'psicologia'   => ['mensual' => 1299, 'anual' => 12990],
+        'psiquiatria'  => ['mensual' => 1699, 'anual' => 16990],
+        'consultorio'  => ['mensual' => 1699, 'anual' => 16990],
     ];
 
     /**
@@ -92,12 +92,15 @@ class PricingService
         'consultorio'  => [],
     ];
 
-    /** Meses cobrados al pagar el plan anual (1 mes de descuento). */
-    public const MESES_ANUALES_COBRADOS = 11;
+    /** Meses cobrados al pagar el plan anual (2 meses gratis = pagar 10). */
+    public const MESES_ANUALES_COBRADOS = 10;
+
+    /** Meses de regalo al pagar anual. */
+    public const MESES_GRATIS_ANUAL = 2;
 
     /**
      * Calcula el precio total aditivo para una clínica.
-     * El plan anual cobra 11 meses (1 mes gratis) sobre el total mensual.
+     * El plan anual cobra 10 meses (2 meses gratis) sobre el total mensual.
      *
      * @param  string   $tipoPrimario     tipo_clinica (especialidad base)
      * @param  array    $modulosHabilitados  array de claves de módulos activos
@@ -141,7 +144,7 @@ class PricingService
         }
 
         $totalMensual = $baseMensual + $addonTotalMensual;
-        $ahorroAnual = $totalMensual; // 1 mes gratis
+        $ahorroAnual = $totalMensual * self::MESES_GRATIS_ANUAL;
 
         if ($esAnual) {
             $base = $baseMensual * self::MESES_ANUALES_COBRADOS;
@@ -159,7 +162,7 @@ class PricingService
             'total'        => $total,
             'items'        => $addonItems,
             'ahorro_anual' => max(0, $ahorroAnual),
-            'meses_gratis' => 1,
+            'meses_gratis' => self::MESES_GRATIS_ANUAL,
             'precio_sin_descuento' => $totalMensual * 12,
         ];
     }

@@ -34,10 +34,12 @@ class SoporteTicketController extends Controller
             $clinicaNombre = $clinica?->nombre;
         }
 
-        // Determinar origen: portal_paciente, dashboard, etc.
+        // Determinar origen: portal_paciente, app_paciente, dashboard, etc.
         $origen = $request->origen ?? 'dashboard';
         if ($user->paciente_id || $user->es_paciente_portal) {
-            $origen = 'portal_paciente';
+            $origen = in_array($request->origen, ['app_paciente', 'portal_paciente'], true)
+                ? $request->origen
+                : 'portal_paciente';
         }
 
         $ticket = SoporteTicket::create([

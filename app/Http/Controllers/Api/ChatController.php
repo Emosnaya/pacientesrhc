@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ChatConversacion;
 use App\Models\ChatParticipante;
 use App\Models\ChatMensaje;
+use App\Models\PacienteNotificacion;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -175,6 +177,34 @@ class ChatController extends Controller
         ChatParticipante::where('conversacion_id', $conv->id)
             ->where('user_id', $userId)
             ->update(['last_read_at' => now()]);
+
+        // Si el staff escribe al paciente, crear notificación + push
+        if ($this->esOperativo()) {
+            $otros = ChatParticipante::where('conversacion_id', $conv->id)
+                ->where('user_id', '!=', $userId)
+                ->pluck('user_id');
+            $pacientes = User::query()
+                ->whereIn('id', $otros)
+                ->whereNotNull('paciente_id')
+                ->get(['id', 'paciente_id']);
+
+            $sender = Auth::user();
+            $nombreStaff = trim(($sender->nombre ?? '').' '.($sender->apellidoPat ?? '')) ?: 'Tu clínica';
+            $preview = mb_substr(trim((string) $request->mensaje), 0, 120);
+
+            foreach ($pacientes as $pu) {
+                PacienteNotificacion::notify(
+                    (int) $pu->paciente_id,
+                    'mensaje_clinica',
+                    'Nuevo mensaje de '.$nombreStaff,
+                    $preview,
+                    [
+                        'conversacion_id' => $conv->id,
+                        'screen' => 'Chat',
+                    ]
+                );
+            }
+        }
 
         $m->load('user:id,nombre,apellidoPat');
         return response()->json(['mensaje' => $this->formatMensaje($m)], 201);

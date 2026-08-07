@@ -287,7 +287,7 @@ class CitaController extends Controller
                 ], 422);
             }
 
-            $sillonId = $request->filled('sillon_id') ? (int) $request->sillon_id : null;
+            $sillonId = $this->normalizeSillonId($request->input('sillon_id'));
             $sillonError = $this->assertSillonDisponible(
                 $sillonId,
                 (string) $request->fecha,
@@ -325,6 +325,30 @@ class CitaController extends Controller
             // Correo siempre (fallback / respaldo). WhatsApp en cola si aplica.
             $this->sendCalendarInvitation($cita, 'create');
             SendCitaWhatsAppNotification::dispatch($cita->id, 'confirmacion');
+
+            // Notificación in-app + push al paciente
+            try {
+                $solicitudService = app(CitaSolicitudService::class);
+                if ($estadoInicial === 'confirmada') {
+                    $solicitudService->registrarEvento(
+                        $cita,
+                        'agendada',
+                        'clinica',
+                        $user->id,
+                        'Tu clínica te agendó una cita confirmada'
+                    );
+                } else {
+                    $solicitudService->registrarEvento(
+                        $cita,
+                        'pendiente_confirmacion',
+                        'clinica',
+                        $user->id,
+                        'Tu clínica te agendó una cita; confirma tu asistencia'
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('No se pudo notificar cita creada al paciente: '.$e->getMessage());
+            }
 
             $response = [
                 'success' => true,
@@ -427,7 +451,7 @@ class CitaController extends Controller
                 : substr((string) $cita->hora, 0, 5));
             $doctorId = $request->has('user_id') ? $request->user_id : $cita->user_id;
             $sillonId = $request->has('sillon_id')
-                ? ($request->sillon_id === '' || $request->sillon_id === 'null' ? null : (int) $request->sillon_id)
+                ? $this->normalizeSillonId($request->input('sillon_id'))
                 : $cita->sillon_id;
             $fechaCambio = $request->has('fecha')
                 && (string) $fechaNueva !== optional($cita->fecha)->format('Y-m-d');
@@ -1001,7 +1025,7 @@ class CitaController extends Controller
             $clinica = Clinica::find($user->clinica_efectiva_id);
             $availability = app(CitaAvailabilityService::class);
             $estadoDefault = $availability->estadoInicial($clinica);
-            $sillonId = $request->filled('sillon_id') ? (int) $request->sillon_id : null;
+            $sillonId = $this->normalizeSillonId($request->input('sillon_id'));
 
             $citasCreadas = [];
             $citasSkipped = [];
@@ -1220,6 +1244,20 @@ class CitaController extends Controller
             // Log error but don't fail the cita operation
             \Log::error('Error sending calendar invitation: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Normaliza sillon_id: null/''/'null'/0 → null (evita FK con 0 por (int) null).
+     */
+    private function normalizeSillonId(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || $value === 'null' || $value === false) {
+            return null;
+        }
+
+        $id = (int) $value;
+
+        return $id > 0 ? $id : null;
     }
 
     /**
